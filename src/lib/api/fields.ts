@@ -1,0 +1,345 @@
+/**
+ * 各端点的字段选择集。
+ *
+ * 为什么不用通配符：Kana API **不支持** `image.*` 之类的通配符，且选太多字段
+ * 会触发 `Too much data selected`。所以列表与详情必须各有一套。
+ *
+ * 三个硬规则（违反即 400）：
+ *   1. 对象型字段必须显式给子字段 —— `image` 不行，`image.url` 或 `image{url,sexual}` 才行
+ *   2. 标量数组可直接选 —— `platforms`、`languages`、`aliases` 不用写子字段
+ *   3. 嵌套只有一层时用点号连续写合法 —— `image.url,titles.lang` 等价于 `image{url},titles{lang}`
+ */
+
+import type {
+  AuthInfo,
+  Character,
+  FieldSpec,
+  Producer,
+  Quote,
+  Release,
+  Staff,
+  Tag,
+  Trait,
+  UListItem,
+  VnDetail,
+  VnSummary,
+} from "./types";
+
+/* -------------------------------------------------------------------------- */
+/* VN                                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * VN 列表字段。
+ * 实测 100 条 = 22,140 B（≈221 B/条），带 tags 会涨到 6,534 B/条 —— 列表页绝不选 tags。
+ *
+ * `image.thumbnail`（256×362）给列表小图用，详情页大图才用 `image.url`；
+ * `devstatus` 是列表行上「开发中 / 停止开发」徽标的来源（原来漏了，徽标永远不显示）。
+ */
+export const VN_LIST_FIELDS = [
+  "id",
+  "title",
+  "alttitle",
+  "olang",
+  "devstatus",
+  "released",
+  "rating",
+  "votecount",
+  "length",
+  "platforms",
+  "image.url",
+  "image.thumbnail",
+  "image.sexual",
+  "image.violence",
+] as const satisfies readonly FieldSpec<VnSummary>[];
+
+/** VN 详情全字段（实测单条 ~8–20 KB） */
+export const VN_DETAIL_FIELDS = [
+  "id",
+  "title",
+  "alttitle",
+  "titles.lang",
+  "titles.title",
+  "titles.official",
+  "titles.main",
+  "olang",
+  "devstatus",
+  "released",
+  "languages",
+  "platforms",
+  "length",
+  "length_minutes",
+  "length_votes",
+  "description",
+  "average",
+  "rating",
+  "votecount",
+  "image.url",
+  "image.dims",
+  "image.thumbnail",
+  "image.sexual",
+  "image.violence",
+  "image.votecount",
+  "tags.id",
+  "tags.name",
+  "tags.category",
+  "tags.rating",
+  "tags.spoiler",
+  "tags.lie",
+  "staff.id",
+  "staff.name",
+  "staff.original",
+  "staff.role",
+  "staff.note",
+  "staff.eid",
+  "developers.id",
+  "developers.name",
+  "developers.original",
+  "developers.type",
+  "va.note",
+  "va.staff.id",
+  "va.staff.name",
+  "va.staff.original",
+  "va.staff.ismain",
+  "va.character.id",
+  "va.character.name",
+  "va.character.original",
+  "va.character.sex",
+  "relations.relation",
+  "relations.relation_official",
+  "relations.id",
+  "relations.title",
+  "relations.alttitle",
+  "relations.released",
+  "relations.image.url",
+  "screenshots.id",
+  "screenshots.url",
+  "screenshots.thumbnail",
+  "screenshots.dims",
+  "screenshots.sexual",
+  "screenshots.violence",
+  "screenshots.votecount",
+  "editions.eid",
+  "editions.lang",
+  "editions.name",
+  "editions.official",
+  "extlinks.id",
+  "extlinks.label",
+  "extlinks.name",
+  "extlinks.url",
+] as const satisfies readonly FieldSpec<VnDetail>[];
+
+/* -------------------------------------------------------------------------- */
+/* Release                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export const RELEASE_LIST_FIELDS = [
+  "id",
+  "title",
+  "alttitle",
+  "released",
+  "platforms",
+  "minage",
+  "patch",
+  "freeware",
+  "uncensored",
+  "voiced",
+] as const satisfies readonly FieldSpec<Release>[];
+
+export const RELEASE_DETAIL_FIELDS = [
+  ...RELEASE_LIST_FIELDS,
+  "languages.lang",
+  "languages.title",
+  "languages.latin",
+  "languages.main",
+  "official",
+  "has_ero",
+  "engine",
+  "notes",
+  "catalog",
+  "gtin",
+  "resolution",
+  "media.medium",
+  "media.qty",
+  "images.id",
+  "images.type",
+  "images.url",
+  "images.dims",
+  "images.sexual",
+  "images.violence",
+  "producers.developer",
+  "producers.publisher",
+  "producers.id",
+  "producers.name",
+  "producers.original",
+  "producers.type",
+  "extlinks.id",
+  "extlinks.label",
+  "extlinks.name",
+  "extlinks.url",
+] as const satisfies readonly FieldSpec<Release>[];
+
+/* -------------------------------------------------------------------------- */
+/* Producer / Staff                                                           */
+/* -------------------------------------------------------------------------- */
+
+export const PRODUCER_LIST_FIELDS = [
+  "id",
+  "name",
+  "original",
+  "lang",
+  "type",
+] as const satisfies readonly FieldSpec<Producer>[];
+
+export const PRODUCER_DETAIL_FIELDS = [
+  ...PRODUCER_LIST_FIELDS,
+  "description",
+  "aliases",
+  "extlinks.id",
+  "extlinks.label",
+  "extlinks.name",
+  "extlinks.url",
+] as const satisfies readonly FieldSpec<Producer>[];
+
+export const STAFF_LIST_FIELDS = [
+  "id",
+  "name",
+  "original",
+  "lang",
+  "ismain",
+] as const satisfies readonly FieldSpec<Staff>[];
+
+/** ⚠️ `/staff` 没有 `image`，也没有 `sex`（那是 `/character` 的） */
+export const STAFF_DETAIL_FIELDS = [
+  ...STAFF_LIST_FIELDS,
+  "description",
+  "aid",
+  "gender",
+  "aliases.name",
+  "aliases.aid",
+  "aliases.latin",
+  "aliases.ismain",
+  "extlinks.id",
+  "extlinks.label",
+  "extlinks.name",
+  "extlinks.url",
+] as const satisfies readonly FieldSpec<Staff>[];
+
+/* -------------------------------------------------------------------------- */
+/* Character / Tag / Trait / Quote                                             */
+/* -------------------------------------------------------------------------- */
+
+export const CHARACTER_LIST_FIELDS = [
+  "id",
+  "name",
+  "original",
+  "image.url",
+  "image.sexual",
+  "image.violence",
+] as const satisfies readonly FieldSpec<Character>[];
+
+export const CHARACTER_DETAIL_FIELDS = [
+  ...CHARACTER_LIST_FIELDS,
+  "description",
+  "aliases",
+  "sex",
+  "gender",
+  "blood_type",
+  "age",
+  "bust",
+  "waist",
+  "hips",
+  "cup",
+  "height",
+  "weight",
+  "birthday",
+  "traits.id",
+  "traits.name",
+  "traits.sexual",
+  "traits.spoiler",
+  "traits.lie",
+] as const satisfies readonly FieldSpec<Character>[];
+
+export const TAG_LIST_FIELDS = [
+  "id",
+  "name",
+  "category",
+  "vn_count",
+] as const satisfies readonly FieldSpec<Tag>[];
+
+export const TAG_DETAIL_FIELDS = [
+  ...TAG_LIST_FIELDS,
+  "description",
+  "aliases",
+] as const satisfies readonly FieldSpec<Tag>[];
+
+export const TRAIT_LIST_FIELDS = [
+  "id",
+  "name",
+  "sexual",
+  "char_count",
+] as const satisfies readonly FieldSpec<Trait>[];
+
+export const TRAIT_DETAIL_FIELDS = [
+  ...TRAIT_LIST_FIELDS,
+  "description",
+  "aliases",
+] as const satisfies readonly FieldSpec<Trait>[];
+
+export const QUOTE_LIST_FIELDS = [
+  "id",
+  "quote",
+  "score",
+  "vn.id",
+  "vn.title",
+  "vn.released",
+  "character.id",
+  "character.name",
+  "character.original",
+] as const satisfies readonly FieldSpec<Quote>[];
+
+/* -------------------------------------------------------------------------- */
+/* 用户                                                                        */
+/* -------------------------------------------------------------------------- */
+
+export const USER_LIST_FIELDS = ["id", "username", "lengthvotes"] as const;
+
+/** `GET /authinfo` 固定返回这三个字段，传入的 fields 会被忽略 */
+export const AUTH_INFO_FIELDS = [
+  "id",
+  "username",
+  "permissions",
+] as const satisfies readonly FieldSpec<AuthInfo>[];
+
+/**
+ * `/ulist` 行字段。
+ * `vn` 子对象刻意只取列表级字段，避免清单页拉全量详情撑爆 `Too much data selected`。
+ */
+export const ULIST_FIELDS = [
+  "id",
+  "added",
+  "voted",
+  "lastmod",
+  "vote",
+  "started",
+  "finished",
+  "notes",
+  "labels.id",
+  "labels.label",
+  "releases.id",
+  "releases.title",
+  "releases.list_status",
+  "releases.platforms",
+  "releases.released",
+  "vn.id",
+  "vn.title",
+  "vn.alttitle",
+  "vn.olang",
+  "vn.released",
+  "vn.rating",
+  "vn.votecount",
+  "vn.length",
+  "vn.image.url",
+  "vn.image.sexual",
+  "vn.image.violence",
+] as const satisfies readonly FieldSpec<UListItem>[];

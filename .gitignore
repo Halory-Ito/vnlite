@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# `bun run bundle:check` 的产物
+.tmp-export/
+
 # Uniwind (generated on first `expo start`)
 uniwind-types.d.ts
 
