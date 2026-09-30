@@ -247,34 +247,45 @@ function Header({
          * 均分与评价人数**不在这里** —— 三列概览已经显示，不再重复。
          * 一律只放值、不放 label（Master 要求）；开发中 / 已取消的徽标例外，
          * 它没有别处可显示，去掉就等于丢信息。
+         *
+         * ⚠️ `shrink-0` + `numberOfLines={1}` 是**修 bug**，不是装饰：
+         * VNDB 的名字带空格（如 `Alice Soft`），chip 在换行行里被压缩时
+         * 标签会折行、被 `overflow: hidden` 裁掉后半截 —— 表现是「只显示 Alice
+         * 加一截空白」。`shrink-0` 让它换行而不是被压扁，`numberOfLines` 保证单行。
          */}
         <View className="flex-row flex-wrap items-center gap-1.5">
           {playStatus ? (
-            <Chip size="sm" variant="soft" color="accent">
-              <Chip.Label>{playStatus}</Chip.Label>
+            <Chip size="sm" variant="soft" color="accent" className="shrink-0">
+              <Chip.Label numberOfLines={1}>{playStatus.trim()}</Chip.Label>
             </Chip>
           ) : null}
           {myVote != null ? (
-            <Chip size="sm" variant="soft" color="default">
-              <Chip.Label>{String(myVote)}</Chip.Label>
+            <Chip size="sm" variant="soft" color="default" className="shrink-0">
+              <Chip.Label numberOfLines={1}>{String(myVote)}</Chip.Label>
             </Chip>
           ) : null}
-          <Chip size="sm" variant="soft" color="default">
-            <Chip.Label>{formatReleased(vn.released)}</Chip.Label>
+          <Chip size="sm" variant="soft" color="default" className="shrink-0">
+            <Chip.Label numberOfLines={1}>{formatReleased(vn.released).trim()}</Chip.Label>
           </Chip>
           {developer ? (
             <Chip
               size="sm"
               variant="soft"
               color="default"
+              className="shrink-0"
               onPress={() => router.push(`/producer/${developer.id}`)}
             >
-              <Chip.Label>{developer.name}</Chip.Label>
+              <Chip.Label numberOfLines={1}>{developer.name.trim()}</Chip.Label>
             </Chip>
           ) : null}
           {inDevelopment || cancelled ? (
-            <Chip size="sm" variant="soft" color={cancelled ? "danger" : "warning"}>
-              <Chip.Label>{devStatusLabel(vn.devstatus)}</Chip.Label>
+            <Chip
+              size="sm"
+              variant="soft"
+              color={cancelled ? "danger" : "warning"}
+              className="shrink-0"
+            >
+              <Chip.Label numberOfLines={1}>{devStatusLabel(vn.devstatus)}</Chip.Label>
             </Chip>
           ) : null}
         </View>

@@ -16,18 +16,24 @@ export interface PillProps {
 }
 
 export function Pill({ label, active, onPress }: PillProps): JSX.Element {
+  // 清单标签名来自 VNDB，可能带首尾空白 —— 一律 trim（芯片折行 + 裁剪会只显示前半截）
+  const text = label.trim();
   return (
     <Pressable
       onPress={onPress}
-      className={`rounded-full border px-3 py-1.5 active:opacity-70 ${
+      className={`shrink-0 rounded-full border px-3 py-1.5 active:opacity-70 ${
         active ? "border-accent bg-accent-soft" : "border-border bg-default-soft"
       }`}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: active }}
-      accessibilityLabel={label}
+      accessibilityLabel={text}
     >
-      <Typography type="body-xs" className={active ? "font-semibold text-accent" : "text-muted"}>
-        {label}
+      <Typography
+        type="body-xs"
+        numberOfLines={1}
+        className={active ? "font-semibold text-accent" : "text-muted"}
+      >
+        {text}
       </Typography>
     </Pressable>
   );

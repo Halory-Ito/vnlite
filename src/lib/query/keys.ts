@@ -93,6 +93,5 @@ export const queryKeys = {
     authInfo: () => ["account", "authinfo"] as const,
     user: (id: string) => ["account", "user", id] as const,
     stats: () => ["account", "stats"] as const,
-    ratingRank: () => ["account", "ratingRank"] as const,
   },
 } as const;

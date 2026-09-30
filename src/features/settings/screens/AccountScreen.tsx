@@ -93,7 +93,8 @@ function SignedOut(): JSX.Element {
 }
 
 function SignedIn({ account }: { account: Account }): JSX.Element {
-  const canWrite = account.permissions.includes("listwrite");
+  // 权限块暂时停用（Master 注释掉了），这行也跟着停用，别让 lint 报未使用
+  // const canWrite = account.permissions.includes("listwrite");
 
   return (
     <View>
@@ -107,7 +108,7 @@ function SignedIn({ account }: { account: Account }): JSX.Element {
         <Muted type="body-xs">ID {account.userId}</Muted>
       </View>
 
-      <View className="gap-1.5 px-4 py-3">
+      {/*<View className="gap-1.5 px-4 py-3">
         <Muted type="body-xs" className="font-medium">
           权限
         </Muted>
@@ -119,7 +120,7 @@ function SignedIn({ account }: { account: Account }): JSX.Element {
             缺少 listwrite 权限，无法写入清单。去 vndb.org 的 Token 设置里勾选后重新登录。
           </Muted>
         ) : null}
-      </View>
+      </View>*/}
 
       <View className="px-4 py-6">
         <Button size="sm" variant="danger-soft" onPress={() => void logout()}>

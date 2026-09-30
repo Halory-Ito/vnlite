@@ -339,7 +339,9 @@
 
 ### Type 3.3 · 统计
 
-- [x] `features/stats/RankScreen` —— 榜单
+- [x] ~~`features/stats/RankScreen` —— 榜单~~ **已移除**（2026-09-30，Master 要求）：
+      首页常用入口删掉后它没有入口了，`/rank` 路由、页面、`queryKeys.account.ratingRank`
+      一并删除；统计需求由 `/stats` 收藏统计承接
 - [x] **收藏统计页 `/stats`（M4 增强，chart-kit 图表页）**
   - [x] 数据：`features/stats/hooks.ts` 翻页拉完整份清单（每页 100，最多 20 页），
         字段集 `ULIST_STATS_FIELDS`（只取年份 / 厂商 / 标签 / 打分，比清单页瘦）

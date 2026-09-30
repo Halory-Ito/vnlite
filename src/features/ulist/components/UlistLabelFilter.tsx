@@ -48,7 +48,7 @@ export function UlistLabelFilter({
         {selectable.map((label) => (
           <Pill
             key={label.id}
-            label={label.count != null ? `${label.label} ${label.count}` : label.label}
+            label={label.count != null ? `${label.label.trim()} ${label.count}` : label.label}
             active={labelFilter === label.id}
             onPress={() => onLabelFilterChange(labelFilter === label.id ? null : label.id)}
           />

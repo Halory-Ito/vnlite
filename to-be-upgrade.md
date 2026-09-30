@@ -49,6 +49,16 @@
 
 ## 游戏详情页
 
+- [x] **修复：开发商名带空格时 chip 只显示前半截**（Master 报，v20802 的 `Alice Soft`）
+      （根因：名字里有空格，chip 在换行行里被压缩 → 标签折行后被 chip 的
+      `overflow: hidden` 裁掉后半截，看起来是「Alice + 一截空白」。
+      修法：chip 加 `shrink-0`（换行而不是压扁）+ 标签 `numberOfLines={1}` +
+      文本一律 `.trim()`；同类 chip（`TagChip` / `Pill` / 清单行状态标签 /
+      标签筛选胶囊 / 详情页值 chip）全部扫了一遍，统一 trim + 单行）
+- [x] **移除 `/rank`（我的评分排名）**（Master 要求）
+      （首页入口删掉后它已无入口：`src/app/rank.tsx` + `features/stats/RankScreen.tsx`
+      删除，`queryKeys.account.ratingRank` 一并清掉）
+
 - [x] **头部信息再调整**（Master 要求）
       （① 三列概览改成 **评价人数 / 均分 / 游玩时长**；② 封面右侧改成 **值 chip 行**
       （HeroUI `Chip`，只放值）：游玩状态 / 我的评分 / 发行日期 / 开发商（只第一个，可点）；

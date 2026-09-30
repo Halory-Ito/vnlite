@@ -120,17 +120,22 @@ export interface TagChipProps {
 }
 
 export function TagChip({ id, name, spoiler = 0, onPress, selected }: TagChipProps): JSX.Element {
-  const color = tagColor(name);
+  // 标签名来自 VNDB，可能带首尾空白 —— 一律 trim（芯片里折行 + 裁剪会只显示前半截）
+  const label = name.trim();
+  const color = tagColor(label);
   return (
     <Chip
       size="sm"
       onPress={onPress ? () => onPress(id) : undefined}
+      className="shrink-0"
       style={{
         backgroundColor: selected ? color : `${color}26`,
         opacity: spoiler >= 2 ? 0.45 : spoiler === 1 ? 0.75 : 1,
       }}
     >
-      <Chip.Label style={{ color: selected ? "#FFFFFF" : color }}>{name}</Chip.Label>
+      <Chip.Label numberOfLines={1} style={{ color: selected ? "#FFFFFF" : color }}>
+        {label}
+      </Chip.Label>
     </Chip>
   );
 }

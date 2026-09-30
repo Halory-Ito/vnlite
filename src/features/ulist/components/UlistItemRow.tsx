@@ -44,14 +44,18 @@ export function UlistItemRow({ item, onPress }: UlistItemRowProps): JSX.Element 
           <VoteBadge vote={item.vote} />
           {status ? (
             <View className="rounded bg-accent-soft px-1.5 py-0.5">
-              <Muted type="body-xs" className="text-[10px] text-accent-soft-foreground">
-                {status.label}
+              <Muted
+                type="body-xs"
+                numberOfLines={1}
+                className="text-[10px] text-accent-soft-foreground"
+              >
+                {status.label.trim()}
               </Muted>
             </View>
           ) : null}
           {custom.length === 1 ? (
-            <Muted type="body-xs" className="text-[10px]">
-              {custom[0]?.label}
+            <Muted type="body-xs" numberOfLines={1} className="text-[10px]">
+              {custom[0]?.label.trim()}
             </Muted>
           ) : null}
           {custom.length > 1 ? (
