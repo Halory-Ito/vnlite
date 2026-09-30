@@ -15,7 +15,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.halory.vnlite"
     },
     "plugins": [
       "expo-router",
@@ -36,6 +37,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2c7d6ae9-e84f-4af3-a185-f858bf603263"
+      }
+    },
+    "owner": "halory"
   }
 }

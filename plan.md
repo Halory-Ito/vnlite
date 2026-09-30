@@ -388,6 +388,19 @@
 - [x] 关于页版本号取 `app.json`（不再手写）
 - [ ] 设置项搜索 / 分组标题（条目变多之后再说）
 
+### Type 4.5 · 构建与分发
+
+- [x] **EAS 构建打通**（2026-09-30，Master 要求用 EAS）
+  - [x] `eas.json`：`development`（dev client）/ **`preview`（APK，内部分发）** /
+        `production`（AAB + `autoIncrement`）；`cli.appVersionSource = "remote"`
+  - [x] `eas init --force`：项目 `@halory/vnlite` 已创建并链接
+        （`app.json` 写入 `extra.eas.projectId`），`android.package = com.halory.vnlite`
+  - [x] 首次构建成功：`eas build -p android --profile preview --non-interactive`，
+        keystore 由 EAS 云端自动生成，产物 116.5 MB（**universal APK，含 4 个 ABI**；
+        要更小可开 ABI 拆分或改 AAB）
+  - [x] 本地 Gradle 路线暂缓：Gradle 9.3.1（Windows 读不了 settings 脚本）
+        与 9.4.1（Kotlin 元数据版本冲突）都过不去，详见 `docs/PLAN.md` §8
+
 ### Type 4.4 · 图片查看器
 
 > 封面和截图原来只能看缩略图，长截图 / 文字小的图根本没法看。

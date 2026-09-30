@@ -227,6 +227,15 @@
 - [x] **移除「名称 · 数量」式标题**（Master 不喜欢这种形式）：
       统计页三张饼图卡片 + 详情页的标签 / 特性 / 相关作品 / 制作 / 配音标题
 
+## 构建与分发
+
+- [x] **EAS 构建打通**（Master 要求）
+      （`eas.json`：development / **preview（APK）** / production（AAB）；
+      项目 `@halory/vnlite` 已链接、keystore 由 EAS 生成；
+      首次构建成功，产物 universal APK 116.5 MB —— 含 4 个 ABI，
+      要更小可开 ABI 拆分或改 AAB 分发。
+      本地 Gradle 路线暂缓：Gradle 9.3.1 与 9.4.1 都过不去，原因见 `docs/PLAN.md` §8）
+
 ## M5 待办（按规划，非本轮）
 
 - [ ] 主题包扩充（当前 11 套来自 vndb-lite，可再补）
