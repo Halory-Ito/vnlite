@@ -17,7 +17,6 @@ import { Switch } from "heroui-native";
 import type { JSX } from "react";
 import { View } from "react-native";
 
-import { Muted } from "@/components/Muted";
 import { Paragraph } from "@/components/Typo";
 import { usePreferences } from "@/hooks/usePreferences";
 import {
@@ -38,7 +37,6 @@ export function BackgroundSettings(): JSX.Element {
       <View className="flex-row items-center justify-between">
         <View className="flex-1">
           <Paragraph className="text-sm">显示背景图</Paragraph>
-          <Muted type="body-xs">关闭后只保留配色</Muted>
         </View>
         <Switch
           isSelected={preferences.showBackground}
@@ -58,7 +56,6 @@ function BackgroundSliders({ preferences }: { preferences: Preferences }): JSX.E
     <View className="gap-5">
       <LabeledSlider
         label="遮罩透明度"
-        hint="遮罩盖在背景图上、颜色与主题底色一致。0% 是原图，100% 完全盖住。调低更出图，调高文字更清楚。"
         value={backgroundOpacity}
         minValue={BACKGROUND_OPACITY_RANGE.min}
         maxValue={BACKGROUND_OPACITY_RANGE.max}
@@ -71,7 +68,6 @@ function BackgroundSliders({ preferences }: { preferences: Preferences }): JSX.E
 
       <LabeledSlider
         label="背景模糊"
-        hint="在遮罩之上再糊一层，进一步压掉细节换对比度。0 为不模糊。"
         value={backgroundBlur}
         minValue={BACKGROUND_BLUR_RANGE.min}
         maxValue={BACKGROUND_BLUR_RANGE.max}

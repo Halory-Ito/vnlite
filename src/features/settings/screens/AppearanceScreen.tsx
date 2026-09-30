@@ -33,7 +33,7 @@ export default function AppearanceScreen(): JSX.Element {
         />
       </SettingsSection>
 
-      <SettingsSection title="主题" hint="每套主题都同时支持亮色与暗色，上面选的是用哪一套配色">
+      <SettingsSection title="主题">
         <View className="flex-row flex-wrap gap-2">
           {THEMES.map((theme) => (
             <ThemeTile

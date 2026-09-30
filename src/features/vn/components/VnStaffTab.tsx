@@ -40,7 +40,7 @@ export function VnStaffTab({ vn }: { vn: VnDetail }): JSX.Element {
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       {groups.map(([role, people]) => (
         <View key={role}>
-          <SectionHeader title={`${staffRoleLabel(role)} · ${people.length}`} />
+          <SectionHeader title={staffRoleLabel(role)} />
           <View className="px-4 pb-3">
             {people.map((person, i) => (
               <Link key={`${person.id}-${i}`} href={`/staff/${person.id}`} asChild>
@@ -69,7 +69,7 @@ export function VnStaffTab({ vn }: { vn: VnDetail }): JSX.Element {
 
       {va.length > 0 ? (
         <>
-          <SectionHeader title={`配音 · ${va.length}`} />
+          <SectionHeader title="配音" />
           <View className="px-4 pb-8">
             {va.map((entry, i) =>
               entry.character ? (

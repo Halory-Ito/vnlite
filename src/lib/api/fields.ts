@@ -71,9 +71,10 @@ export const VN_DETAIL_FIELDS = [
   "length_minutes",
   "length_votes",
   "description",
-  "average",
   "rating",
   "votecount",
+  "developers.id",
+  "developers.name",
   "image.url",
   "image.dims",
   "image.thumbnail",
@@ -346,4 +347,33 @@ export const ULIST_FIELDS = [
   "vn.image.url",
   "vn.image.sexual",
   "vn.image.violence",
+] as const satisfies readonly FieldSpec<UListItem>[];
+
+/**
+ * `/ulist` 统计字段（收藏统计页用）。
+ *
+ * 只取聚合真正需要的三样：发售年份（`vn.released`）、厂商（`vn.developers`）、
+ * 清单标签（`labels`），外加 `vote`（平均分）。刻意不要 image / notes ——
+ * 统计页不渲染条目列表，别为用不到的字段付流量与解析开销。
+ */
+export const ULIST_STATS_FIELDS = [
+  "id",
+  "vote",
+  "labels.id",
+  "labels.label",
+  "vn.released",
+  "vn.developers.id",
+  "vn.developers.name",
+] as const satisfies readonly FieldSpec<UListItem>[];
+
+/**
+ * `/ulist` 的「游戏类型」字段（收藏统计的类型分布用）。
+ *
+ * 只取 `vn.tags.id`：类型靠本地跟一份固定的类型标签清单比对（见 `statsLogic`），
+ * 不需要标签名 —— 但**这一趟载荷很重**（约 1.2 KB/条，实测 100 条 = 121 KB），
+ * 所以单独一个查询，别拖慢其他统计图。
+ */
+export const ULIST_TAG_FIELDS = [
+  "id",
+  "vn.tags.id",
 ] as const satisfies readonly FieldSpec<UListItem>[];

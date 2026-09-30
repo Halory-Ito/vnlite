@@ -1,13 +1,13 @@
 /**
  * 首页。
  *
- * 板块：
- *   1. 随机语录
- *   2. 随机一部（真随机：最大 id + 随机号段，见 `queryRandomVn`）
- *   3. 常用入口（我的游戏 / 评分排行 / 我的评分排名 / 近期热门）
+ * 板块只剩两个（2026-09-30 按 Master 要求精简）：
+ *   1. 每日语录（当天固定一条，跨启动不变）
+ *   2. 随机一部（真随机：最大 id + 随机号段，见 `queryRandomVn`；**摇一摇**也能换）
  *
- * 原来的「最新上架」分区已去掉：它和「浏览 · 按发售时间」重复，
- * 首页只留「一进来就有东西可看」的内容。
+ * 原来的常用入口（我的游戏 / 评分排行 / 我的评分排名 / 近期热门 / 收藏统计）
+ * 全部移除：前四个与底部 Tab、「浏览」页重复，收藏统计挪进「我的」。
+ * 「最新上架」分区更早就去掉了（和「浏览 · 按发售时间」重复）。
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -22,38 +22,52 @@ import { CoverImage } from "@/components/CoverImage";
 import { Icon } from "@/components/Icon";
 import { ImageViewer } from "@/components/ImageViewer";
 import { Muted, Paragraph } from "@/components/Typo";
+import { useShake } from "@/hooks/useShake";
 import { queryRandomQuote, queryRandomVn } from "@/lib/api/endpoints/vn";
 import type { VnSummary } from "@/lib/api/types";
+import { readDailyQuote, writeDailyQuote } from "@/lib/storage/dailyQuote";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
-import { formatRating, formatReleased, languageLabel } from "@/utils/format";
-
-import { QuickEntries } from "@/features/vn/components/QuickEntries";
+import {
+  formatMonthDay,
+  formatRating,
+  formatReleased,
+  languageLabel,
+  todayIso,
+} from "@/utils/format";
 
 export default function HomeTab(): JSX.Element {
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       <QuoteCard />
       <RandomVnCard />
-      <QuickEntries />
     </ScrollView>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* 语录                                                                        */
+/* 每日语录                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function QuoteCard(): JSX.Element | null {
   const router = useRouter();
+  const dateKey = todayIso();
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.quote.random(),
-    queryFn: ({ signal }) => queryRandomQuote(signal),
+    queryKey: queryKeys.quote.ofTheDay(dateKey),
+    /*
+     * 「每日」的语义：当天第一次打开抽一条，之后整天不变。
+     * 内存里由 React Query 缓存（key 带日期），落盘由 `dailyQuote` 负责 ——
+     * 杀进程重开也是同一条，跨天 key 变化自动换新。
+     */
+    queryFn: async ({ signal }) => {
+      const cached = await readDailyQuote(dateKey);
+      if (cached) return cached;
+      const fresh = await queryRandomQuote(signal);
+      const quote = fresh.results[0];
+      if (quote) await writeDailyQuote(quote, dateKey);
+      return quote;
+    },
     staleTime: STALE_TIME.quote,
-    select: (d) =>
-      d.results[0] as
-        | { id: string; quote?: string; score?: number; vn?: { id: string; title: string } }
-        | undefined,
   });
 
   // 骨架屏：以前这里直接返回一个 h-2 的空白，首屏会「什么都没有 → 突然出现一张卡」
@@ -74,6 +88,12 @@ function QuoteCard(): JSX.Element | null {
   return (
     <Card className="mx-4 my-3">
       <Card.Body>
+        <View className="mb-1 flex-row items-center justify-between">
+          <Muted type="body-xs" className="font-medium">
+            每日语录
+          </Muted>
+          <Muted type="body-xs">{formatMonthDay(dateKey)}</Muted>
+        </View>
         <Paragraph>「{data.quote}」</Paragraph>
         {data.vn ? (
           <Pressable
@@ -114,6 +134,9 @@ function RandomVnCard(): JSX.Element {
     setRound((r) => r + 1);
   };
 
+  // 摇一摇 = 换一部（和点按钮同一条路径；首页本来就是「摇一部来玩」的语境）
+  useShake(reshuffle);
+
   return (
     <Card className="mx-4 my-3">
       <Card.Body>
@@ -136,7 +159,8 @@ function RandomVnCard(): JSX.Element {
           </View>
         ) : null}
       </Card.Body>
-      <Card.Footer className="pt-3">
+      <Card.Footer className="flex-row items-center justify-between gap-3 pt-3">
+        <Muted type="body-xs">摇一摇手机也能换</Muted>
         <Button size="sm" onPress={reshuffle} isDisabled={pick.isFetching}>
           <Icon name="shuffle" size={16} color={accentForeground} />
           <Button.Label>换一部</Button.Label>

@@ -12,7 +12,7 @@
 
 import { Database } from "bun:sqlite";
 
-import type { UListItem } from "@/lib/api/types";
+import type { Producer, UListItem } from "@/lib/api/types";
 import * as accountDao from "@/lib/db/dao/account";
 import {
   getDatabase,
@@ -22,8 +22,17 @@ import {
   type SqlRunResult,
 } from "@/lib/db/schema";
 import { dateErrors, diffPatch, draftFrom, isValidDate, isVnId } from "@/features/ulist/entryLogic";
+import {
+  byGameType,
+  byListLabel,
+  byReleaseDecade,
+  summarizeCollection,
+  topDevelopers,
+} from "@/features/stats/statsLogic";
 import { imageGate } from "@/hooks/usePreferences";
+import { isFreshDailyQuote } from "@/lib/storage/dailyQuote";
 import { migratePreferences } from "@/lib/storage/preferences";
+import { formatMonthDay } from "@/utils/format";
 
 let passed = 0;
 let failed = 0;
@@ -93,6 +102,9 @@ function bind(params: unknown[]): unknown[] {
 /* -------------------------------------------------------------------------- */
 
 const makeItem = (id: string, extra: Partial<UListItem> = {}): UListItem => ({ id, ...extra });
+
+/** 厂商字段的最小形状（统计聚合只读 id / name） */
+const dev = (id: string, name: string): Producer => ({ id, name });
 
 /* -------------------------------------------------------------------------- */
 
@@ -242,14 +254,35 @@ async function main(): Promise<void> {
   /* ---- 4. 偏好（迁移 / NSFW 门禁） ---- */
   section("4. 偏好（迁移 / NSFW 门禁）");
 
-  await check("ulistViewMode：默认网格、list 保留、脏值回退", () => {
-    assert(migratePreferences({}).ulistViewMode === "grid", "老数据没这一项应回默认网格");
-    assert(migratePreferences({ ulistViewMode: "list" }).ulistViewMode === "list", "list 应保留");
+  await check("vnViewMode：默认网格、list 保留、脏值回退、旧键接过来", () => {
+    assert(migratePreferences({}).vnViewMode === "grid", "老数据没这一项应回默认网格");
+    assert(migratePreferences({ vnViewMode: "list" }).vnViewMode === "list", "list 应保留");
+    assert(migratePreferences({ vnViewMode: "squares" }).vnViewMode === "grid", "脏值应回退到网格");
+    // 2026-09-30 从 ulistViewMode 改名成 vnViewMode，旧键的值要接过来
     assert(
-      migratePreferences({ ulistViewMode: "squares" }).ulistViewMode === "grid",
-      "脏值应回退到网格"
+      migratePreferences({ ulistViewMode: "list" }).vnViewMode === "list",
+      "旧键 ulistViewMode 的值应迁移过来"
     );
     assert(migratePreferences({ pageSize: 50 }).pageSize === 50, "其他字段不应被迁移改掉");
+  });
+
+  await check("browseSort：默认人气降序、合法值保留、脏值回退", () => {
+    const def = migratePreferences({}).browseSort;
+    assert(def.field === "votecount" && def.reverse === true, "默认应为人气降序");
+    const kept = migratePreferences({
+      browseSort: { field: "released", reverse: false },
+    }).browseSort;
+    assert(kept.field === "released" && kept.reverse === false, "合法值应保留");
+    assert(
+      migratePreferences({ browseSort: { field: "wat", reverse: true } }).browseSort.field ===
+        "votecount",
+      "脏字段应回退到人气"
+    );
+    assert(
+      migratePreferences({ listSort: { field: "added", reverse: true } }).browseSort.field ===
+        "votecount",
+      "废弃的 listSort 不应影响浏览排序"
+    );
   });
 
   await check("imageGate：缺字段按露骨处理，三档行为正确", () => {
@@ -259,6 +292,112 @@ async function main(): Promise<void> {
     assert(!imageGate("blur", { sexual: 1, violence: 0 }).blurred, "暗示级不模糊（只模糊露骨）");
     assert(!imageGate("show", { sexual: 2 }).blurred, "show 档不模糊");
     assert(imageGate("blur", {}).level === 2, "缺字段应按露骨处理（最保守）");
+  });
+
+  /* ---- 5. 收藏统计（纯逻辑） ---- */
+  section("5. 收藏统计聚合（纯逻辑）");
+
+  await check("byReleaseDecade：十年一档、只保留有数据的年代、升序", () => {
+    const items = [
+      makeItem("v1", { vn: { id: "v1", title: "A", released: "2010-05-01" } }),
+      makeItem("v2", { vn: { id: "v2", title: "B", released: "2005" } }),
+      makeItem("v3", { vn: { id: "v3", title: "C", released: "2010-11-20" } }),
+      makeItem("v4", { vn: { id: "v4", title: "D", released: "1999-12-31" } }),
+      // 未定档 / 缺字段的都不进统计
+      makeItem("v5", { vn: { id: "v5", title: "E", released: "TBA" } }),
+      makeItem("v6"),
+    ];
+    const buckets = byReleaseDecade(items);
+    assert(buckets.length === 3, `应有 3 个年代，实际 ${buckets.length}`);
+    assert(buckets[0]?.label === "1990-1999", "最早应是 1990-1999");
+    assert(buckets[1]?.label === "2000-2009" && buckets[1].count === 1, "2000-2009 应 1 部");
+    assert(buckets[2]?.label === "2010-2019" && buckets[2].count === 2, "2010-2019 应 2 部");
+  });
+
+  await check("byGameType：只认固定类型清单、计数降序", () => {
+    const items = [
+      makeItem("v1", { vn: { id: "v1", title: "A", tags: [{ id: "g32" }, { id: "g104" }] } }),
+      makeItem("v2", { vn: { id: "v2", title: "B", tags: [{ id: "g32" }, { id: "g43" }] } }),
+      // 非类型标签（Comedy / 不存在的 id）都不该进统计
+      makeItem("v3", { vn: { id: "v3", title: "C", tags: [{ id: "g9999" }] } }),
+      makeItem("v4"),
+    ];
+    const buckets = byGameType(items);
+    assert(buckets.length === 2, `只应统计类型标签，实际 ${buckets.length}`);
+    assert(buckets[0]?.name === "ADV" && buckets[0].count === 2, "ADV 应居首且计 2");
+    assert(buckets[1]?.name === "NVL" && buckets[1].count === 1, "NVL 次之");
+  });
+
+  await check("byListLabel：虚拟标签不计、按计数降序", () => {
+    const labels = [
+      { id: 1, label: "Playing" },
+      { id: 2, label: "Finished" },
+      { id: 13, label: "Waiting" },
+    ];
+    const items = [
+      makeItem("v1", {
+        labels: [
+          { id: 2, label: "Finished" },
+          { id: 7, label: "Voted" },
+        ],
+      }),
+      makeItem("v2", {
+        labels: [
+          { id: 2, label: "Finished" },
+          { id: 13, label: "Waiting" },
+        ],
+      }),
+      makeItem("v3", { labels: [{ id: 0, label: "No label" }] }),
+      makeItem("v4"),
+    ];
+    const buckets = byListLabel(items, labels);
+    assert(buckets.length === 2, `0 / 7 不该出现，实际 ${buckets.length}`);
+    assert(buckets[0]?.name === "Finished" && buckets[0].count === 2, "Finished 应居首");
+    assert(buckets[1]?.name === "Waiting", "自建标签名应取 /ulist_labels 里的原名");
+  });
+
+  await check("topDevelopers：多厂商各记一次、Top N 截断", () => {
+    const items = [
+      makeItem("v1", {
+        vn: { id: "v1", title: "A", developers: [dev("p1", "Key"), dev("p2", "X")] },
+      }),
+      makeItem("v2", { vn: { id: "v2", title: "B", developers: [dev("p1", "Key")] } }),
+      makeItem("v3", { vn: { id: "v3", title: "C", developers: [dev("p3", "Y")] } }),
+      makeItem("v4"),
+    ];
+    const top = topDevelopers(items, 2);
+    assert(top.length === 2, "Top 2 应只留两条");
+    assert(top[0]?.id === "p1" && top[0].count === 2, "Key 应居首且计 2");
+    assert(topDevelopers(items, 8).length === 3, "不截断时应有三家");
+  });
+
+  await check("summarizeCollection：总数 / 已通关 / 均分", () => {
+    const items = [
+      makeItem("v1", { vote: 80, labels: [{ id: 2, label: "Finished" }] }),
+      makeItem("v2", { vote: 100 }),
+      makeItem("v3"),
+    ];
+    const summary = summarizeCollection(items);
+    assert(summary.total === 3, "总数不对");
+    assert(summary.voted === 2, "打分数不对");
+    assert(summary.finished === 1, "已通关数不对");
+    assert(summary.averageVote === 90, `均分应为 90，实际 ${summary.averageVote}`);
+    assert(summarizeCollection([]).averageVote === null, "没打分应为 null");
+  });
+
+  /* ---- 6. 每日语录（纯逻辑） ---- */
+  section("6. 每日语录缓存 / 日期文案");
+
+  await check("isFreshDailyQuote：只有当天才算新鲜", () => {
+    assert(isFreshDailyQuote({ date: "2026-09-30" }, "2026-09-30"), "同一天应新鲜");
+    assert(!isFreshDailyQuote({ date: "2026-09-29" }, "2026-09-30"), "昨天应过期");
+    assert(!isFreshDailyQuote(null, "2026-09-30"), "没有缓存应过期");
+  });
+
+  await check("formatMonthDay：`2026-09-30` → `9 月 30 日`", () => {
+    assert(formatMonthDay("2026-09-30") === "9 月 30 日", "月份不应补零");
+    assert(formatMonthDay("2026-12-01") === "12 月 1 日", "日期不应补零");
+    assert(formatMonthDay("坏数据") === "坏数据", "解析不了时原样返回");
   });
 
   /* ---- 结果 ---- */

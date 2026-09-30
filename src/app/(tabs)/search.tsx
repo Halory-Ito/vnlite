@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { EmptyState } from "@/components/ScreenState";
-import { Muted, H5 } from "@/components/Typo";
+import { Muted } from "@/components/Typo";
 import { VnInfiniteList } from "@/features/vn/components/VnInfiniteList";
 import { flattenPages, useVnList } from "@/features/vn/hooks";
 import { queryTags } from "@/lib/api/endpoints/catalog";
@@ -51,7 +51,6 @@ export default function SearchTab(): JSX.Element {
   return (
     <View className="flex-1">
       <View className="gap-3 px-4 pt-1">
-        <H5>搜索</H5>
         <SearchField value={input} onChange={(value) => setInput(value)}>
           <SearchField.Group>
             <SearchField.SearchIcon />

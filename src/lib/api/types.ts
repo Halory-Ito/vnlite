@@ -103,6 +103,21 @@ export interface VnSummary {
   image?: Image;
   /** 0 完成 / 1 开发中 / 2 已取消。列表字段集已带上（卡片上的「开发中」徽标要用） */
   devstatus?: DevStatus;
+  /**
+   * 开发厂商。**默认的列表 / 详情字段集都不含它**，只有统计字段集
+   * （`ULIST_STATS_FIELDS`）会请求 —— 收藏统计的「厂商分布」要用。
+   */
+  developers?: Producer[];
+  /**
+   * 标签引用。默认字段集不含；收藏统计的「游戏类型」分布只请求 `vn.tags.id`
+   * （完整标签在 `VnDetail.tags`）。
+   */
+  tags?: TagRef[];
+}
+
+/** 只带 id 的标签引用（统计按类型聚合时只认 id） */
+export interface TagRef {
+  id: string;
 }
 
 export interface VnTag {

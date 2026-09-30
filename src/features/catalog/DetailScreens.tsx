@@ -7,7 +7,7 @@
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useThemeColor } from "heroui-native";
+import { Tabs, useThemeColor } from "heroui-native";
 import type { JSX, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -20,6 +20,8 @@ import { Divider, Separator } from "@/components/Separator";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ScreenState";
 import { H2, H6, Muted, ExternalLinks } from "@/components/Typo";
 import { KeyValueRow, SectionHeader, TagChip } from "@/components/ui";
+import { ViewModeButton } from "@/components/ViewModeButton";
+import { VnCollection } from "@/features/vn/components/VnCollection";
 import { VnListItem } from "@/features/vn/components/VnListItem";
 import {
   getCharacter,
@@ -33,6 +35,8 @@ import {
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import type { VnSummary } from "@/lib/api/types";
+import { setPreference } from "@/lib/storage/preferences";
+import { usePreferences } from "@/hooks/usePreferences";
 import { formatCount, sexLabel } from "@/utils/format";
 
 /* -------------------------------------------------------------------------- */
@@ -52,6 +56,11 @@ interface DetailShellProps {
   error: unknown;
   onRetry: () => void;
   children?: ReactNode;
+  /**
+   * 内容是否包在 `ScrollView` 里（默认 true）。
+   * 需要**自己管滚动**的页面（如制作者详情的 Tabs，每个页签各自滚）传 false。
+   */
+  scrollable?: boolean;
 }
 
 function DetailShell({
@@ -64,6 +73,7 @@ function DetailShell({
   error,
   onRetry,
   children,
+  scrollable = true,
 }: DetailShellProps): JSX.Element {
   const router = useRouter();
   const muted = useThemeColor("muted");
@@ -71,34 +81,41 @@ function DetailShell({
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState error={error} onRetry={onRetry} />;
 
+  const body = (
+    <>
+      <View className="flex-row items-center gap-2 px-4 py-3">
+        <Pressable
+          onPress={() => router.back()}
+          className="active:opacity-60"
+          accessibilityLabel="返回"
+        >
+          {/* 返回箭头取主题 muted，之前写死 iOS 系统灰 #8E8E93，换主题后对不上 */}
+          <Icon name="chevronLeft" size={24} color={muted} />
+        </Pressable>
+        <Muted type="body-sm" className="flex-1" numberOfLines={1}>
+          {title}
+        </Muted>
+      </View>
+
+      <View className="flex-row items-start gap-4 px-4 pb-4">
+        {cover}
+        <View className="flex-1 gap-2">
+          <H2 className="shrink">{title}</H2>
+          {subtitle ? <Muted type="body-xs">{subtitle}</Muted> : null}
+          {header}
+        </View>
+      </View>
+
+      {children}
+    </>
+  );
+
+  // 自己管滚动的页面（Tabs）不要套 ScrollView，否则列表型内容会被撑开
+  if (!scrollable) return <View className="flex-1">{body}</View>;
+
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 48 }}>
-      <View>
-        <View className="flex-row items-center gap-2 px-4 py-3">
-          <Pressable
-            onPress={() => router.back()}
-            className="active:opacity-60"
-            accessibilityLabel="返回"
-          >
-            {/* 返回箭头取主题 muted，之前写死 iOS 系统灰 #8E8E93，换主题后对不上 */}
-            <Icon name="chevronLeft" size={24} color={muted} />
-          </Pressable>
-          <Muted type="body-sm" className="flex-1" numberOfLines={1}>
-            {title}
-          </Muted>
-        </View>
-
-        <View className="flex-row items-start gap-4 px-4 pb-4">
-          {cover}
-          <View className="flex-1 gap-2">
-            <H2 className="shrink">{title}</H2>
-            {subtitle ? <Muted type="body-xs">{subtitle}</Muted> : null}
-            {header}
-          </View>
-        </View>
-
-        {children}
-      </View>
+      <View>{body}</View>
     </ScrollView>
   );
 }
@@ -148,7 +165,7 @@ function RelatedVns({
   return (
     <>
       <Divider />
-      <SectionHeader title={`${title} · ${vns.length}`} />
+      <SectionHeader title={title} />
       <View>
         {vns.map((vn) => (
           <View key={vn.id}>
@@ -273,7 +290,7 @@ export function CharacterDetailScreen(): JSX.Element {
           {c.traits && c.traits.length > 0 ? (
             <>
               <Divider />
-              <SectionHeader title={`特性 · ${c.traits.length}`} />
+              <SectionHeader title="特性" />
               <View className="gap-2">
                 <View className="flex-row flex-wrap gap-1.5 px-4">
                   {traits.shown.map((t) => (
@@ -282,11 +299,7 @@ export function CharacterDetailScreen(): JSX.Element {
                 </View>
                 {traits.truncated ? (
                   <View className="px-4 pb-2">
-                    <ExpandToggle
-                      expanded={traits.expanded}
-                      total={c.traits.length}
-                      onPress={traits.toggle}
-                    />
+                    <ExpandToggle expanded={traits.expanded} onPress={traits.toggle} />
                   </View>
                 ) : null}
               </View>
@@ -321,8 +334,14 @@ export function CharacterDetailScreen(): JSX.Element {
 /* 制作者                                                                      */
 /* -------------------------------------------------------------------------- */
 
+/** 制作者详情的页签 */
+type ProducerTab = "overview" | "works";
+
 export function ProducerDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const viewMode = usePreferences().vnViewMode;
+  const [tab, setTab] = useState<ProducerTab>("overview");
 
   const detail = useQuery({
     queryKey: queryKeys.producer.detail(id),
@@ -349,6 +368,8 @@ export function ProducerDetailScreen(): JSX.Element {
       isError={detail.isError}
       error={detail.error}
       onRetry={() => void detail.refetch()}
+      // Tabs 自己管滚动（每个页签各自滚），外壳不要再套一层 ScrollView
+      scrollable={false}
       header={
         p ? (
           <View className="self-start rounded bg-default-soft px-2 py-0.5">
@@ -359,26 +380,67 @@ export function ProducerDetailScreen(): JSX.Element {
         ) : null
       }
     >
-      {p?.description ? (
-        <>
-          <Divider />
-          <SectionHeader title="简介" />
-          <View className="px-4 pb-4">
-            <CollapsibleText text={p.description} />
-          </View>
-        </>
-      ) : null}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as ProducerTab)} className="flex-1">
+        <Tabs.List className="mx-3">
+          <Tabs.ScrollView>
+            {/* ⚠️ 指示块要自己挂：HeroUI 不会自动注入，漏了就没有「选中」的底色 */}
+            <Tabs.Indicator />
+            <Tabs.Trigger value="overview">
+              <Tabs.Label>概览</Tabs.Label>
+            </Tabs.Trigger>
+            <Tabs.Trigger value="works">
+              <Tabs.Label>作品</Tabs.Label>
+            </Tabs.Trigger>
+          </Tabs.ScrollView>
+        </Tabs.List>
 
-      <ExtLinks links={p?.extlinks} />
+        <View className="flex-1">
+          {tab === "overview" ? (
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+              {p?.description ? (
+                <>
+                  <SectionHeader title="简介" />
+                  <View className="px-4 pb-4">
+                    <CollapsibleText text={p.description} />
+                  </View>
+                </>
+              ) : (
+                <View className="px-4 py-4">
+                  <Muted type="body-sm">该制作者没有登记简介</Muted>
+                </View>
+              )}
 
-      <RelatedVns
-        vns={vns.data}
-        isLoading={vns.isLoading}
-        isError={vns.isError}
-        error={vns.error}
-        onRetry={() => void vns.refetch()}
-        title="作品"
-      />
+              <ExtLinks links={p?.extlinks} />
+            </ScrollView>
+          ) : null}
+
+          {tab === "works" ? (
+            <View className="flex-1">
+              <View className="flex-row items-center justify-end px-4 pb-1 pt-2">
+                {/* 网格 / 列表切换（偏好与清单 Tab 共用，跨启动记住） */}
+                <ViewModeButton
+                  value={viewMode}
+                  onChange={(mode) => void setPreference("vnViewMode", mode)}
+                />
+              </View>
+
+              {vns.isLoading ? (
+                <LoadingState label="拉取作品…" />
+              ) : vns.isError ? (
+                <ErrorState error={vns.error} onRetry={() => void vns.refetch()} />
+              ) : (vns.data?.length ?? 0) === 0 ? (
+                <EmptyState title="没有收录作品" description="VNDB 上这个制作者名下还没有作品" />
+              ) : (
+                <VnCollection
+                  mode={viewMode}
+                  items={vns.data ?? []}
+                  onPressItem={(vnId) => router.push(`/vn/${vnId}`)}
+                />
+              )}
+            </View>
+          ) : null}
+        </View>
+      </Tabs>
     </DetailShell>
   );
 }

@@ -10,9 +10,15 @@
 
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import { CHARACTER_LIST_FIELDS, VN_DETAIL_FIELDS, VN_LIST_FIELDS } from "@/lib/api/fields";
+import {
+  CHARACTER_LIST_FIELDS,
+  ULIST_STATS_FIELDS,
+  ULIST_TAG_FIELDS,
+  VN_DETAIL_FIELDS,
+  VN_LIST_FIELDS,
+} from "@/lib/api/fields";
 import { byTag, byVn, characterInVn, compileVnFilters, pred } from "@/lib/api/filters";
-import { getVn, queryRandomVn, queryVns } from "@/lib/api/endpoints/vn";
+import { getVn, queryRandomQuote, queryRandomVn, queryVns } from "@/lib/api/endpoints/vn";
 import { getTag, queryCharacters, queryTags } from "@/lib/api/endpoints/catalog";
 import {
   getListLabels,
@@ -23,6 +29,7 @@ import {
 } from "@/lib/api/endpoints/ulist";
 import { toFieldsString, type Predicate } from "@/lib/api/types";
 import { RateLimiter } from "@/lib/api/rateLimiter";
+import { GAME_TYPE_TAGS } from "@/features/stats/statsLogic";
 
 let passed = 0;
 let failed = 0;
@@ -375,6 +382,42 @@ async function main(): Promise<void> {
   await check("读公开用户标签", async () => {
     const labels = await getListLabels("u2");
     assert(Array.isArray(labels), "应返回数组");
+  });
+
+  await check("ULIST_STATS_FIELDS 合法（收藏统计页依赖）", async () => {
+    const r = await queryList({ user: "u2", fields: ULIST_STATS_FIELDS, results: 3 });
+    assert(r.results.length > 0, "应有结果");
+    const withDev = r.results.find((item) => (item.vn?.developers?.length ?? 0) > 0);
+    assert(withDev !== undefined, "统计字段应能取到 vn.developers");
+  });
+
+  await check("queryRandomQuote 字段集合法（每日语录依赖）", async () => {
+    const r = await queryRandomQuote();
+    assert(typeof r.results[0]?.quote === "string", "应返回一条带 quote 的语录");
+  });
+
+  await check("ULIST_TAG_FIELDS 合法（收藏统计 · 游戏类型依赖）", async () => {
+    const r = await queryList({ user: "u2", fields: ULIST_TAG_FIELDS, results: 5 });
+    assert(
+      r.results.some((item) => (item.vn?.tags?.length ?? 0) > 0),
+      "应能取到 vn.tags.id"
+    );
+  });
+
+  /*
+   * 类型标签清单是**硬编码**的（VNDB 没有 genre 字段，类型就是 Technical 顶层标签），
+   * 这条真接口检查保证 id → 名字没漂移；名字对不上说明清单该更新了。
+   */
+  await check("GAME_TYPE_TAGS 与 /tag 一致（类型标签没漂移）", async () => {
+    const response = await api.query<{ id: string; name: string }>("/tag", {
+      filters: ["or", ...GAME_TYPE_TAGS.map((type) => pred("id", "=", type.id))],
+      fields: "id,name,category",
+      results: 50,
+    });
+    const byId = new Map(response.results.map((tag) => [tag.id, tag.name]));
+    for (const type of GAME_TYPE_TAGS) {
+      assert(byId.get(type.id) === type.name, `${type.id} 名字对不上：期望 ${type.name}`);
+    }
   });
 
   /* ---- 5. 限流器 ---- */

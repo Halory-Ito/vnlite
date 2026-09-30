@@ -45,7 +45,7 @@ export function VnRelationsTab({ vn }: { vn: VnDetail }): JSX.Element {
       {[...groups.entries()].map(([relation, items], index) => (
         <View key={relation}>
           {index > 0 ? <Divider /> : null}
-          <SectionHeader title={`${relationLabel(relation)} · ${items.length}`} />
+          <SectionHeader title={relationLabel(relation)} />
           <View className="pb-2">
             {items.map((rel) => (
               <RelationRow key={rel.id} rel={rel} />

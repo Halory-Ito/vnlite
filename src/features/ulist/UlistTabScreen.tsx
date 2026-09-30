@@ -7,7 +7,7 @@
  *
  * 视图有网格（默认，纯封面墙）与列表（带打分 / 标签的行）两种，
  * 右上角按钮直接切换（按钮文案 / 图标表示切过去的目标视图），
- * 选择存 `preferences.ulistViewMode` 跨启动记住。
+ * 选择存 `preferences.vnViewMode` 跨启动记住。
  */
 
 import { useRouter } from "expo-router";
@@ -17,14 +17,13 @@ import { useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/ScreenState";
-import { H5 } from "@/components/Typo";
+import { ViewModeButton } from "@/components/ViewModeButton";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useSession } from "@/hooks/useSession";
 import { setPreference } from "@/lib/storage/preferences";
 
 import { UlistItems } from "./components/UlistItems";
 import { UlistLabelFilter } from "./components/UlistLabelFilter";
-import { UlistViewButton } from "./components/UlistViewButton";
 import { useUlistInfinite, useUlistLabels } from "./hooks";
 
 export function UlistTabScreen(): JSX.Element {
@@ -51,7 +50,7 @@ function GuestState(): JSX.Element {
 
 function UlistContent(): JSX.Element {
   const router = useRouter();
-  const viewMode = usePreferences().ulistViewMode;
+  const viewMode = usePreferences().vnViewMode;
   const [labelFilter, setLabelFilter] = useState<number | null>(null);
   const list = useUlistInfinite({ labelId: labelFilter });
   const labels = useUlistLabels();
@@ -69,10 +68,9 @@ function UlistContent(): JSX.Element {
   return (
     <View className="flex-1">
       <View className="flex-row items-center justify-between px-4 pt-1">
-        <H5>我的清单</H5>
-        <UlistViewButton
+        <ViewModeButton
           value={viewMode}
-          onChange={(mode) => void setPreference("ulistViewMode", mode)}
+          onChange={(mode) => void setPreference("vnViewMode", mode)}
         />
       </View>
 
@@ -104,7 +102,8 @@ function UlistContent(): JSX.Element {
             if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
           }}
           isFetchingNextPage={list.isFetchingNextPage}
-          onPressItem={(vnId) => router.push(`/ulist/${vnId}`)}
+          // 点条目 = 进作品详情页；要改打分 / 标签走详情页右上角的「编辑」
+          onPressItem={(vnId) => router.push(`/vn/${vnId}`)}
         />
       )}
     </View>

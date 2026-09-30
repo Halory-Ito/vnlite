@@ -12,7 +12,6 @@ import { Typography } from "heroui-native";
 import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
-import { Muted } from "@/components/Typo";
 import { usePreferences } from "@/hooks/usePreferences";
 import {
   CARD_FIELD,
@@ -52,11 +51,6 @@ export function DisplayPanel({ onClose }: DisplayPanelProps): JSX.Element {
       onClose={onClose}
       footer={
         <View className="flex-row items-center justify-between gap-3 border-t border-separator px-4 py-3">
-          <Muted type="body-xs">
-            {selected.length === 0
-              ? "只显示标题与封面"
-              : `已开启 ${selected.length} / ${CARD_FIELD.length} 项`}
-          </Muted>
           <Pressable
             onPress={() => void setPreference("cardFields", [...CARD_FIELD])}
             disabled={selected.length === CARD_FIELD.length}
@@ -84,10 +78,6 @@ export function DisplayPanel({ onClose }: DisplayPanelProps): JSX.Element {
           />
         ))}
       </FilterGroup>
-
-      <Muted type="body-xs">
-        标题与封面始终显示。这里的选择只影响卡片外观，不参与筛选，也不会重新请求数据。
-      </Muted>
     </FullScreenPanel>
   );
 }

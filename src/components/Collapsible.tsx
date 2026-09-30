@@ -94,14 +94,12 @@ export function useCollapsedList<T>(items: readonly T[], limit: number): Collaps
   };
 }
 
-/** 「展开全部 N 个 / 收起」。和 `CollapsibleText` 的按钮同一套排版 */
+/** 「展开全部 / 收起」。和 `CollapsibleText` 的按钮同一套排版 */
 export function ExpandToggle({
   expanded,
-  total,
   onPress,
 }: {
   expanded: boolean;
-  total: number;
   onPress: () => void;
 }): JSX.Element {
   return (
@@ -109,10 +107,10 @@ export function ExpandToggle({
       onPress={onPress}
       className="self-start active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel={expanded ? "收起" : `展开全部 ${total} 个`}
+      accessibilityLabel={expanded ? "收起" : `展开全部`}
     >
       <Typography type="body-sm" className="text-link">
-        {expanded ? "收起" : `展开全部 ${total} 个`}
+        {expanded ? "收起" : `展开全部`}
       </Typography>
     </Pressable>
   );

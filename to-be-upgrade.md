@@ -4,6 +4,14 @@
 
 ## 首页
 
+- [x] **首页只剩两个板块**（Master 要求）
+      （移除「我的游戏 / 评分排行 / 我的评分排名 / 近期热门」四个常用入口，
+      `features/vn/components/QuickEntries.tsx` 一并删除；「收藏统计」挪进「我的」页；
+      现在首页 = 每日语录 + 随机一部）
+- [x] **「浏览」排序改面板**（Master 要求）
+      （移除顶部「发行日期 / 评分 / 人气」三个 Tabs，改成头部「排序」按钮 →
+      `SortPanel` 全屏面板：字段（人气 / 评分 / 发行日期 / ID 顺序）+ 方向（升 / 降序），
+      默认**人气降序**；选择存 `preferences.browseSort`，`listSort` 顺势删除）
 - [x] 移除底部的「高分佳作」板块
 - [x] 「随机一部」卡片移除 Card.Title
 - [x] 移除「标题」排序（VN 译名有多个别名，按字面排序无意义）
@@ -41,6 +49,27 @@
 
 ## 游戏详情页
 
+- [x] **头部信息再调整**（Master 要求）
+      （① 三列概览改成 **评价人数 / 均分 / 游玩时长**；② 封面右侧改成 **值 chip 行**
+      （HeroUI `Chip`，只放值）：游玩状态 / 我的评分 / 发行日期 / 开发商（只第一个，可点）；
+      ③ 头部的均分 + 评价人数（`RatingBadge`）移除 —— 三列概览已显示；
+      ④ 概览页签移除平台 / 时长 / 语言三行）
+- [x] **信息结构三改**（Master 要求）
+      （① 信息 Tabs 上方加三列概览：**我的打分 / 全球评分 / 游玩时长**（`StatBlock`）；
+      ② 封面右侧显示**开发商名称**（`VN_DETAIL_FIELDS` 补 `developers.id` / `developers.name`，
+      名字可点进制作者详情页）；③ 「编辑清单条目」按钮移到右上角、紧挨加入 / 移出按钮左边，
+      按钮只剩铅笔 + 「编辑」——打分已由三列概览显示）
+- [x] **右上角加入 / 移出清单按钮**（Master 要求）
+      （`UlistToggleButton`：未加入显示「＋ 加入清单」（PATCH 空 patch 建条目），
+      已加入显示「移除」（系统 Alert 二次确认 —— DELETE 会连带删发行版持有记录）；
+      游客 / 只有 listread 的 token 不渲染）
+- [x] **剔除重复渲染的信息**（以命运石之门 v2002 为例）
+      （① 评分渲染了两遍：badge 的 `rating` 与「原始均分 x.xx / 10」实测是同一个数
+      （v2002 两者都是 90.2），且 API 的 `average` 现在就是 0–100，`/ 10` 是错的 →
+      删掉均分行，`VN_DETAIL_FIELDS.average` 与死代码 `averageToRating` 一并移除；
+      ② 原始语言在头部与概览「语言」行各出现一次 → 头部只在概览不渲染语言行时兜底；
+      ③ 清单状态原来由头部 `UlistQuickButton` 与右上角按钮各显示一次 →
+      `UlistQuickButton` 改成 `UlistEditEntry`，只在已加入时显示「我的打分 N · 编辑」）
 - [x] 角色区分主要 / 次要角色（Tabs）
 - [x] 主要信息用 Tabs 区分（概览 / 角色 / 制作 / 版本）
       （只渲染当前页签；角色与版本的数据切到页签才请求，不点不花限流配额）
@@ -70,6 +99,14 @@
 
 ## 清单
 
+- [x] **清单 → 详情的导航方向**（Master 要求）
+      （点「我的清单」里的条目改跳**作品详情页**（`/vn/{id}`），只有详情页右上角的
+      「编辑」按钮才进编辑页（`/ulist/{id}`）；`UlistItemRow` / `UlistItems` 的注释同步。
+      编辑页的「未加入 → 加入清单」入口因此成为深链兜底，正常路径进不来）
+- [x] **清单编辑页：点标题进作品详情页**（Master 要求）
+      （头部标题改成站内链接（`text-link` + `Pressable`，accessibilityRole="link"），
+      点击 push `/vn/[id]`；底部原来的「查看作品详情」按钮整块移除，
+      `EntryForm` 不再需要 expo-router 的 `Link`）
 - [x] **移除清单排序功能与「标签」caption**（Master 要求）
       （排序分段控件（加入 / 打分 / 开始 / 均分 / 标题）整体删掉，清单固定
       「加入时间新 → 旧」（`sort: added, reverse: true` 写死在 `useUlistInfinite`），
@@ -77,12 +114,17 @@
       标签筛选条不再有 caption，只剩胶囊行（`UlistToolbar` → `UlistLabelFilter`））
 - [x] **「我的清单」移除右上角数量统计**（`n 部`）——右上角让位给视图切换按钮
 - [x] **「我的清单」新增网格 / 列表视图切换，默认网格**
-      （网格 = 纯封面墙：3 列、VNDB 缩略图原生比例 256×362、点格子进清单编辑页、
-      敏感封面仍可双击放行；列表 = 原来的行。右上角**单个按钮**（`UlistViewButton`，
-      图标 / 文案表示切过去的目标视图，不做 Tabs / 分段控件），
-      选择存 `preferences.ulistViewMode` 跨启动记住。
+      （网格 = 纯封面墙（共用 `features/vn/components/VnCoverGrid`）：3 列、VNDB 缩略图
+      原生比例 256×362、点格子进作品详情页、敏感封面仍可双击放行；列表 = 原来的行。
+      右上角**单个按钮**（`components/ViewModeButton`，图标 / 文案表示切过去的目标视图，
+      不做 Tabs / 分段控件），选择存 `preferences.vnViewMode` 跨启动记住 ——
+      2026-09-30 从 `ulistViewMode` 改名（清单与制作者作品共用），旧键自动迁移。
       踩坑：FlashList v2 的分列按列表自身宽度算，不认 `contentContainerStyle` 的
       padding → 左右外边距改用外层 View，列间距用格子 padding）
+- [x] **制作者详情页改 Tabs + 作品网格 / 列表**（Master 要求）
+      （`/producer/[id]` 拆成「概览」（简介 + 外链）/「作品」两个页签；
+      作品页签右上角同一个 `ViewModeButton` 切换 `VnCollection` 的网格 / 列表；
+      `DetailShell` 新增 `scrollable={false}`，让 Tabs 自己管滚动）
 - [x] **修复：从清单列表点条目跳转进「出错了」页面**
       （`/ulist` 返回的 `vn` 子对象**不带 `id`**：与顶层 `id` 相同、被 VNDB 省略。
       行组件原样传 `vn` 给 `VnListItem`，点击回调取 `vn.id = undefined` → 路由拼成
@@ -159,9 +201,26 @@
 - [x] 「外观」页底部的「当前主题」诊断读数 —— 按决定**已删掉**
       （`features/settings/components/ThemeDebugReadout.tsx` 一并删除；真机验证改为目视：切主题看背景图与各处选中态）
 
-## M4 待办（按规划，非本轮）
+## M4 增强（本轮完成）
+
+- [x] **每日语录**：当天第一次打开抽一条，之后整天不变（React Query key 带本地日期 +
+      `lib/storage/dailyQuote` 落盘，杀进程重开也是同一条）；卡片标「每日语录 + 月日」，
+      原来的「每次打开换一条」已被取代
+- [x] **摇一摇换一部**：`hooks/useShake`（`expo-sensors`，只在首页聚焦时订阅、
+      1.8g 阈值 + 1.5s 冷却、传感器不可用时静默），与「换一部」按钮同一条路径（带 haptics），
+      卡片底部提示「摇一摇手机也能换」
+- [x] **收藏统计页 `/stats`**：发售年代饼图（十年一档）+ 清单标签饼图 +
+      游戏类型饼图（ADV / NVL / RPG…）+ 厂商 Top 8 横向条
+      （chart-kit；聚合走纯函数 `statsLogic`，类型标签清单有真接口冒烟复核；
+      类型分布单独一趟查询，不拖慢其他图），入口在首页常用入口；
+      `components/BackBar` 抽成共用返回栏
+- [x] **移除「名称 · 数量」式标题**（Master 不喜欢这种形式）：
+      统计页三张饼图卡片 + 详情页的标签 / 特性 / 相关作品 / 制作 / 配音标题
+
+## M5 待办（按规划，非本轮）
 
 - [ ] 主题包扩充（当前 11 套来自 vndb-lite，可再补）
 - [ ] 用户自定义背景图（`backgroundUrl` 字段已预留，设置页未开放入口）
-- [ ] 统计图表（`react-native-chart-kit` 已装未用）
-- [ ] 清单写入 + 乐观更新（依赖 M2 用户数据层）
+- [ ] 骨架屏补全（首页两处已有）、首启引导页（`hasSeenOnboarding` 字段已就位）
+- [ ] 设置项搜索 / 分组标题（条目变多之后再说）
+- [ ] 真机回归：Android 7.0 / 主流分辨率 / 刘海屏；查看器手势；背景图可读性走查

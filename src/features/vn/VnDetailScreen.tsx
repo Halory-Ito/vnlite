@@ -24,7 +24,7 @@
  */
 
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Tabs, useThemeColor } from "heroui-native";
+import { Chip, Tabs, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
@@ -33,11 +33,21 @@ import { CoverImage } from "@/components/CoverImage";
 import { Icon } from "@/components/Icon";
 import { ImageViewer, type ViewerImage } from "@/components/ImageViewer";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ScreenState";
-import { H2, Muted } from "@/components/Typo";
-import { RatingBadge } from "@/components/ui";
-import { UlistQuickButton } from "@/features/ulist/components/UlistQuickButton";
+import { H3, Muted } from "@/components/Typo";
+import { StatBlock } from "@/components/ui";
+import { UlistEditEntry } from "@/features/ulist/components/UlistEditEntry";
+import { UlistToggleButton } from "@/features/ulist/components/UlistToggleButton";
+import { useUlistItem } from "@/features/ulist/hooks";
+import { useSession } from "@/hooks/useSession";
 import type { VnDetail } from "@/lib/api/types";
-import { devStatusLabel, formatReleased, languageLabel } from "@/utils/format";
+import {
+  devStatusLabel,
+  formatCount,
+  formatLength,
+  formatMinutes,
+  formatRating,
+  formatReleased,
+} from "@/utils/format";
 
 import { VnCharactersTab } from "./components/VnCharactersTab";
 import { VnExtLinksTab } from "./components/VnExtLinksTab";
@@ -81,6 +91,10 @@ export default function VnDetailScreen(): JSX.Element {
   const router = useRouter();
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const detail = useVnDetail(id);
+  // 我的打分（三列概览的第一列）：登录就能读自己的清单，不要求 listwrite
+  const session = useSession();
+  const isLoggedIn = session.status === "authenticated";
+  const myListItem = useUlistItem(id, isLoggedIn);
   const [tab, setTab] = useState<TabKey>("overview");
   // 封面查看器：false = 关着
   const [coverOpen, setCoverOpen] = useState(false);
@@ -93,6 +107,11 @@ export default function VnDetailScreen(): JSX.Element {
 
   const vn = detail.data;
   if (!vn) return <EmptyState title="作品不存在" description="它可能已从 VNDB 删除" />;
+
+  const myVote = myListItem.data?.vote ?? null;
+  // 游玩状态 = 我的清单标签里的状态标签（Playing / Finished / …，VNDB 英文原名）
+  const playStatus =
+    (myListItem.data?.labels ?? []).find((label) => label.id >= 1 && label.id <= 5)?.label ?? null;
 
   const coverImages: ViewerImage[] = vn.image?.url
     ? [
@@ -121,9 +140,31 @@ export default function VnDetailScreen(): JSX.Element {
         <Muted type="body-sm" className="flex-1">
           {vn.id}
         </Muted>
+        {/* 右上角：先「编辑」（改状态 / 打分 / 标签），再「加入 / 移出清单」 */}
+        <UlistEditEntry vnId={vn.id} />
+        <UlistToggleButton vnId={vn.id} />
       </View>
 
-      <Header vn={vn} onCoverPress={() => setCoverOpen(true)} />
+      <Header
+        vn={vn}
+        playStatus={playStatus}
+        myVote={myVote}
+        onCoverPress={() => setCoverOpen(true)}
+      />
+
+      {/* 三列概览：评价人数 / 均分 / 游玩时长（信息 Tabs 上方） */}
+      <View className="flex-row gap-2 px-4 pb-3">
+        <StatBlock value={formatCount(vn.votecount)} label="评价人数" />
+        <StatBlock value={formatRating(vn.rating)} label="均分" tone="accent" />
+        <StatBlock
+          value={
+            vn.length_minutes != null
+              ? (formatMinutes(vn.length_minutes) ?? "—")
+              : formatLength(vn.length)
+          }
+          label="游玩时长"
+        />
+      </View>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1">
         <Tabs.List className="mx-3">
@@ -164,12 +205,30 @@ export default function VnDetailScreen(): JSX.Element {
 /* 头部                                                                        */
 /* -------------------------------------------------------------------------- */
 
-function Header({ vn, onCoverPress }: { vn: VnDetail; onCoverPress: () => void }): JSX.Element {
+function Header({
+  vn,
+  playStatus,
+  myVote,
+  onCoverPress,
+}: {
+  vn: VnDetail;
+  /** 我的游玩状态（Playing / Finished / …），不在清单里时为 null */
+  playStatus: string | null;
+  /** 我的评分，未打分时为 null */
+  myVote: number | null;
+  onCoverPress: () => void;
+}): JSX.Element {
+  const router = useRouter();
+  // 只显示第一个开发商（VNDB 的开发商列表常有重复条目，全铺会把头部撑长）
+  const developer = vn.developers?.[0];
+  const inDevelopment = vn.devstatus === 1;
+  const cancelled = vn.devstatus === 2;
+
   return (
     <View className="flex-row items-start gap-4 px-4 pb-3">
       <CoverImage
         url={vn.image?.url}
-        width={104}
+        width={124}
         height={[104, 138]}
         sexual={vn.image?.sexual}
         violence={vn.image?.violence}
@@ -178,19 +237,47 @@ function Header({ vn, onCoverPress }: { vn: VnDetail; onCoverPress: () => void }
         accessibilityLabel={`${vn.title} 封面`}
         onPress={onCoverPress}
       />
-      <View className="flex-1 gap-1.5">
-        <H2 className="shrink">{vn.title}</H2>
+      <View className="flex-1 gap-2">
+        {/* 标题用 H3（比原来的 H2 小一号）：封面放大后，信息列要装得下更多行 */}
+        <H3 className="shrink">{vn.title}</H3>
         {vn.alttitle ? <Muted type="body-xs">{vn.alttitle}</Muted> : null}
-        <RatingBadge rating={vn.rating} votecount={vn.votecount} size="md" />
-        <Muted type="body-xs">
-          原始均分 {vn.average != null ? vn.average.toFixed(2) : "—"} / 10
-        </Muted>
-        <UlistQuickButton vnId={vn.id} />
-        <Muted type="body-xs">
-          {formatReleased(vn.released)}
-          {vn.olang ? ` · ${languageLabel(vn.olang)}` : ""}
-          {vn.devstatus != null && vn.devstatus !== 0 ? ` · ${devStatusLabel(vn.devstatus)}` : ""}
-        </Muted>
+
+        {/*
+         * 值 chip 行：游玩状态 / 我的评分 / 发行日期 / 开发商（只第一个）。
+         * 均分与评价人数**不在这里** —— 三列概览已经显示，不再重复。
+         * 一律只放值、不放 label（Master 要求）；开发中 / 已取消的徽标例外，
+         * 它没有别处可显示，去掉就等于丢信息。
+         */}
+        <View className="flex-row flex-wrap items-center gap-1.5">
+          {playStatus ? (
+            <Chip size="sm" variant="soft" color="accent">
+              <Chip.Label>{playStatus}</Chip.Label>
+            </Chip>
+          ) : null}
+          {myVote != null ? (
+            <Chip size="sm" variant="soft" color="default">
+              <Chip.Label>{String(myVote)}</Chip.Label>
+            </Chip>
+          ) : null}
+          <Chip size="sm" variant="soft" color="default">
+            <Chip.Label>{formatReleased(vn.released)}</Chip.Label>
+          </Chip>
+          {developer ? (
+            <Chip
+              size="sm"
+              variant="soft"
+              color="default"
+              onPress={() => router.push(`/producer/${developer.id}`)}
+            >
+              <Chip.Label>{developer.name}</Chip.Label>
+            </Chip>
+          ) : null}
+          {inDevelopment || cancelled ? (
+            <Chip size="sm" variant="soft" color={cancelled ? "danger" : "warning"}>
+              <Chip.Label>{devStatusLabel(vn.devstatus)}</Chip.Label>
+            </Chip>
+          ) : null}
+        </View>
       </View>
     </View>
   );

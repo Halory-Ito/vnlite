@@ -48,18 +48,12 @@ const LEGACY_DIM_OPACITY: Record<BackgroundDim, number> = {
 // 这里只是转出去，设置页与滑杆统一从一处取。
 export { BACKGROUND_BLUR_RANGE, BACKGROUND_OPACITY_RANGE } from "@/theme/background";
 
-/** 列表排序偏好 */
-export interface ListSortPreference {
-  field:
-    | "vote"
-    | "added"
-    | "released"
-    | "title"
-    | "lastmod"
-    | "started"
-    | "length_minutes"
-    | "rating"
-    | "votecount";
+/** 浏览页可用的排序字段（与 `features/sort/sortOptions` 的选项一一对应） */
+export type BrowseSortField = "votecount" | "rating" | "released" | "id";
+
+/** 浏览页的排序偏好（字段 + 方向） */
+export interface BrowseSortPreference {
+  field: BrowseSortField;
   reverse: boolean;
 }
 
@@ -90,25 +84,25 @@ export const CARD_FIELD_LABEL: Record<CardField, string> = {
 };
 
 /**
- * 「我的清单」的两种视图。
+ * 作品列表的两种视图。
  *
  * `grid` 是**默认**：挑作品时封面比文字有效得多；要看打分 / 标签 / 状态再切 `list`。
- * 网格只画封面（点格子进清单编辑页），列表复用 `UlistItemRow`。
+ * 清单 Tab 与制作者详情的「作品」页签共用这一个偏好（`preferences.vnViewMode`）。
  */
-export type UlistViewMode = "grid" | "list";
+export type VnViewMode = "grid" | "list";
 
 export interface Preferences {
   /** NSFW 图片处理，默认 blur */
   nsfwMode: NsfwMode;
   /**
-   * 「我的清单」的视图模式。
-   * `grid` = 纯封面网格（默认），`list` = 带打分 / 标签的行。
+   * 作品列表的视图模式（清单 Tab / 制作者详情的「作品」页签共用）。
+   * `grid` = 纯封面网格（默认），`list` = 带元信息的行。
    */
-  ulistViewMode: UlistViewMode;
+  vnViewMode: VnViewMode;
   /** 每页条数，上限 100（Kana 硬限制） */
   pageSize: number;
-  /** 清单（本地数据）排序 */
-  listSort: ListSortPreference;
+  /** 浏览页排序（默认：人气降序） */
+  browseSort: BrowseSortPreference;
   /** 列表卡片显示哪些信息 */
   cardFields: CardField[];
   /** 首次使用是否已看过引导 */
@@ -139,9 +133,9 @@ export interface Preferences {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   nsfwMode: "blur",
-  ulistViewMode: "grid",
+  vnViewMode: "grid",
   pageSize: 25,
-  listSort: { field: "added", reverse: true },
+  browseSort: { field: "votecount", reverse: true },
   cardFields: [...CARD_FIELD],
   hasSeenOnboarding: false,
   colorScheme: "system",
@@ -151,6 +145,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   backgroundBlur: 0,
   backgroundUrl: null,
 };
+
+/** 浏览页排序可用字段（脏数据兜底用，与 `BrowseSortField` 保持一致） */
+const BROWSE_SORT_FIELDS = new Set<BrowseSortField>(["votecount", "rating", "released", "id"]);
 
 const KEY = "vnlite.preferences";
 
@@ -184,8 +181,25 @@ export async function loadPreferences(): Promise<Preferences> {
 export function migratePreferences(stored: Record<string, unknown>): Preferences {
   const next: Preferences = { ...DEFAULT_PREFERENCES, ...(stored as Partial<Preferences>) };
 
-  // 视图模式只认 grid / list，老数据没有这一项或存了脏值 → 回默认的网格
-  next.ulistViewMode = next.ulistViewMode === "list" ? "list" : "grid";
+  /*
+   * 视图模式只认 grid / list，老数据没有这一项或存了脏值 → 回默认的网格。
+   * 这个键 2026-09-30 从 `ulistViewMode` 改名成 `vnViewMode`（清单与制作者作品共用），
+   * 旧键的值要接过来，否则老用户的选择会被重置。
+   */
+  const legacyViewMode = stored.ulistViewMode;
+  // ⚠️ 读**原始存储**而不是合并默认值后的 `next`：否则默认的 "grid" 会盖掉旧键的值
+  const viewMode = stored.vnViewMode ?? legacyViewMode;
+  next.vnViewMode = viewMode === "list" ? "list" : "grid";
+  delete (next as unknown as Record<string, unknown>).ulistViewMode;
+
+  // 浏览页排序：字段与方向都校验一遍，脏值回默认（人气降序）；
+  // 旧版本存过 `listSort`（本地清单排序，已随清单本地化一起废弃）——直接丢掉
+  const sort = stored.browseSort as { field?: unknown; reverse?: unknown } | undefined;
+  const field = BROWSE_SORT_FIELDS.has(sort?.field as BrowseSortField)
+    ? (sort?.field as BrowseSortField)
+    : DEFAULT_PREFERENCES.browseSort.field;
+  next.browseSort = { field, reverse: sort?.reverse !== false };
+  delete (next as unknown as Record<string, unknown>).listSort;
 
   if (typeof next.backgroundOpacity !== "number" || !Number.isFinite(next.backgroundOpacity)) {
     const legacyDim = stored.backgroundDim;

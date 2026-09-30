@@ -80,6 +80,13 @@ export function todayIso(): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+/** `2024-01-05` → `1 月 5 日`（每日语录的日期标签） */
+export function formatMonthDay(iso: string): string {
+  const [, month, day] = iso.split("-");
+  if (!month || !day) return iso;
+  return `${Number(month)} 月 ${Number(day)} 日`;
+}
+
 /* -------------------------------------------------------------------------- */
 /* 评分                                                                        */
 /* -------------------------------------------------------------------------- */
@@ -88,12 +95,6 @@ export function todayIso(): string {
 export function formatRating(rating: number | null | undefined): string {
   if (rating == null) return "—";
   return rating.toFixed(1);
-}
-
-/** `0.904` → `90.4`（把 0–10 的 average 统一到 0–100 便于比较） */
-export function averageToRating(average: number | null | undefined): number | null {
-  if (average == null) return null;
-  return average * 10;
 }
 
 /** 投票数缩写：`1.2k` / `13k` */
@@ -125,10 +126,10 @@ export function formatLength(length: Length | null | undefined): string {
 /** 分钟数 → `约 12 小时` / `约 40 分钟` */
 export function formatMinutes(minutes: number | null | undefined): string | null {
   if (minutes == null) return null;
-  if (minutes < 60) return `约 ${minutes} 分钟`;
+  if (minutes < 60) return `${minutes} m`;
   const hours = minutes / 60;
-  if (hours < 10) return `约 ${hours.toFixed(1).replace(/\.0$/, "")} 小时`;
-  return `约 ${Math.round(hours)} 小时`;
+  if (hours < 10) return `${hours.toFixed(1).replace(/\.0$/, "")} h`;
+  return `${Math.round(hours)} h`;
 }
 
 export function languageLabel(lang: string | null | undefined): string {

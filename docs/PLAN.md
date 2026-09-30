@@ -1,6 +1,6 @@
 # vnlite — VNDB 客户端开发规划
 
-> 状态：**M0 + M1 + M2 + M3 已完成 ✅** ｜ 需求全部定案 ｜ 当前：M4（增强）
+> 状态：**M0–M4 已完成 ✅** ｜ 需求全部定案 ｜ 当前：M5（打磨发布）
 > 质量门禁：`bun run check` 全绿（typecheck + oxlint + oxfmt + 39 项 API 冒烟 + 21 项主题冒烟 + 12 项本地库冒烟）；`bun run bundle:check` 可打包 Android
 > Q1–Q4 已确认，Q5–Q13 采用默认建议
 > 勘察数据来源：`api.vndb.org/kana/stats` 实测、`dl.vndb.org/dump/` 实测、`expo/bundledNativeModules.json` 实测、npm registry 实测、Expo 官方文档 实测
@@ -315,7 +315,7 @@ src/
 | **M1 只读浏览**   | ✅ 已完成 |
 | **M2 用户数据层** | ✅ 已完成 |
 | **M3 账号清单**   | ✅ 已完成 |
-| M4 增强           | ⬜ 未开始 |
+| **M4 增强**       | ✅ 已完成 |
 | M5 打磨发布       | ⬜ 未开始 |
 
 | 阶段              | 内容                                                                                                             | 预估       |
@@ -418,3 +418,4 @@ Master 原话：**「按照你推荐的」**（第 4 轮）
 | 第 8 轮  | **M3 完成**：清单 Tab（浏览 / 标签筛选 / 5 种本地排序 / 下拉同步 / 「N 部 · 待同步 k」状态行，读本地库离线可用）；`/ulist/[id]` 清单编辑页（打分滑杆 10–100、状态标签互斥收敛 + 自建标签、备注、起止日期严格校验、移出清单二次确认；draft + 保存一次入队）；VN 详情页清单入口（`UlistQuickButton`）+ 版本页签发行版持有状态（想要 / 已拥有 / 借出中，`PATCH /rlist`）；`setReleaseHold` 支持 VN 占位行、`toVnSummary` 投影防止详情大 JSON 进本地库                                                                                                                                                                                                                             |
 | 第 9 轮  | **工具链迁移**：lint / format 从 ESLint + Prettier 换成 oxc 系 —— `oxlint`（`.oxlintrc.json`）+ `oxfmt`（`.oxfmtrc.json`，自 prettier 配置迁移，格式差异仅 4 处 union 换行）；卸载 `eslint` / `eslint-config-expo` / `prettier` 并删除旧配置；首跑全量诊断清零（写队列冗余 spread、`useSetPreference` 伪 hook 改名、函数提升；6 条运行时 / 框架模式相关规则显式例外（含 `unicorn/no-array-sort`：Hermes 无 `toSorted`，已回退并记录 §8））；`bun run check` 门禁构成不变                                                                                                                                                                                                       |
 | 第 10 轮 | **清单架构切换（VNDB 直读直写）**：按 Master 决定，视觉小说清单数据**不再落本地库** —— 列表 / 单条 / 标签全部现拉现读（`/ulist` 无限滚动、排序与标签筛选下推给 Kana），下拉刷新取最新；**删除「同步」按钮与整条本地化链路**（`sync` / `writeQueue` / `syncPlan` / 本地 `ulist` DAO / 持久化写队列 / 乐观回滚 / 离线可读）；DB 迁移 v3 删除 `ulist` / `ulist_label` / `ulist_pending` 表（本地只剩 `account`）；`/ulist/[id]` 编辑页完全由服务端数据渲染并直写 PATCH；发行版持有状态改英文（Pending / Obtained / On loan）；**标签一律用 VNDB 英文原名**；`scripts/smoke-db.ts` 重写为迁移 / account / 编辑页纯逻辑                                                             |
+| 第 11 轮 | **M4 增强完成**：① **每日语录**（当天抽一条落 AsyncStorage，`ofTheDay(dateKey)` key 跨天换新）；② **摇一摇换一部**（`expo-sensors` 加速度计，聚焦时订阅、1.8g / 1.5s 冷却，与按钮同路径 + haptics）；③ **收藏统计页 `/stats`**（`chart-kit`：年份柱状 + 清单标签饼图 + 厂商 Top 8 手绘横条；`statsLogic` 纯函数聚合、`ULIST_STATS_FIELDS` 瘦字段集、翻页拉全量）。同轮：清单行 `/ulist/undefined` 修复、网格 / 列表双视图（默认网格）、移除排序 UI 与「标签」caption、VN 详情页右上角加入 / 移出 + 去重复渲染（评分 / 原始语言 / 清单状态）、编辑页点标题进详情；`components/BackBar` 抽出共用                                                                                 |

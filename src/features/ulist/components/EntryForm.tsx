@@ -6,11 +6,11 @@
  * 唯一的例外是「移出清单」：独立按钮 + 二次确认。
  */
 
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Button, Input, useToast } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 
 import { CoverImage } from "@/components/CoverImage";
 import { Muted, Paragraph } from "@/components/Typo";
@@ -72,8 +72,10 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
       contentContainerStyle={{ gap: 20, paddingTop: 8, paddingBottom: 32 }}
       keyboardShouldPersistTaps="handled"
     >
-      {/* 头部：直接展示本次从 VNDB 拉到的作品信息 */}
-      {entry.vn ? <EntryHeader vn={entry.vn} /> : null}
+      {/* 头部：直接展示本次从 VNDB 拉到的作品信息；点标题进作品详情页 */}
+      {entry.vn ? (
+        <EntryHeader vn={entry.vn} onPressTitle={() => router.push(`/vn/${entry.id}`)} />
+      ) : null}
 
       <View className="gap-6 px-4">
         <VoteField vote={draft.vote} onChange={(vote) => update({ vote })} />
@@ -132,21 +134,19 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
         )}
         <Muted type="body-xs">移出会同时删除该作品的全部发行版持有记录，且不可撤销</Muted>
       </View>
-
-      {/* 编辑页是导航死胡同，给一个回作品详情的出口 */}
-      <View className="px-4">
-        <Link href={`/vn/${entry.id}`} asChild>
-          <Button size="sm" variant="secondary">
-            <Button.Label>查看作品详情</Button.Label>
-          </Button>
-        </Link>
-      </View>
     </ScrollView>
   );
 }
 
 /** 头部：展示本次从 VNDB 拉到的作品信息（封面 / 标题 / 评分 / 发售日） */
-function EntryHeader({ vn }: { vn: NonNullable<UListItem["vn"]> }): JSX.Element {
+function EntryHeader({
+  vn,
+  onPressTitle,
+}: {
+  vn: NonNullable<UListItem["vn"]>;
+  /** 点标题进作品详情页（编辑页本身是导航死胡同，出口就挂在标题上） */
+  onPressTitle: () => void;
+}): JSX.Element {
   return (
     <View className="flex-row items-center gap-3 px-4">
       <CoverImage
@@ -159,7 +159,16 @@ function EntryHeader({ vn }: { vn: NonNullable<UListItem["vn"]> }): JSX.Element 
         accessibilityLabel={`${vn.title} 封面`}
       />
       <View className="flex-1 gap-1">
-        <Paragraph className="line-clamp-2 text-sm font-medium">{vn.title}</Paragraph>
+        <Pressable
+          onPress={onPressTitle}
+          className="active:opacity-60"
+          accessibilityRole="link"
+          accessibilityLabel={`查看 ${vn.title} 的详情`}
+          hitSlop={4}
+        >
+          {/* 站内链接色：标题现在同时是「进详情页」的入口 */}
+          <Paragraph className="line-clamp-2 text-sm font-medium text-link">{vn.title}</Paragraph>
+        </Pressable>
         <View className="flex-row flex-wrap items-center gap-2">
           <RatingBadge rating={vn.rating} votecount={vn.votecount} />
           <Muted type="body-xs">{formatReleased(vn.released)}</Muted>

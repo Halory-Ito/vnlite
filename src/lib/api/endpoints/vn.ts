@@ -21,6 +21,7 @@ import {
   toFieldsString,
   type Predicate,
   type QueryResponse,
+  type Quote,
   type VnDetail,
   type VnSummary,
 } from "../types";
@@ -214,9 +215,9 @@ export async function queryRandomVn(signal?: AbortSignal): Promise<VnSummary> {
   throw new Error("随机作品暂时取不到，请稍后再试");
 }
 
-/** 随机一条语录 */
-export function queryRandomQuote(signal?: AbortSignal): Promise<QueryResponse<unknown>> {
-  return api.query(
+/** 随机一条语录（每日语录当天抽一次就用它） */
+export function queryRandomQuote(signal?: AbortSignal): Promise<QueryResponse<Quote>> {
+  return api.query<Quote>(
     "/quote",
     {
       filters: ["random", "=", 1] as unknown as Predicate,

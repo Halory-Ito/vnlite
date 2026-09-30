@@ -15,7 +15,7 @@ export default function ContentScreen(): JSX.Element {
 
   return (
     <SettingsShell title="内容显示">
-      <SettingsSection title="成人内容（封面 / 截图 / 立绘）" hint="模糊档下可双击封面单独显示">
+      <SettingsSection title="成人内容">
         <SegmentedControl
           options={NSFW_OPTIONS}
           value={preferences.nsfwMode}
@@ -23,7 +23,7 @@ export default function ContentScreen(): JSX.Element {
         />
       </SettingsSection>
 
-      <SettingsSection title="每页条数（上限 100）">
+      <SettingsSection title="每页条数">
         <SegmentedControl
           options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: size }))}
           value={String(preferences.pageSize)}

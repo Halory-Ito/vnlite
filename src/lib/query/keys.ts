@@ -69,7 +69,7 @@ export const queryKeys = {
   /* ---- 语录 ---- */
   quote: {
     all: ["quote"] as const,
-    random: () => ["quote", "random"] as const,
+    /** 每日语录（key 里带本地日期，跨天自动换新） */
     ofTheDay: (dateKey: string) => ["quote", "ofTheDay", dateKey] as const,
     byVn: (vnId: string) => ["quote", "byVn", vnId] as const,
   },
@@ -81,6 +81,10 @@ export const queryKeys = {
     list: (labelId: number | null) => ["ulist", "list", labelId ?? 0] as const,
     labels: () => ["ulist", "labels"] as const,
     item: (vnId: string) => ["ulist", "item", vnId] as const,
+    /** 收藏统计（整份清单的聚合，与列表页分开缓存） */
+    stats: () => ["ulist", "stats"] as const,
+    /** 收藏统计 · 游戏类型分布（带 tags 的那一趟，单独缓存） */
+    statsTypes: () => ["ulist", "statsTypes"] as const,
   },
 
   /* ---- 账号 ---- */

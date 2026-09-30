@@ -22,6 +22,7 @@ import { pred } from "../filters";
 import {
   toFieldsString,
   type AuthInfo,
+  type FieldSpec,
   type Predicate,
   type QueryResponse,
   type UListItem,
@@ -37,6 +38,8 @@ export interface UListQueryOptions {
   /** 读谁的清单。不传 = 已认证的自己的清单 */
   user?: string;
   filters?: Predicate | Predicate[];
+  /** 覆盖默认字段集（统计页用更瘦的 `ULIST_STATS_FIELDS`） */
+  fields?: readonly FieldSpec<UListItem>[];
   sort?:
     | "id"
     | "title"
@@ -64,7 +67,7 @@ export function queryList(options: UListQueryOptions = {}): Promise<QueryRespons
     {
       user: options.user ?? null,
       filters: options.filters,
-      fields: toFieldsString(ULIST_FIELDS),
+      fields: toFieldsString(options.fields ?? ULIST_FIELDS),
       sort: options.sort ?? "added",
       reverse: options.reverse ?? true,
       results: Math.min(options.results ?? 25, 100),

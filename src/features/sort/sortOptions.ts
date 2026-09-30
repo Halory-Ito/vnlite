@@ -1,69 +1,41 @@
 /**
- * 排序选项。
+ * 浏览页的排序选项。
  *
- * 拆成两套（借鉴 vndb-lite 的 `LOCAL_SORTABLE_DATA` / `REMOTE_SORTABLE_DATA`），
- * 因为两边可用的字段根本不同：
+ * 字段直接对应 VNDB `/vn` 支持的远程排序，但只放**浏览页用得上的四个**：
  *
- *   远程（`/vn`）  有 searchrank（搜索相关度），但没有 started / added
- *   本地（`/ulist`）有 started / added / length_minutes / vote，但没有 searchrank
+ *   - `votecount` 人气（默认：评价人数降序）
+ *   - `rating`    评分
+ *   - `released`  发行日期
+ *   - `id`        ID 顺序（越新的条目 ID 越大）
  *
- * 之前我们把两者混在一起，导致搜索页和清单页都能选到对方不支持的字段。
+ * 两个刻意排除的：
+ *   - `title`：VNDB 的标题是译名，同一作品常有多个别名，按字面排序没意义（反馈过）
+ *   - `searchrank`：只有顶层过滤器是 `search` 时才允许排序，只在搜索页有意义
+ *
+ * 方向由用户在排序面板里选，`reverse` 是**该字段的默认方向**（true = 高 / 新在前）。
  */
 
-import type { VnQueryOptions } from "@/lib/api/endpoints/vn";
-import type { UListQueryOptions } from "@/lib/api/endpoints/ulist";
+import type { BrowseSortField } from "@/lib/storage/preferences";
 
-export interface SortOption<T extends string> {
-  value: T;
+export interface SortOption {
+  value: BrowseSortField;
   label: string;
-  /** true = 默认降序 */
+  /** 该字段的默认方向：true = 降序（高 / 新在前） */
   reverse: boolean;
-  /** 该字段在本地（离线）排序里是否可用 */
-  local: boolean;
-  /** 该字段在远程 API 排序里是否可用 */
-  remote: boolean;
 }
 
-/**
- * 远程（`/vn`）排序。
- *
- * `searchrank` 显示成「相关度」而不是英文原名。
- * 顺带说明：它**只有**在顶层过滤器是 `search` 时才允许排序，
- * 所以它只能出现在搜索页，不能作为浏览页的通用排序。
- *
- * ⚠️ 不含 `title`：标题是 VNDB 的译名，同一作品常有多个别名，
- * 按字面排序既不直观也基本没有意义（反馈：移除「标题」列）。
- */
-export const VN_SORT_OPTIONS: SortOption<NonNullable<VnQueryOptions["sort"]>>[] = [
-  { value: "released", label: "发行日期", reverse: true, local: true, remote: true },
-  { value: "rating", label: "评分", reverse: true, local: true, remote: true },
-  { value: "votecount", label: "人气", reverse: true, local: true, remote: true },
-  { value: "searchrank", label: "相关度", reverse: false, local: false, remote: true },
+/** 浏览页可选排序字段（数组顺序 = 面板里的展示顺序） */
+export const BROWSE_SORT_OPTIONS: readonly SortOption[] = [
+  { value: "votecount", label: "人气", reverse: true },
+  { value: "rating", label: "评分", reverse: true },
+  { value: "released", label: "发行日期", reverse: true },
+  { value: "id", label: "ID 顺序", reverse: true },
 ];
 
-/**
- * 本地清单排序。
- *
- * 比远程多出「加入时间」「打分时间」「开始游玩」「完成日期」「我的打分」，
- * 这些是 `/ulist` 独有的字段。同样不含 `title`。
- */
-export const ULIST_SORT_OPTIONS: SortOption<NonNullable<UListQueryOptions["sort"]>>[] = [
-  { value: "added", label: "加入时间", reverse: true, local: true, remote: true },
-  { value: "voted", label: "打分时间", reverse: true, local: true, remote: true },
-  { value: "vote", label: "我的打分", reverse: true, local: true, remote: true },
-  { value: "started", label: "开始游玩", reverse: true, local: true, remote: true },
-  { value: "finished", label: "完成日期", reverse: true, local: true, remote: true },
-  { value: "released", label: "发行日期", reverse: true, local: true, remote: true },
-  { value: "rating", label: "评分", reverse: true, local: true, remote: true },
-];
+/** 默认排序：人气降序（Master 定） */
+export const DEFAULT_BROWSE_SORT: SortOption = BROWSE_SORT_OPTIONS[0]!;
 
-/** 浏览页可用的排序（排除只能用于搜索的 searchrank） */
-export const BROWSE_SORT_OPTIONS = VN_SORT_OPTIONS.filter((o) => o.value !== "searchrank");
-
-export function findSort<T extends string>(
-  options: SortOption<T>[],
-  value: T | undefined,
-  fallback: SortOption<T>
-): SortOption<T> {
-  return options.find((o) => o.value === value) ?? fallback;
+/** 按 value 找选项，找不到给默认 */
+export function findSortOption(value: BrowseSortField): SortOption {
+  return BROWSE_SORT_OPTIONS.find((option) => option.value === value) ?? DEFAULT_BROWSE_SORT;
 }

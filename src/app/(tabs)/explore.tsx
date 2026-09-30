@@ -1,60 +1,51 @@
 /**
  * 浏览页：可排序 / 可筛选的 VN 大列表。
  *
- * 与首页的区别：这里是「一次看很多」的入口，支持排序切换 + 筛选面板。
- * 首页点「全部」会带 `?sort=` 参数跳过来。
+ * 与首页的区别：这里是「一次看很多」的入口，支持**排序面板**（字段 + 方向）
+ * 与筛选面板。排序偏好存 `preferences.browseSort`（默认人气降序）。
  *
- * 筛选面板是全屏覆盖层（`FilterPanel`），**不是** BottomSheet ——
+ * 排序 / 筛选 / 卡片显示三个面板都是全屏覆盖层（`Panel.tsx`），**不是** BottomSheet ——
  * 原因见该文件顶部，简单说是为了避开全局 Portal 层的触摸穿透。
  */
 
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { Icon } from "@/components/Icon";
-import { SegmentedControl } from "@/components/SegmentedControl";
 import { Muted } from "@/components/Typo";
 import { ActiveFilterStrip, describeFilters } from "@/features/browse/components/FilterSummary";
 import { DisplayPanel } from "@/features/browse/components/DisplayPanel";
 import { FilterPanel } from "@/features/browse/components/FilterPanel";
-import { BROWSE_SORT_OPTIONS, findSort } from "@/features/sort/sortOptions";
+import { SortPanel } from "@/features/browse/components/SortPanel";
+import { DEFAULT_BROWSE_SORT, findSortOption } from "@/features/sort/sortOptions";
 import { flattenPages, useVnList } from "@/features/vn/hooks";
 import { VnInfiniteList } from "@/features/vn/components/VnInfiniteList";
 import { usePreferences } from "@/hooks/usePreferences";
 import type { VnFilterState } from "@/lib/api/filters";
 import type { VnSummary } from "@/lib/api/types";
-import { CARD_FIELD } from "@/lib/storage/preferences";
-
-type SortKey = (typeof BROWSE_SORT_OPTIONS)[number]["value"];
-
-const VALID_SORTS = new Set<string>(BROWSE_SORT_OPTIONS.map((o) => o.value));
+import { CARD_FIELD, setPreference } from "@/lib/storage/preferences";
 
 export default function BrowseTab(): JSX.Element {
   const router = useRouter();
-  const params = useLocalSearchParams<{ sort?: string }>();
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const preferences = usePreferences();
 
-  const [sortValue, setSortValue] = useState<SortKey>(() =>
-    params.sort && VALID_SORTS.has(params.sort) ? (params.sort as SortKey) : "released"
-  );
   const [filters, setFilters] = useState<VnFilterState>({});
+  const [sortOpen, setSortOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
 
-  const sort = useMemo(
-    () => findSort(BROWSE_SORT_OPTIONS, sortValue, BROWSE_SORT_OPTIONS[0]!),
-    [sortValue]
-  );
+  const sortPref = preferences.browseSort;
+  const sort = useMemo(() => findSortOption(sortPref.field), [sortPref.field]);
 
   const query = useVnList({
     filters: Object.keys(filters).length > 0 ? filters : undefined,
     sort: sort.value,
-    reverse: sort.reverse,
+    reverse: sortPref.reverse,
   });
 
   const items = flattenPages<VnSummary>(query.data?.pages);
@@ -62,13 +53,34 @@ export default function BrowseTab(): JSX.Element {
   const activeFilterCount = describeFilters(filters).length;
   // 卡片字段被改过（不是全开）时给「显示」按钮上强调色，和筛选按钮的用法一致
   const customizedDisplay = preferences.cardFields.length !== CARD_FIELD.length;
+  // 排序不是默认（人气降序）时给「排序」按钮上强调色，同上
+  const customizedSort =
+    sortPref.field !== DEFAULT_BROWSE_SORT.value ||
+    sortPref.reverse !== DEFAULT_BROWSE_SORT.reverse;
 
   return (
     <View className="flex-1">
       <View className="gap-2 px-4 pt-1 pb-2">
         <View className="flex-row items-center justify-between">
-          <Muted type="h5">浏览</Muted>
           <View className="flex-row items-center gap-1">
+            {/* 排序：字段 + 方向都在面板里选，默认人气降序 */}
+            <Pressable
+              onPress={() => setSortOpen(true)}
+              className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
+              accessibilityRole="button"
+              accessibilityLabel={customizedSort ? "排序设置，已自定义" : "排序设置"}
+              hitSlop={6}
+            >
+              <Icon
+                name="barsAscendingAlignLeft"
+                size={18}
+                color={customizedSort ? accent : muted}
+              />
+              <Muted type="body-sm" className={customizedSort ? "text-accent" : "text-muted"}>
+                排序
+              </Muted>
+            </Pressable>
+
             {/* 卡片显示：和筛选是两码事，所以单独一个入口，放在筛选左边 */}
             <Pressable
               onPress={() => setDisplayOpen(true)}
@@ -104,12 +116,6 @@ export default function BrowseTab(): JSX.Element {
           </View>
         </View>
 
-        <SegmentedControl
-          options={BROWSE_SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-          value={sortValue}
-          onChange={setSortValue}
-        />
-
         {/* 列表外的条件速览：不打开面板也能看到、点标签直接撤销 */}
         <ActiveFilterStrip filters={filters} onChange={setFilters} />
       </View>
@@ -135,6 +141,14 @@ export default function BrowseTab(): JSX.Element {
        * 没有 Portal、没有 BottomSheet —— 关闭时整棵子树消失，
        * 不存在「关掉了还留一层吃触摸」的问题。
        */}
+      {sortOpen ? (
+        <SortPanel
+          value={sortPref}
+          onChange={(next) => void setPreference("browseSort", next)}
+          onClose={() => setSortOpen(false)}
+        />
+      ) : null}
+
       {panelOpen ? (
         <FilterPanel
           onClose={() => setPanelOpen(false)}

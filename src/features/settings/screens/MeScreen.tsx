@@ -11,7 +11,7 @@
 import { useRouter } from "expo-router";
 import { ListGroup, Typography, useThemeColor, useToast } from "heroui-native";
 import type { JSX } from "react";
-import { Pressable, ScrollView, useColorScheme, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 
 import { Icon } from "@/components/Icon";
 import { Divider } from "@/components/Separator";
@@ -21,16 +21,14 @@ import { NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useSession } from "@/hooks/useSession";
 import { clearContentCache } from "@/lib/query/client";
-import { getTheme, resolveMode } from "@/theme/themes";
+import { getTheme } from "@/theme/themes";
 
 export default function MeScreen(): JSX.Element {
   const router = useRouter();
   const preferences = usePreferences();
-  const systemScheme = useColorScheme();
   const { toast } = useToast();
-  // 「外观」那行的读数是主题名 + 当前生效的明暗，同步算出来即可，不用另存状态
+  // 「外观」那行的读数是主题名，同步算出来即可，不用另存状态
   const theme = getTheme(preferences.themeId);
-  const mode = resolveMode(preferences.colorScheme, systemScheme);
 
   const clearCache = () => {
     void clearContentCache().then(() => toast.show("已清空浏览缓存"));
@@ -44,7 +42,7 @@ export default function MeScreen(): JSX.Element {
         <SettingsItem
           icon="palette"
           label="外观"
-          value={`${theme.name} · ${mode === "dark" ? "暗" : "亮"}`}
+          value={`${theme.name}`}
           onPress={() => router.push("/settings/appearance")}
         />
         <Divider className="mx-4" />
@@ -55,6 +53,10 @@ export default function MeScreen(): JSX.Element {
           value={optionLabel(NSFW_OPTIONS, preferences.nsfwMode)}
           onPress={() => router.push("/settings/content")}
         />
+        <Divider className="mx-4" />
+
+        {/* 收藏统计原来在首页的常用入口里，按 Master 要求挪进「我的」 */}
+        <SettingsItem icon="chartPie" label="收藏统计" onPress={() => router.push("/stats")} />
         <Divider className="mx-4" />
 
         <SettingsItem icon="trashBin" label="清空浏览缓存" tone="danger" onPress={clearCache} />
