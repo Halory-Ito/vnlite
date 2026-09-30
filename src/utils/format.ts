@@ -9,6 +9,7 @@ import {
   DEV_STATUS,
   LENGTH,
   LANGUAGE_LABEL,
+  LIST_STATUS,
   PLATFORM_LABEL,
   SEX_LABEL,
   STAFF_ROLE_LABEL,
@@ -25,6 +26,8 @@ import {
 
 /** `TBA` = to be announced，未定档 */
 export const TBA = "TBA";
+
+const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /**
  * 发布日期。
@@ -68,8 +71,13 @@ export function formatUnixDate(timestamp: number | null | undefined): string | n
   if (!timestamp) return null;
   const d = new Date(timestamp * 1000);
   if (Number.isNaN(d.getTime())) return null;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** 今天（本地时区）→ `2024-01-05`，清单日期输入的「今天」快捷键用 */
+export function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -145,6 +153,12 @@ export function staffRoleLabel(role: StaffRole | string | undefined): string {
 export function devStatusLabel(status: number | null | undefined): string {
   if (status == null) return "未知";
   return DEV_STATUS[status] ?? "未知";
+}
+
+/** 发行版持有状态（0–4）→ 英文（与 VNDB 一致，见 `LIST_STATUS`） */
+export function listStatusLabel(status: number | null | undefined): string {
+  if (status == null) return "Unknown";
+  return LIST_STATUS[status] ?? "Unknown";
 }
 
 export function voicedLabel(voiced: number | null | undefined): string {

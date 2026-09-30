@@ -30,7 +30,9 @@ export interface Account {
 }
 
 export type SessionState =
-  { status: "loading" } | { status: "guest" } | { status: "authenticated"; account: Account };
+  | { status: "loading" }
+  | { status: "guest" }
+  | { status: "authenticated"; account: Account };
 
 let current: SessionState = { status: "loading" };
 const listeners = new Set<(state: SessionState) => void>();

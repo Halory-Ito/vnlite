@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "import", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "env": {
+    "es2024": true,
+    "browser": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    "node_modules",
+    ".expo",
+    "dist",
+    ".tmp-export",
+    "ios",
+    "android",
+    "expo-env.d.ts",
+    "uniwind-types.d.ts"
+  ],
+  "rules": {
+    "no-unused-vars": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "react-hooks/rules-of-hooks": "error",
+
+    // React 17+ 自动 JSX runtime，不需要 React 在作用域里
+    "react/react-in-jsx-scope": "off",
+    // tabBarIcon 这类 render prop 必须内联写（react-navigation API 要求）
+    "react/no-unstable-nested-components": "off",
+    // expo-status-bar 的 style 是 "auto" | "light" | "dark" 字符串，不是样式对象
+    "react/style-prop-object": "off",
+    // app/_layout 的 global.css 是副作用导入
+    "import/no-unassigned-import": "off",
+    // 串行 await 是有意为之：SQLite 事务、限流下的顺序请求、分页循环
+    "eslint/no-await-in-loop": "off",
+    // ⚠️ Hermes（RN 0.86 / Expo Go）没有 ES2023 的 Array.prototype.toSorted，
+    // 采信这条规则的建议会在真机上 `undefined is not a function` 崩溃；
+    // 本仓库约定：原地 sort 一律落在副本上（见 features/ulist/listOrder.ts）
+    "unicorn/no-array-sort": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/features/vn/components/VnStaffTab.tsx"],
+      "rules": {
+        // 静态只读列表（不重排、不增删），且同一角色组内 id 可能重复：
+        // 「id-索引」是刻意的合键，索引参与反而是唯一性保证
+        "react/no-array-index-key": "off"
+      }
+    }
+  ]
+}

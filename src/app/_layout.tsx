@@ -14,7 +14,8 @@ import { ThemeProvider } from "@/theme/ThemeProvider";
 import "../global.css";
 
 export default function RootLayout(): JSX.Element {
-  // 冷启动恢复登录态：读 SecureStore 的 token → /authinfo 校验 → 写本地 account 表
+  // 冷启动恢复登录态：读 SecureStore 的 token → /authinfo 校验 → 写本地 account 表。
+  // 清单数据不落库（服务端直读），所以这里没有清单同步要做
   useEffect(() => {
     void restoreSession();
   }, []);

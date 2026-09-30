@@ -314,6 +314,10 @@ export const AUTH_INFO_FIELDS = [
 /**
  * `/ulist` 行字段。
  * `vn` 子对象刻意只取列表级字段，避免清单页拉全量详情撑爆 `Too much data selected`。
+ *
+ * ⚠️ `vn.id` **请求了也不会返回**：它与顶层 `id` 相同，VNDB 会省略（实测）。
+ * 需要用 VN id 时一律取 `UListItem.id`；拿 `vn.id` 拼路由会得到 `/ulist/undefined`
+ * （真事故：编辑页 `400 Invalid 'id' filter`，见 `UlistItemRow` 的注释）。
  */
 export const ULIST_FIELDS = [
   "id",

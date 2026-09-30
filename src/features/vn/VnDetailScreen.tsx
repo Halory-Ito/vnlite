@@ -35,6 +35,7 @@ import { ImageViewer, type ViewerImage } from "@/components/ImageViewer";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ScreenState";
 import { H2, Muted } from "@/components/Typo";
 import { RatingBadge } from "@/components/ui";
+import { UlistQuickButton } from "@/features/ulist/components/UlistQuickButton";
 import type { VnDetail } from "@/lib/api/types";
 import { devStatusLabel, formatReleased, languageLabel } from "@/utils/format";
 
@@ -48,7 +49,13 @@ import { VnStaffTab } from "./components/VnStaffTab";
 import { useVnDetail } from "./hooks";
 
 type TabKey =
-  "overview" | "characters" | "staff" | "releases" | "screenshots" | "relations" | "extlinks";
+  | "overview"
+  | "characters"
+  | "staff"
+  | "releases"
+  | "screenshots"
+  | "relations"
+  | "extlinks";
 
 /**
  * 页签定义表。
@@ -178,6 +185,7 @@ function Header({ vn, onCoverPress }: { vn: VnDetail; onCoverPress: () => void }
         <Muted type="body-xs">
           原始均分 {vn.average != null ? vn.average.toFixed(2) : "—"} / 10
         </Muted>
+        <UlistQuickButton vnId={vn.id} />
         <Muted type="body-xs">
           {formatReleased(vn.released)}
           {vn.olang ? ` · ${languageLabel(vn.olang)}` : ""}

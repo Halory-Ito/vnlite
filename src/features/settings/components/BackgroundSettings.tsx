@@ -19,11 +19,12 @@ import { View } from "react-native";
 
 import { Muted } from "@/components/Muted";
 import { Paragraph } from "@/components/Typo";
-import { usePreferences, useSetPreference } from "@/hooks/usePreferences";
-import { patchPreferences } from "@/lib/storage/preferences";
+import { usePreferences } from "@/hooks/usePreferences";
 import {
   BACKGROUND_BLUR_RANGE,
   BACKGROUND_OPACITY_RANGE,
+  patchPreferences,
+  setPreference,
   type Preferences,
 } from "@/lib/storage/preferences";
 
@@ -31,7 +32,6 @@ import { LabeledSlider } from "./LabeledSlider";
 
 export function BackgroundSettings(): JSX.Element {
   const preferences = usePreferences();
-  const setPreference = useSetPreference;
 
   return (
     <View className="gap-4">
@@ -52,7 +52,6 @@ export function BackgroundSettings(): JSX.Element {
 }
 
 function BackgroundSliders({ preferences }: { preferences: Preferences }): JSX.Element {
-  const setPreference = useSetPreference;
   const { backgroundOpacity, backgroundBlur } = preferences;
 
   return (

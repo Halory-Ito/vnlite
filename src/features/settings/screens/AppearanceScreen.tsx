@@ -12,13 +12,13 @@ import { SegmentedControl } from "@/components/SegmentedControl";
 import { BackgroundSettings } from "@/features/settings/components/BackgroundSettings";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/SettingsShell";
 import { SCHEME_OPTIONS } from "@/features/settings/options";
-import { usePreferences, useSetPreference } from "@/hooks/usePreferences";
+import { usePreferences } from "@/hooks/usePreferences";
+import { setPreference } from "@/lib/storage/preferences";
 import { resolveMode, THEMES } from "@/theme/themes";
 import { ThemeTile } from "@/theme/ThemeTile";
 
 export default function AppearanceScreen(): JSX.Element {
   const preferences = usePreferences();
-  const setPreference = useSetPreference;
   const systemScheme = useColorScheme();
   // 主题 tile 的色块按**当前生效的模式**取色，而不是主题自带的明暗
   const mode = resolveMode(preferences.colorScheme, systemScheme);

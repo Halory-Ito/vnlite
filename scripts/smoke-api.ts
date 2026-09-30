@@ -11,10 +11,16 @@
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { CHARACTER_LIST_FIELDS, VN_DETAIL_FIELDS, VN_LIST_FIELDS } from "@/lib/api/fields";
-import { byTag, byVn, characterInVn, compileVnFilters } from "@/lib/api/filters";
+import { byTag, byVn, characterInVn, compileVnFilters, pred } from "@/lib/api/filters";
 import { getVn, queryRandomVn, queryVns } from "@/lib/api/endpoints/vn";
 import { getTag, queryCharacters, queryTags } from "@/lib/api/endpoints/catalog";
-import { getListLabels, queryList, sanitizeLabels, toggleLabel } from "@/lib/api/endpoints/ulist";
+import {
+  getListLabels,
+  getListItem,
+  queryList,
+  sanitizeLabels,
+  toggleLabel,
+} from "@/lib/api/endpoints/ulist";
 import { toFieldsString, type Predicate } from "@/lib/api/types";
 import { RateLimiter } from "@/lib/api/rateLimiter";
 
@@ -324,6 +330,46 @@ async function main(): Promise<void> {
   await check("读公开用户清单（u2，不需要 token）", async () => {
     const r = await queryList({ user: "u2", results: 2 });
     assert(Array.isArray(r.results), "应返回数组");
+  });
+
+  await check("getListItem 单条读取（清单编辑页 / 详情入口依赖）", async () => {
+    const r = await getListItem("v17", "u2");
+    assert(r.results.length === 1 && r.results[0]?.id === "v17", "应返回 v17 单条");
+  });
+
+  await check("清单行导航 id 取顶层：/ulist 的 vn 子对象不带 id", async () => {
+    const r = await queryList({ user: "u2", results: 5 });
+    assert(r.results.length > 0, "u2 清单应有条目");
+    // VNDB 会省略与顶层相同的嵌套 id：item.vn.id 是 undefined，
+    // 导航必须用 item.id —— 用 vn.id 会拼出 /ulist/undefined → 400（真事故）。
+    for (const item of r.results) {
+      assert(item.vn === undefined || item.vn.id === undefined, `v${item.id} 的 vn.id 应缺省`);
+    }
+    const first = r.results[0]!;
+    const single = await getListItem(first.id, "u2");
+    assert(single.results[0]?.id === first.id, `顶层 id ${first.id} 应能查回单条`);
+  });
+
+  await check("清单标签过滤（服务端下推，label 过滤器生效）", async () => {
+    const r = await queryList({ user: "u2", filters: pred("label", "=", 1), results: 5 });
+    assert(r.results.length > 0, "应有 Playing 标签的条目");
+    for (const item of r.results) {
+      assert(
+        (item.labels ?? []).some((label) => label.id === 1),
+        `条目 ${item.id} 应含 label 1`
+      );
+    }
+  });
+
+  await check("清单按我的打分排序（vote 降序，服务端排序）", async () => {
+    const r = await queryList({ user: "u2", sort: "vote", reverse: true, results: 5 });
+    const votes = r.results.map((item) => item.vote ?? -1);
+    assert(votes.length > 1, "应有多条可比");
+    for (let i = 1; i < votes.length; i += 1) {
+      const prev = votes[i - 1] as number;
+      const curr = votes[i] as number;
+      assert(prev >= curr, `vote 应降序：${votes.join(",")}`);
+    }
   });
 
   await check("读公开用户标签", async () => {

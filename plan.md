@@ -2,7 +2,7 @@
 
 > 格式：`Module`（1 级目录）→ `Type`（2 级目录）→ `List`（复选框）
 > `- [x]` = 已实现并通过质量门禁；`- [ ]` = 待实现 / 计划中
-> 质量门禁：`bun run check`（typecheck + lint + format + API/主题冒烟）、`bun run bundle:check`
+> 质量门禁：`bun run check`（typecheck + lint + format + API / 主题 / 本地库冒烟）、`bun run bundle:check`
 
 ---
 
@@ -12,7 +12,18 @@
 
 - [x] Expo SDK 57 + RN 0.86 + React 19.2 + expo-router 57（文件路由）
 - [x] HeroUI Native 1.0.10 + Uniwind 1.10（Tailwind v4）接入 Metro
-- [x] bun 作为包管理器，ESLint / Prettier / TypeScript 严格模式
+- [x] bun 作为包管理器，TypeScript 严格模式；lint / format 采用 oxc 系工具链
+      （`oxlint` + `oxfmt`，2026-09-30 从 ESLint + Prettier 迁移）
+  - [x] `oxlint`（`bun run lint` / `lint:fix`）+ `.oxlintrc.json`：
+        typescript / react / import / unicorn / oxc 插件，correctness=error、suspicious / perf=warn
+  - [x] `oxfmt`（`bun run format` / `format:check`）+ `.oxfmtrc.json`：
+        自 prettier 配置一键迁移（含 ignorePatterns），格式差异仅 4 处 union 换行
+  - [x] 卸载 `eslint` / `eslint-config-expo` / `prettier`，删除
+        `eslint.config.js` / `.prettierrc.json` / `.prettierignore`
+  - [x] 首跑全量诊断已清零（`oxlint --deny-warnings` 0 输出）：
+        修掉写队列的冗余 spread 回退、`useSetPreference` 伪 hook 改名（rules-of-hooks 误报链）、
+        函数提升到模块级；对 6 条与运行时 / 框架模式冲突的规则做了显式例外并注明理由
+        （含 `unicorn/no-array-sort` —— Hermes 没有 `toSorted`，采信它会真机崩溃，见 docs/PLAN.md §8）
 - [x] `bun run check` 一键质量门禁
 - [x] `components/Icon` + `components/iconGlyphs` —— Gravity UI 图标的 RN 封装
       （`@gravity-ui/icons` 只出渲染原生 `<svg>` 的 Web 组件，源码内置走 `react-native-svg`）
@@ -34,8 +45,15 @@
 - [x] `lib/storage/keyValue` —— KV 抽象 + AsyncStorage 实现
 - [x] `lib/storage/preferences` —— 应用偏好（KV 层，模块级缓存 + 订阅）
 - [x] `lib/storage/session` —— SecureStore 存 Token + 冷启动 `restoreSession`
-- [ ] `lib/db` —— SQLite schema + DAO（ulist / ulist_label / account）
-- [ ] 持久化写队列（杀进程不丢）
+- [x] `lib/db` —— SQLite schema + account DAO（**v3 起清单数据不落库**）
+  - [x] 迁移按 `PRAGMA user_version` 推进；**v3 删除旧的 `ulist` / `ulist_label` /
+        `ulist_pending` 表**（清单改 VNDB 直读直写，见 Type 3.2）
+  - [x] `setDatabaseProvider` 可注入 DB 实现（bun 冒烟用 `bun:sqlite` 适配器，
+        生产懒加载 expo-sqlite，原生模块不会进 bun 进程）
+- [x] `scripts/smoke-db.ts` 本地库冒烟（迁移 / account / 编辑页纯逻辑）
+
+> ⚠️ **2026-09-30 架构调整**：此前实现的本地清单镜像（持久化写队列 / 乐观回滚 /
+> 全量同步 / 离线可读）**全部移除** —— 清单数据一律不落本地库，改为 VNDB 直读直写。
 
 ---
 
@@ -233,12 +251,48 @@
 - [x] 粘贴 Token 登录 + `/authinfo` 权限校验
 - [x] 权限检查（`listread` / `listwrite` 缺失时给出提示）
 
-### Type 3.2 · 清单
+### Type 3.2 · 清单（**VNDB 直读直写**）
 
-- [ ] SQLite `ulist` / `ulist_label` / `account` 表
-- [ ] 清单浏览 / 筛选 / 排序（`components/SegmentedControl` 已就位）
-- [ ] 打分 / 标签 / 备注 / 起止日期 / 发行版持有状态
-- [ ] 乐观更新 + 失败回滚 + 脏标记
+> 2026-09-30 架构调整（Master 决定）：**视觉小说清单数据一律不保存本地数据库**，
+> 每次从 vndb.org 现拉现读；删除「同步」（下拉刷新即取最新）。
+> 此前的本地镜像 / 写队列 / 乐观回滚 / 离线可读**全部移除**。
+
+- [x] 数据层：`features/ulist/hooks.ts` 服务端驱动
+  - [x] `useUlistInfinite` —— `useInfiniteQuery` 直查 `/ulist`（每页 50）
+  - [x] `useUlistItem` —— 单条直查 `/ulist`（`filters: id = v…`）
+  - [x] `useUlistLabels` —— `GET /ulist_labels`（含 count）
+  - [x] 写入：`useUlistMutations`（PATCH / DELETE `/ulist`）、
+        `useUlistReleaseHold`（PATCH / DELETE `/rlist`），成功后失效查询重取
+- [x] 清单 Tab（`UlistTabScreen`）
+  - [x] 浏览 / 标签筛选（`label` 过滤器下推；虚拟标签 0/7 不给筛）
+  - [x] **排序 UI 已移除**（Master 要求）：清单固定「加入时间新 → 旧」，
+        原「加入 / 打分 / 开始 / 均分 / 标题」分段控件与 `ULIST_SORT_PARAM` 一并删除
+  - [x] **「标签」caption 已移除**：筛选条只剩胶囊行（`UlistLabelFilter`）
+  - [x] 下拉刷新取最新；触底翻页；空态也能下拉刷新
+  - [x] 删除「同步」按钮与「待同步」状态行；行组件复用 `VnListItem`
+  - [x] **网格 / 列表双视图**（`UlistItems`）：网格 = 纯封面墙（3 列，点格子进编辑页，
+        敏感封面仍可双击放行），列表 = 带打分 / 标签的行；右上角**单个按钮**切换
+        （`UlistViewButton`：图标 / 文案表示切过去的目标视图，不是 Tabs / 分段控件）
+  - [x] **默认网格视图**，选择存 `preferences.ulistViewMode` 跨启动记住（脏值回退网格，
+        冒烟已卡）；右上角「N 部」数量统计按 Master 要求移除
+- [x] 打分 / 标签 / 备注 / 起止日期（`/ulist/[id]` 编辑页）
+  - [x] 页面内容完全由服务端数据渲染（标题 / 封面 / 现有值），未加入时给加入入口
+  - [x] 表单 draft + 底部「保存」统一 diff 成一条 `UListPatch` 直写
+  - [x] 打分滑杆 10–100；状态标签互斥收敛（`toggleLabel`）+ 自建标签多选
+  - [x] 备注（多行）、开始 / 完成日期（YYYY-MM-DD 严格校验 + 今天/清除）
+  - [x] 移出清单二次确认（连带删除发行版持有记录，不可撤销）
+- [x] 发行版持有状态（VN 详情 · 版本页签）
+  - [x] Pending / Obtained / On loan 三档胶囊，再点已选中 = 移除记录
+  - [x] 当前状态直读 `/ulist` 的 `releases`；只在有 `listwrite` 权限时渲染
+- [x] **标签一律用 VNDB 英文原名**（Playing / Finished / 自建标签原文 / 持有状态
+      Pending·Obtained·On loan），不再做中文翻译
+- [x] VN 详情清单入口（`UlistQuickButton`）：服务端直读，不再有「本地没同步到」的误判
+- [x] **修复：清单列表点条目跳 `/ulist/undefined` 进错误页**
+      （根因：`/ulist` 的 `vn` 子对象**不带 `id`** —— 与顶层 `id` 相同被 VNDB 省略，
+      请求 `vn.id` 也不返回。`UlistItemRow` 之前把 `vn` 原样交给 `VnListItem`，
+      点击回调取 `vn.id = undefined` → 路由变成 `/ulist/undefined` → 编辑页拿它当
+      过滤器 → `400 Invalid 'id' filter`。现改用顶层 `item.id` 导航；编辑页对非法
+      参数给「无效的作品 ID」空态、不发请求（`entryLogic.isVnId` + 冒烟））
 
 ### Type 3.3 · 统计
 

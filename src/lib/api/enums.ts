@@ -286,8 +286,8 @@ export const VOICED_LABEL: Record<Voiced, string> = {
   4: "全配音",
 };
 
-/** 发行版在用户清单里的持有状态 */
-export const LIST_STATUS = ["未知", "想要", "已拥有", "借出中", "已删除"] as const;
+/** 发行版在用户清单里的持有状态（英文与 VNDB 一致，不做翻译） */
+export const LIST_STATUS = ["Unknown", "Pending", "Obtained", "On loan", "Deleted"] as const;
 export type ListStatus = 0 | 1 | 2 | 3 | 4;
 
 /**
@@ -302,9 +302,25 @@ export const BUILTIN_LABEL = {
   STALLED: 3,
   DROPPED: 4,
   PLANNED: 5,
+  BLACKLIST: 6,
   /** 随 vote 自动增删，不可手动设置 */
   VOTED: 7,
 } as const;
+
+/**
+ * 内置清单标签的**英文名兜底**（与 vndb.org 一致，不做翻译）。
+ * 正常路径下名称来自 `GET /ulist_labels`，这里只在标签表还没加载出来时兜底。
+ */
+export const BUILTIN_LABEL_NAME: Record<number, string> = {
+  [BUILTIN_LABEL.NO_LABEL]: "No label",
+  [BUILTIN_LABEL.PLAYING]: "Playing",
+  [BUILTIN_LABEL.FINISHED]: "Finished",
+  [BUILTIN_LABEL.STALLED]: "Stalled",
+  [BUILTIN_LABEL.DROPPED]: "Dropped",
+  [BUILTIN_LABEL.PLANNED]: "Wishlist",
+  [BUILTIN_LABEL.BLACKLIST]: "Blacklist",
+  [BUILTIN_LABEL.VOTED]: "Voted",
+};
 
 /** 互斥的状态标签：写入时必须只保留其中一个（API 不会自动清理） */
 export const EXCLUSIVE_STATUS_LABELS: readonly number[] = [

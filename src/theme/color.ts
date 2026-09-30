@@ -64,9 +64,12 @@ export function parseColor(input: string): Rgb {
   return { r: 128, g: 128, b: 128 };
 }
 
+function hexPart(n: number): string {
+  return Math.round(clamp(n)).toString(16).padStart(2, "0");
+}
+
 export function toHex({ r, g, b }: Rgb): string {
-  const part = (n: number) => Math.round(clamp(n)).toString(16).padStart(2, "0");
-  return `#${part(r)}${part(g)}${part(b)}`;
+  return `#${hexPart(r)}${hexPart(g)}${hexPart(b)}`;
 }
 
 /** 线性插值。t=0 返回 a，t=1 返回 b */
@@ -90,13 +93,14 @@ export const CONTRAST_AA = 4.5;
 /** 次要文字（大字号 / 辅助信息）的目标 */
 export const CONTRAST_MUTED = 3;
 
+function srgbChannel(value: number): number {
+  const c = value / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
 /** 相对亮度（WCAG 2.x），0–1 */
 export function relativeLuminance({ r, g, b }: Rgb): number {
-  const channel = (value: number): number => {
-    const c = value / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  return 0.2126 * srgbChannel(r) + 0.7152 * srgbChannel(g) + 0.0722 * srgbChannel(b);
 }
 
 /**

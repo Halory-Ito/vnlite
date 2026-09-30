@@ -13,8 +13,13 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted } from "@/components/Typo";
-import { usePreferences, useSetPreference } from "@/hooks/usePreferences";
-import { CARD_FIELD, CARD_FIELD_LABEL, type CardField } from "@/lib/storage/preferences";
+import { usePreferences } from "@/hooks/usePreferences";
+import {
+  CARD_FIELD,
+  CARD_FIELD_LABEL,
+  setPreference,
+  type CardField,
+} from "@/lib/storage/preferences";
 
 import { FilterChip, FilterGroup, type FilterChipOption } from "./FilterGroup";
 import { FullScreenPanel } from "./Panel";
@@ -30,7 +35,6 @@ export interface DisplayPanelProps {
 
 export function DisplayPanel({ onClose }: DisplayPanelProps): JSX.Element {
   const preferences = usePreferences();
-  const setPreference = useSetPreference;
   const selected = preferences.cardFields;
 
   /** 保持 CARD_FIELD 的固定顺序，免得 chip 顺序跟着点选跳 */

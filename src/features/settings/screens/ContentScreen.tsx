@@ -7,11 +7,11 @@ import type { JSX } from "react";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/SettingsShell";
 import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS } from "@/features/settings/options";
-import { usePreferences, useSetPreference } from "@/hooks/usePreferences";
+import { usePreferences } from "@/hooks/usePreferences";
+import { setPreference } from "@/lib/storage/preferences";
 
 export default function ContentScreen(): JSX.Element {
   const preferences = usePreferences();
-  const setPreference = useSetPreference;
 
   return (
     <SettingsShell title="内容显示">

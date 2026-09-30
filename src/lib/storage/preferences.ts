@@ -89,9 +89,22 @@ export const CARD_FIELD_LABEL: Record<CardField, string> = {
   devstatus: "开发状态",
 };
 
+/**
+ * 「我的清单」的两种视图。
+ *
+ * `grid` 是**默认**：挑作品时封面比文字有效得多；要看打分 / 标签 / 状态再切 `list`。
+ * 网格只画封面（点格子进清单编辑页），列表复用 `UlistItemRow`。
+ */
+export type UlistViewMode = "grid" | "list";
+
 export interface Preferences {
   /** NSFW 图片处理，默认 blur */
   nsfwMode: NsfwMode;
+  /**
+   * 「我的清单」的视图模式。
+   * `grid` = 纯封面网格（默认），`list` = 带打分 / 标签的行。
+   */
+  ulistViewMode: UlistViewMode;
   /** 每页条数，上限 100（Kana 硬限制） */
   pageSize: number;
   /** 清单（本地数据）排序 */
@@ -126,6 +139,7 @@ export interface Preferences {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   nsfwMode: "blur",
+  ulistViewMode: "grid",
   pageSize: 25,
   listSort: { field: "added", reverse: true },
   cardFields: [...CARD_FIELD],
@@ -153,7 +167,7 @@ function emit(): void {
 export async function loadPreferences(): Promise<Preferences> {
   if (hydrated) return snapshot;
   const stored = await kv.get<Record<string, unknown>>(KEY);
-  snapshot = migrate(stored ?? {});
+  snapshot = migratePreferences(stored ?? {});
   hydrated = true;
   emit();
   return snapshot;
@@ -164,9 +178,14 @@ export async function loadPreferences(): Promise<Preferences> {
  *
  * 除了「缺字段补默认值」，还要把已废弃的 `backgroundDim`(0–3 四档)
  * 换算成连续的 `backgroundOpacity`，否则老用户升级后遮罩直接变成 0（等于没遮）。
+ *
+ * 导出是为了冒烟测试能直接验证迁移规则（`bun run smoke:db`）。
  */
-function migrate(stored: Record<string, unknown>): Preferences {
+export function migratePreferences(stored: Record<string, unknown>): Preferences {
   const next: Preferences = { ...DEFAULT_PREFERENCES, ...(stored as Partial<Preferences>) };
+
+  // 视图模式只认 grid / list，老数据没有这一项或存了脏值 → 回默认的网格
+  next.ulistViewMode = next.ulistViewMode === "list" ? "list" : "grid";
 
   if (typeof next.backgroundOpacity !== "number" || !Number.isFinite(next.backgroundOpacity)) {
     const legacyDim = stored.backgroundDim;

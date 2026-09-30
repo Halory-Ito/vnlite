@@ -74,14 +74,13 @@ export const queryKeys = {
     byVn: (vnId: string) => ["quote", "byVn", vnId] as const,
   },
 
-  /* ---- 用户清单（唯一会落盘的业务数据） ---- */
+  /* ---- 用户清单（服务端驱动，不落本地库） ---- */
   ulist: {
     all: ["ulist"] as const,
-    local: () => ["ulist", "local"] as const,
-    remote: (user?: string, page?: number, sort?: string) =>
-      ["ulist", "remote", user ?? "me", page ?? 1, sort ?? "added"] as const,
-    item: (vnId: string, user?: string) => ["ulist", "item", vnId, user ?? "me"] as const,
-    labels: (user?: string) => ["ulist", "labels", user ?? "me"] as const,
+    /** 列表页（标签筛选进 key；排序固定加入时间，不进 key） */
+    list: (labelId: number | null) => ["ulist", "list", labelId ?? 0] as const,
+    labels: () => ["ulist", "labels"] as const,
+    item: (vnId: string) => ["ulist", "item", vnId] as const,
   },
 
   /* ---- 账号 ---- */

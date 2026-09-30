@@ -68,6 +68,28 @@
 - [x] 角色 / 制作者 / staff / 标签 四个详情页的简介（说明）统一改成**默认折叠 6 行**
       （长简介会把页面撑得极长，下面的内容要滚很久）
 
+## 清单
+
+- [x] **移除清单排序功能与「标签」caption**（Master 要求）
+      （排序分段控件（加入 / 打分 / 开始 / 均分 / 标题）整体删掉，清单固定
+      「加入时间新 → 旧」（`sort: added, reverse: true` 写死在 `useUlistInfinite`），
+      `UlistSort` / `ULIST_SORT_PARAM` / query key 里的 sort 段一并删除；
+      标签筛选条不再有 caption，只剩胶囊行（`UlistToolbar` → `UlistLabelFilter`））
+- [x] **「我的清单」移除右上角数量统计**（`n 部`）——右上角让位给视图切换按钮
+- [x] **「我的清单」新增网格 / 列表视图切换，默认网格**
+      （网格 = 纯封面墙：3 列、VNDB 缩略图原生比例 256×362、点格子进清单编辑页、
+      敏感封面仍可双击放行；列表 = 原来的行。右上角**单个按钮**（`UlistViewButton`，
+      图标 / 文案表示切过去的目标视图，不做 Tabs / 分段控件），
+      选择存 `preferences.ulistViewMode` 跨启动记住。
+      踩坑：FlashList v2 的分列按列表自身宽度算，不认 `contentContainerStyle` 的
+      padding → 左右外边距改用外层 View，列间距用格子 padding）
+- [x] **修复：从清单列表点条目跳转进「出错了」页面**
+      （`/ulist` 返回的 `vn` 子对象**不带 `id`**：与顶层 `id` 相同、被 VNDB 省略。
+      行组件原样传 `vn` 给 `VnListItem`，点击回调取 `vn.id = undefined` → 路由拼成
+      `/ulist/undefined` → 编辑页拿 "undefined" 当过滤器 → `400 Invalid 'id' filter`。
+      改用顶层 `item.id` 导航；编辑页对非法路由参数给「无效的作品 ID」空态、不发请求；
+      `smoke:api` 补了对照检查、`smoke:db` 补了 `isVnId` 用例）
+
 ## 主题
 
 - [x] 主题切换时看不见背景图片

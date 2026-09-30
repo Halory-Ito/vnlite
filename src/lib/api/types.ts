@@ -358,6 +358,8 @@ export interface UListLabel {
   id: number;
   label: string;
   private?: boolean;
+  /** 该标签下的条目数（请求 `fields=count` 时返回） */
+  count?: number;
 }
 
 export interface UListRelease {
@@ -404,7 +406,9 @@ export type SimplePredicate = readonly [string, string, unknown];
 
 /** 组合谓词首元素 */
 export type Predicate =
-  SimplePredicate | readonly ["and", ...Predicate[]] | readonly ["or", ...Predicate[]];
+  | SimplePredicate
+  | readonly ["and", ...Predicate[]]
+  | readonly ["or", ...Predicate[]];
 
 export interface QueryBody {
   filters?: Predicate | Predicate[];
@@ -453,7 +457,9 @@ export type TopLevelField<T> = Extract<keyof T, string>;
  * 已知局限：不校验点号之后的子字段名。
  */
 export type FieldSpec<T> =
-  TopLevelField<T> | `${TopLevelField<T>}.${string}` | `${TopLevelField<T>}{${string}}`;
+  | TopLevelField<T>
+  | `${TopLevelField<T>}.${string}`
+  | `${TopLevelField<T>}{${string}}`;
 
 /** 把字段数组拼成 API 需要的逗号分隔字符串 */
 export function toFieldsString<T>(fields: readonly FieldSpec<T>[]): string {

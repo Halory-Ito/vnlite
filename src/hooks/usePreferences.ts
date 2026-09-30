@@ -11,7 +11,6 @@ import {
   DEFAULT_PREFERENCES,
   getPreferences,
   loadPreferences,
-  setPreference,
   subscribePreferences,
   type NsfwMode,
   type Preferences,
@@ -37,17 +36,16 @@ export function useNsfwMode(): NsfwMode {
   return usePreferences().nsfwMode;
 }
 
-/** `setPreference` 是模块级稳定函数，直接透传即可，不需要 useCallback */
-export const useSetPreference = setPreference;
-
 /**
- * 根据 NSFW 档位决定一张图的展示方式。
+ * 根据 NSFW 档位决定一张图的展示方式（纯函数）。
  *
  * `sexual` / `violence` 是 0(安全) / 1(暗示) / 2(露骨)，缺字段时按 2(露骨) 处理 ——
  * 宁可多遮一次，也不要漏放。
+ *
+ * 网格这类需要**自己判断「这张图会不会被隐藏」**的场景直接用它，
+ * 不必为每个格子再挂一层 hook。
  */
-export function useImageGate(flags: { sexual?: number; violence?: number }) {
-  const mode = useNsfwMode();
+export function imageGate(mode: NsfwMode, flags: { sexual?: number; violence?: number }) {
   const level = Math.max(flags.sexual ?? 2, flags.violence ?? 2);
   const isSensitive = level >= 1;
 
@@ -60,4 +58,9 @@ export function useImageGate(flags: { sexual?: number; violence?: number }) {
     /** 加模糊（只模糊「露骨」级，「暗示」级直接显示） */
     blurred: mode === "blur" && level >= 2,
   } as const;
+}
+
+/** `imageGate` 的 React 绑定版（订阅当前 NSFW 档位） */
+export function useImageGate(flags: { sexual?: number; violence?: number }) {
+  return imageGate(useNsfwMode(), flags);
 }

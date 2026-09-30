@@ -2,6 +2,7 @@
  * VN 详情 · 发行版页签。
  *
  * 数据独立请求（列表页的字段集不含发行版）。
+ * 有 `listwrite` 权限时，每个发行版带「持有状态」胶囊（Pending / Obtained / On loan）。
  */
 
 import type { JSX } from "react";
@@ -10,6 +11,7 @@ import { ScrollView, View } from "react-native";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ScreenState";
 import { Muted, Paragraph } from "@/components/Typo";
 import { PlatformBadges } from "@/components/ui";
+import { ReleaseHoldChips } from "@/features/ulist/components/ReleaseHoldChips";
 import { formatReleased } from "@/utils/format";
 
 import { useVnReleases } from "../hooks";
@@ -37,6 +39,8 @@ export function VnReleasesTab({ vnId }: { vnId: string }): JSX.Element {
               </View>
             ) : null}
           </View>
+
+          <ReleaseHoldChips vnId={vnId} release={release} />
         </View>
       ))}
     </ScrollView>
