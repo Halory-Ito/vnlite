@@ -4,7 +4,7 @@
  * 板块三个：
  *   1. 每日语录（当天固定一条，跨启动不变）
  *   2. 随机一部（真随机：最大 id + 随机号段，见 `queryRandomVn`；**摇一摇**也能换）
- *   3. 数据库统计（VNDB 全局条目数图表，`features/stats/DatabaseStats`）
+ *   3. 数据库统计（VNDB 全局条目数图表，`features/stats/database-stats`）
  *
  * 原来的常用入口（我的游戏 / 评分排行 / 我的评分排名 / 近期热门 / 收藏统计）
  * 全部移除：前四个与底部 Tab、「浏览」页重复，收藏统计挪进「我的」。
@@ -19,15 +19,15 @@ import type { JSX } from "react";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
-import { CoverImage } from "@/components/CoverImage";
-import { Icon } from "@/components/Icon";
-import { ImageViewer } from "@/components/ImageViewer";
-import { Muted, Paragraph } from "@/components/Typo";
-import { DatabaseStats } from "@/features/stats/DatabaseStats";
-import { useShake } from "@/hooks/useShake";
+import { CoverImage } from "@/components/cover-image";
+import { Icon } from "@/components/icon";
+import { ImageViewer } from "@/components/image-viewer";
+import { Muted, Paragraph } from "@/components/typo";
+import { DatabaseStats } from "@/features/stats/database-stats";
+import { useShake } from "@/hooks/use-shake";
 import { queryRandomQuote, queryRandomVn } from "@/lib/api/endpoints/vn";
 import type { VnSummary } from "@/lib/api/types";
-import { readDailyQuote, writeDailyQuote } from "@/lib/storage/dailyQuote";
+import { readDailyQuote, writeDailyQuote } from "@/lib/storage/daily-quote";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import {

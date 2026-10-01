@@ -3,8 +3,8 @@ import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import type { ColorValue } from "react-native";
 
-import { Icon, type IconName } from "@/components/Icon";
-import { usePreferences } from "@/hooks/usePreferences";
+import { Icon, type IconName } from "@/components/icon";
+import { usePreferences } from "@/hooks/use-preferences";
 import { withAlpha } from "@/theme/color";
 
 /**

@@ -4,7 +4,7 @@
  * 与首页的区别：这里是「一次看很多」的入口，支持**排序面板**（字段 + 方向）
  * 与筛选面板。排序偏好存 `preferences.browseSort`（默认人气降序）。
  *
- * 排序 / 筛选 / 卡片显示三个面板都是全屏覆盖层（`Panel.tsx`），**不是** BottomSheet ——
+ * 排序 / 筛选 / 卡片显示三个面板都是全屏覆盖层（`panel.tsx`），**不是** BottomSheet ——
  * 原因见该文件顶部，简单说是为了避开全局 Portal 层的触摸穿透。
  */
 
@@ -14,16 +14,16 @@ import type { JSX } from "react";
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 
-import { Icon } from "@/components/Icon";
-import { Muted } from "@/components/Typo";
-import { ActiveFilterStrip, describeFilters } from "@/features/browse/components/FilterSummary";
-import { DisplayPanel } from "@/features/browse/components/DisplayPanel";
-import { FilterPanel } from "@/features/browse/components/FilterPanel";
-import { SortPanel } from "@/features/browse/components/SortPanel";
-import { DEFAULT_BROWSE_SORT, findSortOption } from "@/features/sort/sortOptions";
+import { Icon } from "@/components/icon";
+import { Muted } from "@/components/typo";
+import { ActiveFilterStrip, describeFilters } from "@/features/browse/components/filter-summary";
+import { DisplayPanel } from "@/features/browse/components/display-panel";
+import { FilterPanel } from "@/features/browse/components/filter-panel";
+import { SortPanel } from "@/features/browse/components/sort-panel";
+import { DEFAULT_BROWSE_SORT, findSortOption } from "@/features/sort/sort-options";
 import { flattenPages, useVnList } from "@/features/vn/hooks";
-import { VnInfiniteList } from "@/features/vn/components/VnInfiniteList";
-import { usePreferences } from "@/hooks/usePreferences";
+import { VnInfiniteList } from "@/features/vn/components/vn-infinite-list";
+import { usePreferences } from "@/hooks/use-preferences";
 import type { VnFilterState } from "@/lib/api/filters";
 import type { VnSummary } from "@/lib/api/types";
 import { CARD_FIELD, setPreference } from "@/lib/storage/preferences";

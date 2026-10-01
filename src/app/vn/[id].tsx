@@ -1,1 +1,1 @@
-export { default } from "@/features/vn/VnDetailScreen";
+export { default } from "@/features/vn/vn-detail-screen";

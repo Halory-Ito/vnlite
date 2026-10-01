@@ -16,7 +16,7 @@ import {
   staffRoleLabel,
 } from "@/utils/format";
 
-import { H6, Muted } from "./Typo";
+import { H6, Muted } from "./typo";
 
 /* -------------------------------------------------------------------------- */
 /* 区块标题                                                                    */

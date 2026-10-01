@@ -1,1 +1,1 @@
-export { StaffDetailScreen as default } from "@/features/catalog/DetailScreens";
+export { StaffDetailScreen as default } from "@/features/catalog/detail-screens";

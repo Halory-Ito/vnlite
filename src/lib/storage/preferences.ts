@@ -3,11 +3,11 @@
  *
  * 全部走 AsyncStorage（KV 层），不进 SQLite —— 读写频繁、量小、结构简单。
  *
- * 内部是「模块级缓存 + 订阅者」模式，供 `src/hooks/usePreferences.ts`
+ * 内部是「模块级缓存 + 订阅者」模式，供 `src/hooks/use-preferences.ts`
  * 用 `useSyncExternalStore` 接到 React 树上（NSFW 档位会影响所有图片渲染）。
  */
 
-import { kv } from "./keyValue";
+import { kv } from "./key-value";
 import { BACKGROUND_BLUR_RANGE, DEFAULT_BACKGROUND_OPACITY } from "@/theme/background";
 
 /** NSFW 内容展示档位（Q6） */

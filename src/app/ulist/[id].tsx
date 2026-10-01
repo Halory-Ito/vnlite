@@ -1,12 +1,12 @@
 /**
  * 清单条目编辑页（路由入口）。
  *
- * 页面本体在 `features/ulist/UlistEntryScreen.tsx`。
+ * 页面本体在 `features/ulist/ulist-entry-screen.tsx`。
  */
 
 import type { JSX } from "react";
 
-import { UlistEntryScreen } from "@/features/ulist/UlistEntryScreen";
+import { UlistEntryScreen } from "@/features/ulist/ulist-entry-screen";
 
 export default function UlistEntryRoute(): JSX.Element {
   return <UlistEntryScreen />;

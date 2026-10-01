@@ -1,1 +1,1 @@
-export { CharacterDetailScreen as default } from "@/features/catalog/DetailScreens";
+export { CharacterDetailScreen as default } from "@/features/catalog/detail-screens";

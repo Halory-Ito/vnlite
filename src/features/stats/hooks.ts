@@ -15,7 +15,7 @@ import type { UListItem } from "@/lib/api/types";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 
-import { byGameType, type TypeBucket } from "./statsLogic";
+import { byGameType, type TypeBucket } from "./stats-logic";
 
 /** 最多翻 20 页（2000 部），超过就不再往下拉 */
 const MAX_PAGES = 20;

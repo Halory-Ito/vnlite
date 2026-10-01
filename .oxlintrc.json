@@ -43,7 +43,7 @@
   },
   "overrides": [
     {
-      "files": ["src/features/vn/components/VnStaffTab.tsx"],
+      "files": ["src/features/vn/components/vn-staff-tab.tsx"],
       "rules": {
         // 静态只读列表（不重排、不增删），且同一角色组内 id 可能重复：
         // 「id-索引」是刻意的合键，索引参与反而是唯一性保证

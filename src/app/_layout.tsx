@@ -9,7 +9,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { queryClient } from "@/lib/query/client";
 import { restoreSession } from "@/lib/storage/session";
-import { ThemeProvider } from "@/theme/ThemeProvider";
+import { ThemeProvider } from "@/theme/theme-provider";
 
 import "../global.css";
 

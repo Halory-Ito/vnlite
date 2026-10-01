@@ -1,1 +1,1 @@
-export { default } from "@/features/settings/screens/MeScreen";
+export { default } from "@/features/settings/screens/me-screen";

@@ -1,1 +1,1 @@
-export { default } from "@/features/settings/screens/ContentScreen";
+export { default } from "@/features/settings/screens/content-screen";

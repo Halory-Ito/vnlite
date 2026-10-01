@@ -2,8 +2,8 @@ import { Link } from "expo-router";
 import type { JSX } from "react";
 import { View } from "react-native";
 
-import { EmptyState } from "@/components/ScreenState";
-import { LinkText } from "@/components/Typo";
+import { EmptyState } from "@/components/screen-state";
+import { LinkText } from "@/components/typo";
 
 export default function NotFoundScreen(): JSX.Element {
   return (

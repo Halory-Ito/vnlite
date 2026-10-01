@@ -144,7 +144,7 @@
 - [x] **摇一摇换一部**（M4 增强）：`hooks/useShake`（expo-sensors 加速度计，
       只在首页聚焦时订阅、1.8g 阈值 + 1.5s 冷却），触发与「换一部」按钮同一条路径（带 haptics），
       卡片底部有「摇一摇手机也能换」提示
-- [x] **底部数据库统计图表（Master 要求）**：`features/stats/DatabaseStats`
+- [x] **底部数据库统计图表（Master 要求）**：`features/stats/database-stats`
       读 `GET /stats`（整个 VNDB 站点的条目数，与收藏统计的数据源不同），
       用 chart-kit v2 的 `PieChart`（`react-native-chart-kit/v2`）画视觉小说 /
       发行版 / 角色 / 制作人员 / 制作者 / 标签 / 特性的占比扇形图，
@@ -196,8 +196,8 @@
 
 ### Type 2.4 · 详情页
 
-- [x] `features/vn/VnDetailScreen` —— VN 详情外壳（头部固定 + 页签路由）
-- [x] `features/catalog/DetailScreens` —— 角色 / 制作者 / staff / 标签详情
+- [x] `features/vn/vn-detail-screen` —— VN 详情外壳（头部固定 + 页签路由）
+- [x] `features/catalog/detail-screens` —— 角色 / 制作者 / staff / 标签详情
 - [x] **staff 详情展示参与作品（Master 要求）**：概览 / 作品两个页签；
       `/vn` 的 `staff` 嵌套过滤器（新增 `vnWithStaff` + `queryVnsByStaff`）拉取
       该制作人员参与的全部作品（覆盖脚本 / 原画 / 音乐等全部职责），
@@ -306,11 +306,11 @@
       Cookie 挑战（503 + 种 Cookie 图片 → 重试；手动 Cookie 罐 + RN 原生 jar 双保险）；
       `fetchVnDiscussions`（讨论板列表）/ `fetchThread`（单帖正文，每页 25 楼）
 - [x] `features/discussion/hooks.ts` —— `useVnDiscussions` / `useThread` 无限翻页
-- [x] `features/discussion/components/VnDiscussionsTab.tsx` —— 帖子列表；
+- [x] `features/discussion/components/vn-discussions-tab.tsx` —— 帖子列表；
       元信息用独立元素 + 间距排版（**不用 `内容 · 内容` 拼接**，Master 要求）
-- [x] `features/discussion/components/PostContent.tsx` —— 正文渲染：嵌套 `<Text>`
+- [x] `features/discussion/components/post-content.tsx` —— 正文渲染：嵌套 `<Text>`
       表达粗体 / 斜体 / 下划线 / 链接，引用块左竖线，剧透默认盖住点按显示
-- [x] `features/discussion/components/ThreadScreen.tsx` + 路由 `app/thread/[id]` ——
+- [x] `features/discussion/components/thread-screen.tsx` + 路由 `app/thread/[id]` ——
       **站内帖子页**（不再跳浏览器）：楼层卡片 + 无限翻页 + 页脚「共 N 楼」
 - [x] VN 详情页新增「讨论」页签（现共 9 个页签）
 - [x] 冒烟新增真请求：反爬挑战能过 + 列表 / 单帖 HTML 结构还能解析（含引用块）
@@ -325,9 +325,9 @@
       自我标记的特性 / 打分分布（10 档）/ 近期打分
 - [x] `features/user/client.ts` + `hooks.ts` —— `fetchUserProfile` / `useUserProfile`
       （HTTP 走共用的 `lib/scrape/client`，同样含限流退避）
-- [x] `features/user/components/UserScreen.tsx` —— 三列概览（清单作品 / 投票数 /
+- [x] `features/user/components/user-screen.tsx` —— 三列概览（清单作品 / 投票数 /
       发帖数）+ 资料行 + 特性分组 chip + 打分分布 + 近期打分（可点进作品详情）
-- [x] `features/user/components/VoteHistogram.tsx` —— 手绘直方图（10 档）
+- [x] `features/user/components/vote-histogram.tsx` —— 手绘直方图（10 档）
 - [x] 路由 `app/user/[id]`
 - [x] 讨论列表的「发起自 / 最后回复」与帖子页的作者昵称改为**可点**，
       用 `text-link` 标示（讨论列表解析新增 `starterId` / `lastPosterId`）
@@ -348,7 +348,7 @@
   - [x] ⚠️ **踩坑**：`/ulist` 的 `count` **未登录一律 400**
         （报 `Missing "user" parameter and not authenticated.`，报错信息有误导性
         —— 明明传了 `user`）。所以总数拿不到，只能报「已加载 N 条」
-  - [x] 列定义 / 取值 / 格式化抽到 `features/user/voteColumns.ts`，
+  - [x] 列定义 / 取值 / 格式化抽到 `features/user/vote-columns.ts`，
         面板与列表**同源**（各写一份迟早对不上）
 - [x] 「全部投票」数据层（服务两处）
   - [x] `USER_VOTE_FIELDS` —— 瘦字段集（无封面 / 无 notes）；刻意不列 `vn.id`
@@ -439,7 +439,7 @@
 - [x] **收藏统计页 `/stats`（M4 增强，chart-kit 图表页）**
   - [x] 数据：`features/stats/hooks.ts` 翻页拉完整份清单（每页 100，最多 20 页），
         字段集 `ULIST_STATS_FIELDS`（只取年份 / 厂商 / 标签 / 打分，比清单页瘦）
-  - [x] 聚合纯函数 `features/stats/statsLogic.ts`：年份分布 / 标签分布 /
+  - [x] 聚合纯函数 `features/stats/stats-logic.ts`：年份分布 / 标签分布 /
         厂商 Top N / 概览数字（冒烟已卡）
   - [x] 图表：**发售年代饼图**（十年一档，如 1990-1999）、清单标签饼图、
         游戏类型饼图（ADV / NVL / RPG…，VNDB 的 Technical 顶层标签，id 固定清单 +

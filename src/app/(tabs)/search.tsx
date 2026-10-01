@@ -12,9 +12,9 @@ import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
-import { EmptyState } from "@/components/ScreenState";
-import { Muted } from "@/components/Typo";
-import { VnInfiniteList } from "@/features/vn/components/VnInfiniteList";
+import { EmptyState } from "@/components/screen-state";
+import { Muted } from "@/components/typo";
+import { VnInfiniteList } from "@/features/vn/components/vn-infinite-list";
 import { flattenPages, useVnList } from "@/features/vn/hooks";
 import { queryTags } from "@/lib/api/endpoints/catalog";
 import { useQuery } from "@tanstack/react-query";

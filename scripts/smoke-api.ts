@@ -28,8 +28,8 @@ import {
   toggleLabel,
 } from "@/lib/api/endpoints/ulist";
 import { toFieldsString, type Predicate } from "@/lib/api/types";
-import { RateLimiter } from "@/lib/api/rateLimiter";
-import { GAME_TYPE_TAGS } from "@/features/stats/statsLogic";
+import { RateLimiter } from "@/lib/api/rate-limiter";
+import { GAME_TYPE_TAGS } from "@/features/stats/stats-logic";
 
 let passed = 0;
 let failed = 0;

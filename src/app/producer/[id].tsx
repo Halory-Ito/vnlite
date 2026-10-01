@@ -1,1 +1,1 @@
-export { ProducerDetailScreen as default } from "@/features/catalog/DetailScreens";
+export { ProducerDetailScreen as default } from "@/features/catalog/detail-screens";

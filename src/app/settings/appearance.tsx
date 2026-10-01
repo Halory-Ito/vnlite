@@ -1,1 +1,1 @@
-export { default } from "@/features/settings/screens/AppearanceScreen";
+export { default } from "@/features/settings/screens/appearance-screen";

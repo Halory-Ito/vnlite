@@ -12,7 +12,7 @@
 import { API_BASE_URL, RATE_LIMIT } from "@/constants/config";
 
 import { ApiError, toApiError } from "./errors";
-import { rateLimiter, type RateLimiter } from "./rateLimiter";
+import { rateLimiter, type RateLimiter } from "./rate-limiter";
 import type { QueryBody, QueryResponse } from "./types";
 
 /** Token 提供器。返回 null 表示未登录 */

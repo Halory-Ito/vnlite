@@ -21,16 +21,22 @@ import {
   type SqlDatabase,
   type SqlRunResult,
 } from "@/lib/db/schema";
-import { dateErrors, diffPatch, draftFrom, isValidDate, isVnId } from "@/features/ulist/entryLogic";
+import {
+  dateErrors,
+  diffPatch,
+  draftFrom,
+  isValidDate,
+  isVnId,
+} from "@/features/ulist/entry-logic";
 import {
   byGameType,
   byListLabel,
   byReleaseDecade,
   summarizeCollection,
   topDevelopers,
-} from "@/features/stats/statsLogic";
-import { imageGate } from "@/hooks/usePreferences";
-import { isFreshDailyQuote } from "@/lib/storage/dailyQuote";
+} from "@/features/stats/stats-logic";
+import { imageGate } from "@/hooks/use-preferences";
+import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
 import { migratePreferences } from "@/lib/storage/preferences";
 import { formatMonthDay } from "@/utils/format";
 
