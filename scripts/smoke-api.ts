@@ -51,6 +51,34 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+const pad2 = (n: number): string => String(n).padStart(2, "0");
+
+/**
+ * 把 VNDB 的 `released` 变成**可与 Kana 排序结果比较**的字符串。
+ *
+ * ⚠️ 断言排序时不能直接比原始字符串：`released` 是**部分日期**
+ * （`2026` / `2026-09` / `2026-09-30` / `TBA`），而 Kana 是按真实日期排的，
+ * 实测**月份级日期按「该月最后一天」参与排序**（`2026-09` 排在 `2026-09-30` 那一批里），
+ * 直接比字符串会得到相反的结论 —— 之前就让「最新发售」那条断言偶发失败。
+ * 这里按同一套规则补齐：只到年 → 12-31，只到月 → 该月最后一天，TBA → 9999-12-31。
+ */
+function releasedSortKey(raw: string | undefined): string {
+  if (!raw) return "";
+  if (raw === "TBA") return "9999-12-31";
+
+  const parts = raw.split("-");
+  const year = Number(parts[0]);
+  if (parts.length === 1) return `${year}-12-31`;
+
+  const month = Number(parts[1]);
+  if (parts.length === 2) {
+    // Date.UTC(y, m, 0) = 该月最后一天（m 是 1-based 时 0 号即上月最后一天）
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return `${year}-${pad2(month)}-${pad2(lastDay)}`;
+  }
+  return `${year}-${pad2(month)}-${pad2(Number(parts[2]))}`;
+}
+
 async function section(title: string): Promise<void> {
   console.log(`\n${title}`);
 }
@@ -371,6 +399,263 @@ async function main(): Promise<void> {
     assert(r.results.length === 1 && r.results[0]?.id === "v17", "应返回 v17 单条");
   });
 
+  /* ---- 搜索页的四档（作品 / 制作人员 / 用户 / 制作者） ---- */
+
+  await check("queryStaff 搜主名与搜别名都能命中同一个人（不加 ismain 过滤）", async () => {
+    const { queryStaff } = await import("@/lib/api/endpoints/catalog");
+    // s208 有两个名字行：主名「SCA-Ji / SCA-自」与别名「Sukaji / すかぢ」
+    const byMain = await queryStaff({ search: "SCA-自", results: 5 });
+    const byAlias = await queryStaff({ search: "sukaji", results: 5 });
+    assert(
+      byMain.results.some((s) => s.id === "s208"),
+      "搜主名应命中 s208"
+    );
+    // ⚠️ 真事故：曾经为去重加 `ismain = 1`，结果搜别名一条都不剩
+    //（官网能搜到「sukaji」，本项目搜不到）。去重改在客户端按 id 做。
+    assert(
+      byAlias.results.some((s) => s.id === "s208"),
+      "搜别名也应命中 s208（不能被 ismain 过滤掉）"
+    );
+    const alias = byAlias.results.find((s) => s.id === "s208");
+    assert(alias?.ismain === false, "别名命中的是 ismain=false 的那一行");
+  });
+
+  await check("queryProducers 搜索（搜索页「制作者」依赖）", async () => {
+    const { queryProducers } = await import("@/lib/api/endpoints/catalog");
+    const r = await queryProducers({ search: "Key", sort: "searchrank", results: 5 });
+    assert(r.results.length > 0, "Key 应有结果");
+    assert(
+      r.results.some((p) => p.id === "p24"),
+      "Key（p24）应在结果里"
+    );
+  });
+
+  await check("findUser 精确匹配（搜索页「用户」依赖）", async () => {
+    const { findUser } = await import("@/lib/api/endpoints/ulist");
+    const byName = await findUser("Yorhel");
+    assert(byName?.id === "u2", `按用户名应查到 u2，实际 ${JSON.stringify(byName)}`);
+    const byId = await findUser("u2");
+    assert(byId?.username === "Yorhel", "按用户 id 也应查到");
+  });
+
+  await check("findUser 不支持模糊匹配（Kana 的硬限制，UI 必须说明）", async () => {
+    const { findUser } = await import("@/lib/api/endpoints/ulist");
+    // 实测 ?q=yor → {"yor": null}：用户名必须写全（只是不区分大小写）
+    const partial = await findUser("yor");
+    assert(partial === null, `部分用户名应查不到，实际 ${JSON.stringify(partial)}`);
+  });
+
+  await check("搜索页行数据与文案（features/search/search-logic 纯逻辑）", async () => {
+    const {
+      looksLikeUserId,
+      resultHeadline,
+      SCOPE_LABEL,
+      SCOPE_NOUN,
+      SCOPE_OPTIONS,
+      SEARCH_PLACEHOLDER,
+      toProducerEntries,
+      toStaffEntries,
+      userMissDescription,
+    } = await import("@/features/search/search-logic");
+
+    // 分段控件顺序：作品（默认）在最左
+    assert(SCOPE_OPTIONS[0]?.value === "vn", "默认应是作品");
+    assert(SCOPE_OPTIONS.length === 4, "应有 4 档：作品 / 人员 / 用户 / 厂商");
+    for (const option of SCOPE_OPTIONS) {
+      assert(option.label.length > 0, `${option.value} 缺档位名`);
+    }
+    // ⚠️ 只有一句通用 placeholder：Master 要求移除每个搜索条目的 hint，
+    // 所以这里不能出现「按档位给提示」的表（曾经有过 SCOPE_PLACEHOLDER / SCOPE_IDLE）
+    assert(SEARCH_PLACEHOLDER.length > 0, "输入框应有 placeholder");
+    // 控件上用短名（人员 / 厂商），完整说法在 SCOPE_NOUN 里 —— 两处不能写成一样：
+    // 「制作人员」与「制作者」只差一个字，用户分不清哪个是 staff 哪个是 producer
+    assert(
+      SCOPE_LABEL.staff === "人员" && SCOPE_NOUN.staff === "制作人员",
+      "staff 档位名 / 集合名"
+    );
+    assert(
+      SCOPE_LABEL.producer === "厂商" && SCOPE_NOUN.producer === "制作者",
+      "producer 档位名 / 集合名"
+    );
+    // hint 移走后，「用户只能精确匹配」这条限制只能在**搜不到时**的文案里说清楚
+    assert(
+      userMissDescription("yor").includes("不支持模糊搜索"),
+      "用户未命中的文案必须说明只能精确匹配"
+    );
+
+    assert(looksLikeUserId("u2") && looksLikeUserId(" U123 "), "u123 形式应识别为用户 id");
+    assert(!looksLikeUserId("yorhel") && !looksLikeUserId("user"), "普通用户名不是 id");
+    assert(
+      userMissDescription("yor").includes("不支持模糊搜索"),
+      "部分用户名的未命中提示要说明只能精确匹配"
+    );
+    assert(userMissDescription("u999999").includes("u999999"), "id 形式的提示要带上 id");
+    assert(resultHeadline("key") === "搜索「key」的结果", "结果标题格式");
+
+    const staff = toStaffEntries([{ results: [{ id: "s1", name: "A", original: "Ｂ" }] }]);
+    assert(staff[0]?.meta === "s1" && staff[0]?.original === "Ｂ", "staff 行应带 id 与原名");
+    const producer = toProducerEntries([{ results: [{ id: "p24", name: "Key", type: "co" }] }]);
+    assert(producer[0]?.meta === "公司 · p24", "制作者行应显示「类型 · id」");
+    assert(toStaffEntries(undefined).length === 0, "没有数据时应返回空数组");
+  });
+
+  await check("toStaffEntries 按 id 去重、优先主名行（s208 的两行只出一行）", async () => {
+    const { toStaffEntries } = await import("@/features/search/search-logic");
+    // 只有别名行命中（搜「sukaji」）：显示命中的那个名字，与官网一致
+    const aliasOnly = toStaffEntries([
+      { results: [{ id: "s208", name: "Sukaji", original: "すかぢ", ismain: false }] },
+    ]);
+    assert(aliasOnly.length === 1, "别名行也要出结果");
+    assert(aliasOnly[0]?.title === "Sukaji", `应显示命中的别名，实际 ${aliasOnly[0]?.title}`);
+
+    // 主名行与别名行都命中（分页可能把它们分到两页）：只出一行，且用主名行
+    const both = toStaffEntries([
+      { results: [{ id: "s208", name: "Sukaji", original: "すかぢ", ismain: false }] },
+      { results: [{ id: "s208", name: "SCA-Ji", original: "SCA-自", ismain: true }] },
+    ]);
+    assert(both.length === 1, "同一个 id 只能出一行");
+    assert(both[0]?.title === "SCA-Ji", `应优先主名行，实际 ${both[0]?.title}`);
+
+    // 顺序反过来也一样（主名先到时不被别名行覆盖）
+    const reversed = toStaffEntries([
+      { results: [{ id: "s208", name: "SCA-Ji", ismain: true }] },
+      { results: [{ id: "s208", name: "Sukaji", ismain: false }] },
+    ]);
+    assert(reversed.length === 1 && reversed[0]?.title === "SCA-Ji", "别名行不能覆盖主名行");
+
+    // 不同 id 各自一行，顺序按 searchrank 保持
+    const mixed = toStaffEntries([
+      {
+        results: [
+          { id: "s1", name: "A", ismain: true },
+          { id: "s2", name: "B", ismain: true },
+          { id: "s1", name: "A2", ismain: false },
+        ],
+      },
+    ]);
+    assert(mixed.length === 2, "两个 id 应出两行");
+    assert(mixed[0]?.title === "A" && mixed[1]?.title === "B", "行序应与搜索排序一致");
+  });
+
+  /* ---- 首页信息流：最新评价（抓取）/ 即将发售 / 最新上架（API） ---- */
+
+  await check("queryUpcomingVns：只给未来发售、日期升序、TBA 已排掉", async () => {
+    const { queryUpcomingVns } = await import("@/lib/api/endpoints/vn");
+    const { todayIso } = await import("@/utils/format");
+    const today = todayIso();
+
+    /*
+     * 端点的字段集刻意不含 `released`（卡片只画封面和名称），所以这里用一条
+     * 同样过滤/排序的裸查询把日期取回来验不变式，再核对端点取的 id 与它一致
+     * —— 顺带证明端点用的就是这套过滤与排序。
+     */
+    const raw = await api.query<{ id: string; released?: string }>("/vn", {
+      filters: ["and", ["released", ">", today]],
+      fields: "id,released",
+      sort: "released",
+      results: 10,
+    });
+    assert(raw.results.length > 0, "应有即将发售的作品");
+    for (const vn of raw.results) {
+      // ⚠️ TBA 在 Kana 里按「最大」参与排序，不过滤的话整页都是「未定档」
+      assert(vn.released !== "TBA", `${vn.id} 不该是 TBA`);
+      assert(releasedSortKey(vn.released) > today, `${vn.id} 的 ${vn.released} 应晚于今天`);
+    }
+    const dates = raw.results.map((vn) => releasedSortKey(vn.released));
+    assert(
+      dates.every((d, i) => i === 0 || d >= (dates[i - 1] as string)),
+      "应按发售日升序（越近越靠前）"
+    );
+
+    const viaEndpoint = await queryUpcomingVns(today, 10);
+    assert(
+      viaEndpoint.results.map((vn) => vn.id).join(",") === raw.results.map((vn) => vn.id).join(","),
+      "端点应与「released > 今天 + 升序」这条查询取到同一批"
+    );
+  });
+
+  await check("queryJustReleasedVns：只给已发售、日期降序、TBA 已排掉", async () => {
+    const { queryJustReleasedVns } = await import("@/lib/api/endpoints/vn");
+    const { todayIso } = await import("@/utils/format");
+    const today = todayIso();
+
+    const raw = await api.query<{ id: string; released?: string }>("/vn", {
+      filters: ["and", ["released", "<=", today]],
+      fields: "id,released",
+      sort: "released",
+      reverse: true,
+      results: 10,
+    });
+    assert(raw.results.length > 0, "应有新发售的作品");
+    for (const vn of raw.results) {
+      // ⚠️ 不加 `<=` 的话 TBA 排在最前，出来的是「一堆未定档」而不是「刚发售」
+      assert(vn.released !== "TBA", `${vn.id} 不该是 TBA`);
+      assert(releasedSortKey(vn.released) <= today, `${vn.id} 的 ${vn.released} 应不晚于今天`);
+    }
+    const dates = raw.results.map((vn) => releasedSortKey(vn.released));
+    assert(
+      dates.every((d, i) => i === 0 || d <= (dates[i - 1] as string)),
+      `应按发售日降序（刚发售的排最前），实际 ${dates.join(" ")}`
+    );
+
+    const viaEndpoint = await queryJustReleasedVns(today, 10);
+    assert(
+      viaEndpoint.results.map((vn) => vn.id).join(",") === raw.results.map((vn) => vn.id).join(","),
+      "端点应与「released <= 今天 + 降序」这条查询取到同一批"
+    );
+  });
+
+  await check("首页信息流条数与官网首页一致（各 10 条）", async () => {
+    const { FEED_COUNT, FEED_TABS, FEED_TAB_LABEL } = await import("@/features/home/feed-config");
+    assert(FEED_COUNT === 10, "官网首页三栏都是 10 条");
+    assert(FEED_TABS.length === 3, "应有 3 档");
+    for (const tab of FEED_TABS) {
+      assert(FEED_TAB_LABEL[tab].length > 0, `${tab} 缺中文名`);
+    }
+  });
+
+  await check("抓取并解析最新评价列表（首页「最新评价」依赖）", async () => {
+    const { fetchLatestReviews } = await import("@/features/review/client");
+    const { FEED_COUNT } = await import("@/features/home/feed-config");
+    const page = await fetchLatestReviews();
+    assert(page.reviews.length >= FEED_COUNT, `至少应有 ${FEED_COUNT} 条`);
+    assert(page.hasMore, "官网有 rel=next（说明这页是列表页而不是截断的首页）");
+    const first = page.reviews[0]!;
+    assert(/^w\d+$/.test(first.id), `评价 id 形状错：${first.id}`);
+    assert(first.title.length > 0, "应有作品名");
+    assert(first.author !== null, "应有作者名");
+    assert(/^u\d+$/.test(first.authorId ?? ""), `作者 id 形状错：${first.authorId}`);
+    assert(/^\d{4}-\d{2}-\d{2}$/.test(first.date ?? ""), `日期形状错：${first.date}`);
+    assert(first.score === null || (first.score >= 0 && first.score <= 10), "分数应在 0–10");
+    assert(first.length !== null, "应有通关状态 / 时长");
+  });
+
+  await check("抓取并解析单条评价（站内评价页依赖）", async () => {
+    const { fetchLatestReviews, fetchReview } = await import("@/features/review/client");
+    const list = await fetchLatestReviews();
+    const id = list.reviews[0]!.id;
+    const review = await fetchReview(id);
+    assert(review !== null, "应解析出一条评价");
+    const detail = review!;
+    assert(detail.id === id, "id 应与请求的一致");
+    // 作品名能对上列表那一行（两处解析的是同一条数据的两个页面）
+    assert(
+      detail.title === list.reviews[0]!.title,
+      `详情与列表的作品名应一致：${detail.title} vs ${list.reviews[0]!.title}`
+    );
+    assert(/^v\d+$/.test(detail.vnId ?? ""), `应能拿到作品 id（能跳站内详情）：${detail.vnId}`);
+    assert(/^u\d+$/.test(detail.authorId ?? ""), `应能拿到作者 id：${detail.authorId}`);
+    assert(detail.date !== null, "应有日期");
+    assert(detail.score === null || (detail.score >= 0 && detail.score <= 10), "分数应在 0–10");
+    assert(detail.content.length > 0, "正文节点树不应为空");
+    // 平台 / 语言 / 通关状态是从 abbr[title] 里认出来的
+    assert(detail.platforms.length + detail.languages.length > 0, "应认出平台或语言");
+    assert(
+      detail.platforms.every((p) => !detail.languages.includes(p)),
+      "平台与语言不能混在一起"
+    );
+  });
+
   await check("清单行导航 id 取顶层：/ulist 的 vn 子对象不带 id", async () => {
     const r = await queryList({ user: "u2", results: 5 });
     assert(r.results.length > 0, "u2 清单应有条目");
@@ -384,7 +669,10 @@ async function main(): Promise<void> {
     assert(single.results[0]?.id === first.id, `顶层 id ${first.id} 应能查回单条`);
   });
 
-  await check("清单标签过滤（服务端下推，label 过滤器生效）", async () => {
+  // ⚠️ 清单 Tab 的标签筛选已经改成**本地**筛（Master 要求，切标签零请求），
+  // 这条只验证 Kana 的 `label` 过滤器本身可用 —— 本地筛选的语义要与它一致
+  // （`features/ulist/list-filter` 的 `itemHasLabel`，那边有纯逻辑冒烟）
+  await check("Kana 的 label 过滤器可用（本地筛选的语义基准）", async () => {
     const r = await queryList({ user: "u2", filters: pred("label", "=", 1), results: 5 });
     assert(r.results.length > 0, "应有 Playing 标签的条目");
     for (const item of r.results) {

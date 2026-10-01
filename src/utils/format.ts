@@ -101,8 +101,8 @@ export function formatRating(rating: number | null | undefined): string {
 export function formatCount(count: number | null | undefined): string {
   if (count == null) return "—";
   if (count < 1000) return String(count);
-  if (count < 1_000_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-  return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (count < 1_000_000) return `${(count / 1000).toFixed(1).replace(/\.0$/, "")} k`;
+  return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")} M`;
 }
 
 /** 评分对应的语义色，UI 用它决定 badge 配色 */

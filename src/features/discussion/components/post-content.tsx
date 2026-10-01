@@ -49,7 +49,8 @@ export function PostContent({ nodes }: { nodes: PostNode[] }): JSX.Element {
             <PostContent nodes={block.nodes} />
           </View>
         ) : (
-          <Text key={block.key} className="text-sm leading-[21px] text-foreground">
+          // 选区挂在最外层 Text 上（嵌套 Text 会被一起包含），所以正文可长按选中复制
+          <Text key={block.key} selectable className="text-sm leading-[21px] text-foreground">
             <InlineNodes nodes={block.nodes} />
           </Text>
         )

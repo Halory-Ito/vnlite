@@ -7,7 +7,7 @@
  */
 
 import * as Linking from "expo-linking";
-import { Button, Input, Typography } from "heroui-native";
+import { Button, Input, Label, TextField, Typography } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
 import { View } from "react-native";
@@ -23,7 +23,8 @@ export default function AccountScreen(): JSX.Element {
   const session = useSession();
 
   return (
-    <SettingsShell title="账号">
+    // 未登录时表单只有一两个控件，顶部对齐看起来很空 —— 整块垂直居中
+    <SettingsShell title="账号" centerContent>
       {session.status === "authenticated" ? <SignedIn account={session.account} /> : <SignedOut />}
     </SettingsShell>
   );
@@ -50,55 +51,63 @@ function SignedOut(): JSX.Element {
   };
 
   return (
-    <View className="gap-3 px-4 py-3">
-      <Muted type="body-sm">
-        粘贴 VNDB Token 以启用清单功能。Token 相当于密码，请只从官网创建。
-      </Muted>
+    /*
+     * 布局（Master 要求：不额外加内容，只调排版）：
+     *   - `self-center` + `max-w-sm`：`maxWidth` 会让 flex 子元素从「拉伸」退化成
+     *     「靠左」，必须显式 `alignSelf: center` 才是真的水平居中（平板上才看得出）
+     *   - `flex-1 justify-center`：整块表单落在剩余空间的垂直正中
+     *   - `gap-3`：`TextField` 内部已经处理了 Label 与 Input 的间距，
+     *     外层只需要把「错误文案 / 按钮」跟输入框分开
+     */
+    <View className="w-full max-w-sm flex-1 self-center justify-center gap-3 px-4">
+      <TextField>
+        <Label>VNDB Token</Label>
+        <Input
+          value={token}
+          onChangeText={setToken}
+          placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
+        />
+      </TextField>
 
-      <Button
-        size="sm"
-        variant="secondary"
-        onPress={() => void Linking.openURL(TOKEN_CREATE_URL)}
-        className="self-start"
-      >
-        <Button.Label>前往 vndb.org 创建 Token</Button.Label>
-      </Button>
+      {/* 错误文案占位固定高度：登录失败时按钮不会跟着往下跳 */}
+      <View className="min-h-4 justify-center">
+        {error ? (
+          <Muted type="body-xs" className="text-danger-soft-foreground">
+            {error}
+          </Muted>
+        ) : null}
+      </View>
 
-      <Input
-        value={token}
-        onChangeText={setToken}
-        placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
-        autoCapitalize="none"
-        autoCorrect={false}
-        secureTextEntry
-      />
-
-      {error ? (
-        <Muted type="body-xs" className="text-danger-soft-foreground">
-          {error}
-        </Muted>
-      ) : null}
-
-      <Button
-        size="sm"
-        onPress={() => void doLogin()}
-        isDisabled={busy || token.trim().length === 0}
-      >
-        <Button.Label>{busy ? "验证中…" : "登录"}</Button.Label>
-      </Button>
-
-      <Muted type="body-xs">需要勾选 listread（读私有清单）与 listwrite（写清单）</Muted>
+      <View className="mt-1 flex-row gap-3">
+        <Button
+          size="sm"
+          className="flex-1"
+          onPress={() => void doLogin()}
+          isDisabled={busy || token.trim().length === 0}
+        >
+          <Button.Label>{busy ? "验证中…" : "登录"}</Button.Label>
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="flex-1"
+          onPress={() => void Linking.openURL(TOKEN_CREATE_URL)}
+        >
+          <Button.Label>获取</Button.Label>
+        </Button>
+      </View>
     </View>
   );
 }
 
 function SignedIn({ account }: { account: Account }): JSX.Element {
-  // 权限块暂时停用（Master 注释掉了），这行也跟着停用，别让 lint 报未使用
-  // const canWrite = account.permissions.includes("listwrite");
-
   return (
-    <View>
-      <View className="items-center gap-1.5 px-4 py-6">
+    // 与未登录态同一套容器（同样的 max-w-sm + 居中），两个状态切换时不跳版
+    <View className="w-full max-w-sm flex-1 self-center justify-center gap-6 px-4">
+      <View className="items-center gap-1.5">
         <View className="h-16 w-16 items-center justify-center rounded-full bg-accent-soft">
           <Typography type="h3" className="text-accent">
             {account.username.slice(0, 1).toUpperCase()}
@@ -108,25 +117,9 @@ function SignedIn({ account }: { account: Account }): JSX.Element {
         <Muted type="body-xs">ID {account.userId}</Muted>
       </View>
 
-      {/*<View className="gap-1.5 px-4 py-3">
-        <Muted type="body-xs" className="font-medium">
-          权限
-        </Muted>
-        <Muted type="body-sm">
-          {account.permissions.length > 0 ? account.permissions.join(" · ") : "仅公开数据"}
-        </Muted>
-        {!canWrite ? (
-          <Muted type="body-xs" className="text-warning-soft-foreground">
-            缺少 listwrite 权限，无法写入清单。去 vndb.org 的 Token 设置里勾选后重新登录。
-          </Muted>
-        ) : null}
-      </View>*/}
-
-      <View className="px-4 py-6">
-        <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
-          <Button.Label>退出登录</Button.Label>
-        </Button>
-      </View>
+      <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
+        <Button.Label>退出登录</Button.Label>
+      </Button>
     </View>
   );
 }

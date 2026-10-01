@@ -2,10 +2,21 @@
  * 清单的 React 数据层（**服务端驱动**，2026-09-30 架构调整）。
  *
  * Master 决定：**视觉小说清单数据不落本地库**，每次从 vndb.org 现拉现读：
- *   - 列表：`useInfiniteQuery` 直查 `/ulist`（标签筛选下推给 Kana；
- *     排序固定「加入时间新 → 旧」—— 排序 UI 已按 Master 要求移除）
+ *   - 列表：`useInfiniteQuery` 直查 `/ulist`，排序固定「加入时间新 → 旧」
+ *     （排序 UI 已按 Master 要求移除）
  *   - 单条：`useUlistItem` 直查 `/ulist`（`filters: id = v…`）
  *   - 写入：直接 PATCH / DELETE / PATCH /rlist，成功后失效相关查询、从服务端重取
+ *
+ * ## 标签筛选改在**本地**做（Master 要求）
+ *
+ * 原来是把 `label` 过滤器下推给 Kana：每切一个标签就换一个 queryKey → 重新请求
+ * + 回到全屏 loading。可清单本来就整份拉回来了（分页），切标签只是**换个过滤
+ * 条件**，没必要重新请求 —— 现在只查**不带 label 过滤**的清单，筛选走
+ * `filterByLabel()`：切换零请求、零 loading。
+ *
+ * 代价与对策：本地只能筛「**已经加载**的条目」（一页 50 条）。所以筛选态下
+ * 列表底部会说明「已加载的 N 条里筛出 M 条（该标签共 X 条）」并给一个「加载更多」
+ * —— 补的是**未过滤**清单的下一页（`fetchNextPage`），筛出的结果随之变多。
  *
  * 代价：离线不可读（有意的取舍，VNDB 是唯一数据源）；内存里仍有 React Query
  * 缓存（`gcTime`），切页/返回不会重复请求。
@@ -29,7 +40,6 @@ import {
   setReleaseStatus,
   type UListPatch,
 } from "@/lib/api/endpoints/ulist";
-import { pred } from "@/lib/api/filters";
 import type { UListItem, UListLabel } from "@/lib/api/types";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
@@ -41,16 +51,18 @@ const PAGE_SIZE = 50;
 /* 读                                                                         */
 /* -------------------------------------------------------------------------- */
 
-/** 清单列表（无限滚动）。标签筛选是**服务端**行为；排序固定加入时间新 → 旧 */
-export function useUlistInfinite(options: { labelId: number | null }) {
-  const { labelId } = options;
-
+/**
+ * 清单列表（无限滚动，**不带标签过滤**）。
+ *
+ * 标签筛选是纯客户端行为（见文件头），所以这个查询的 key 固定 —— 切标签不会换 key，
+ * 也就不会重新请求、更不会回到 loading。
+ */
+export function useUlistInfinite() {
   return useInfiniteQuery({
-    queryKey: queryKeys.ulist.list(labelId),
+    queryKey: queryKeys.ulist.list(),
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
       queryList({
-        filters: labelId != null ? pred("label", "=", labelId) : undefined,
         sort: "added",
         reverse: true,
         results: PAGE_SIZE,

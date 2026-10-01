@@ -84,6 +84,8 @@ export const queryKeys = {
     votes: (userId: string) => ["user", "votes", userId] as const,
     /** 游玩时长记录（抓 `/u…/lengthvotes`） */
     lengthVotes: (userId: string) => ["user", "lengthvotes", userId] as const,
+    /** 搜索页的「用户」档（`GET /user`，只支持精确匹配，见 `findUser`） */
+    search: (nameOrId: string) => ["user", "search", nameOrId] as const,
   },
 
   /* ---- VNDB 数据库统计（全局条目数，与用户清单无关） ---- */
@@ -100,11 +102,29 @@ export const queryKeys = {
     thread: (threadId: string) => ["discussion", "thread", threadId] as const,
   },
 
-  /* ---- 用户清单（服务端驱动，不落本地库） ---- */
+  /* ---- 用户评价（同样只能抓网站：Kana 没有 reviews 端点） ---- */
+  review: {
+    all: ["review"] as const,
+    /** 最新评价列表（`/w`，首页「最新评价」页签） */
+    list: (limit: number) => ["review", "list", limit] as const,
+    /** 单条评价详情（`/w18526`，站内评价页） */
+    detail: (id: string) => ["review", "detail", id] as const,
+  },
+
+  /* ---- 首页信息流 ---- */
+  home: {
+    all: ["home"] as const,
+    /** 即将发售（`released > 今天`，key 带日期：跨天自动重取） */
+    upcoming: (day: string) => ["home", "upcoming", day] as const,
+    /** 最新发售（`released <= 今天`） */
+    justReleased: (day: string) => ["home", "just-released", day] as const,
+  },
+
+  /* ---- 用户清单（服务端驱动，不落本地库；标签筛选在本地做） ---- */
   ulist: {
     all: ["ulist"] as const,
-    /** 列表页（标签筛选进 key；排序固定加入时间，不进 key） */
-    list: (labelId: number | null) => ["ulist", "list", labelId ?? 0] as const,
+    /** 列表页（不带标签过滤 —— 筛选是纯客户端行为，key 固定，换标签不重新请求） */
+    list: () => ["ulist", "list"] as const,
     labels: () => ["ulist", "labels"] as const,
     item: (vnId: string) => ["ulist", "item", vnId] as const,
     /** 收藏统计（整份清单的聚合，与列表页分开缓存） */

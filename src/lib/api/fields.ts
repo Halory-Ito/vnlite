@@ -53,6 +53,21 @@ export const VN_LIST_FIELDS = [
   "image.violence",
 ] as const satisfies readonly FieldSpec<VnSummary>[];
 
+/**
+ * 首页横向封面墙的字段集（`queryUpcomingVns` / `queryJustReleasedVns`）。
+ *
+ * 只要「封面 + 名称」：id（跳转）+ title + 缩略图。
+ * 刻意**不要** `image.url`（原图几十 KB，列表里用不上）、`released`（不显示日期）、
+ * `rating`（未发售作品没有分），也别用 `VN_LIST_FIELDS` —— 那是带卡片信息行的列表字段。
+ */
+export const VN_COVER_CARD_FIELDS = [
+  "id",
+  "title",
+  "image.thumbnail",
+  "image.sexual",
+  "image.violence",
+] as const satisfies readonly FieldSpec<VnSummary>[];
+
 /** VN 详情全字段（实测单条 ~8–20 KB） */
 export const VN_DETAIL_FIELDS = [
   "id",

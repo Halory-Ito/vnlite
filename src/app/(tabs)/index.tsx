@@ -4,46 +4,46 @@
  * 板块三个：
  *   1. 每日语录（当天固定一条，跨启动不变）
  *   2. 随机一部（真随机：最大 id + 随机号段，见 `queryRandomVn`；**摇一摇**也能换）
- *   3. 数据库统计（VNDB 全局条目数图表，`features/stats/database-stats`）
+ *   3. **信息流**：最新评价 / 即将发售 / 最新上架
+ *      （`features/home`，栏目与条数都对齐 vndb.org 首页）
  *
  * 原来的常用入口（我的游戏 / 评分排行 / 我的评分排名 / 近期热门 / 收藏统计）
  * 全部移除：前四个与底部 Tab、「浏览」页重复，收藏统计挪进「我的」。
- * 「最新上架」分区更早就去掉了（和「浏览 · 按发售时间」重复）。
+ * 「最新上架」曾作为独立分区被去掉（与「浏览 · 按发售时间」重复），
+ * 现在作为信息流的一档回来 —— 它与另外两档（评价 / 即将发售）构成一组，
+ * 单独看才是重复。
+ * ⚠️ **数据库统计扇形图已搬到「搜索」页**（Master 要求，空输入时占下半屏，
+ * 且去掉了卡片外框），首页不再有第四个板块。
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Button, Card, Skeleton, useThemeColor } from "heroui-native";
+import { Card, Skeleton } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
-import { Icon } from "@/components/icon";
 import { ImageViewer } from "@/components/image-viewer";
 import { Muted, Paragraph } from "@/components/typo";
-import { DatabaseStats } from "@/features/stats/database-stats";
+import { HomeFeed } from "@/features/home/components/home-feed";
+import { useCopyProps } from "@/hooks/use-copy";
 import { useShake } from "@/hooks/use-shake";
 import { queryRandomQuote, queryRandomVn } from "@/lib/api/endpoints/vn";
 import type { VnSummary } from "@/lib/api/types";
 import { readDailyQuote, writeDailyQuote } from "@/lib/storage/daily-quote";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
-import {
-  formatMonthDay,
-  formatRating,
-  formatReleased,
-  languageLabel,
-  todayIso,
-} from "@/utils/format";
+import { vnCopyText } from "@/utils/copy-text";
+import { formatRating, formatReleased, languageLabel, todayIso } from "@/utils/format";
 
 export default function HomeTab(): JSX.Element {
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       <QuoteCard />
       <RandomVnCard />
-      <DatabaseStats />
+      <HomeFeed />
     </ScrollView>
   );
 }
@@ -73,6 +73,15 @@ function QuoteCard(): JSX.Element | null {
     staleTime: STALE_TIME.quote,
   });
 
+  /*
+   * 语录正文是普通文字：长按走系统选区（全局行为，见 `components/typo`），
+   * 想连出处一起复制就长按下面那行作品名（它是 Pressable，长按=整条复制）。
+   * hook 必须排在骨架屏 / 空态的提前 return 之前。
+   */
+  const copyVn = useCopyProps(vnCopyText({ id: data?.vn?.id ?? "", title: data?.vn?.title }), {
+    preview: data?.vn?.title,
+  });
+
   // 骨架屏：以前这里直接返回一个 h-2 的空白，首屏会「什么都没有 → 突然出现一张卡」
   if (isLoading) {
     return (
@@ -91,17 +100,14 @@ function QuoteCard(): JSX.Element | null {
   return (
     <Card className="mx-4 my-3">
       <Card.Body>
-        <View className="mb-1 flex-row items-center justify-between">
-          <Muted type="body-xs" className="font-medium">
-            每日语录
-          </Muted>
-          <Muted type="body-xs">{formatMonthDay(dateKey)}</Muted>
-        </View>
         <Paragraph>「{data.quote}」</Paragraph>
         {data.vn ? (
           <Pressable
             onPress={() => router.push(`/vn/${data.vn?.id}`)}
+            onLongPress={copyVn.onLongPress}
+            delayLongPress={copyVn.delayLongPress}
             className="mt-2 self-start active:opacity-60"
+            accessibilityHint="长按可复制作品名与官网链接"
           >
             <Muted type="body-sm" className="text-link">
               — {data.vn.title}
@@ -119,8 +125,6 @@ function QuoteCard(): JSX.Element | null {
 
 function RandomVnCard(): JSX.Element {
   const router = useRouter();
-  // 按钮上的图标跟标签同色，不能写死白色（换主题后 primary 按钮的前景会变）
-  const accentForeground = useThemeColor("accent-foreground");
   // round 进 queryKey：点一次「换一部」= 一次新查询，随机逻辑放在 queryFn 里
   const [round, setRound] = useState(0);
 
@@ -162,13 +166,13 @@ function RandomVnCard(): JSX.Element {
           </View>
         ) : null}
       </Card.Body>
-      <Card.Footer className="flex-row items-center justify-between gap-3 pt-3">
+      {/*<Card.Footer className="flex-row items-center justify-between gap-3 pt-3">
         <Muted type="body-xs">摇一摇手机也能换</Muted>
         <Button size="sm" onPress={reshuffle} isDisabled={pick.isFetching}>
           <Icon name="shuffle" size={16} color={accentForeground} />
           <Button.Label>换一部</Button.Label>
         </Button>
-      </Card.Footer>
+      </Card.Footer>*/}
     </Card>
   );
 }
@@ -176,6 +180,8 @@ function RandomVnCard(): JSX.Element {
 function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): JSX.Element {
   // 封面查看器：null = 关着（这张卡只有一张图）
   const [coverOpen, setCoverOpen] = useState(false);
+  // 长按整行复制「作品名 + 官网链接」；长按不会连带触发 onPress（进详情页）
+  const copyable = useCopyProps(vnCopyText(vn), { preview: vn.title });
   const cover = vn.image?.url
     ? [
         {
@@ -191,7 +197,14 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
 
   return (
     <>
-      <Pressable onPress={onPress} className="active:opacity-60">
+      <Pressable
+        onPress={onPress}
+        onLongPress={copyable.onLongPress}
+        delayLongPress={copyable.delayLongPress}
+        accessibilityLabel={vn.title}
+        accessibilityHint={copyable.accessibilityHint}
+        className="active:opacity-60"
+      >
         <View className="flex-row gap-3">
           <CoverImage
             url={vn.image?.thumbnail ?? vn.image?.url}
@@ -203,7 +216,10 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
             onPress={() => setCoverOpen(true)}
           />
           <View className="flex-1 justify-center">
-            <Paragraph className="line-clamp-2">{vn.title}</Paragraph>
+            {/* 整行可点：长按由行自己接管（复制作品名），标题不弹系统选区 */}
+            <Paragraph className="line-clamp-2" selectable={false}>
+              {vn.title}
+            </Paragraph>
             <Muted type="body-xs">
               {formatReleased(vn.released)} · {languageLabel(vn.olang)} · {formatRating(vn.rating)}
             </Muted>

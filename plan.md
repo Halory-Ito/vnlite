@@ -130,7 +130,7 @@
 
 ### Type 2.1 · 首页
 
-- [x] `(tabs)/index` —— 每日语录 / 随机一部
+- [x] `(tabs)/index` —— 每日语录 / 随机一部 / 信息流（最新评价·即将发售·最新上架）
 - [x] **首页精简**（Master 要求）：移除「我的游戏 / 评分排行 / 我的评分排名 / 近期热门」
       四个常用入口（与底部 Tab、「浏览」页重复，`QuickEntries` 组件一并删除）；
       「收藏统计」挪进「我的」页
@@ -144,13 +144,44 @@
 - [x] **摇一摇换一部**（M4 增强）：`hooks/useShake`（expo-sensors 加速度计，
       只在首页聚焦时订阅、1.8g 阈值 + 1.5s 冷却），触发与「换一部」按钮同一条路径（带 haptics），
       卡片底部有「摇一摇手机也能换」提示
-- [x] **底部数据库统计图表（Master 要求）**：`features/stats/database-stats`
-      读 `GET /stats`（整个 VNDB 站点的条目数，与收藏统计的数据源不同），
+- [x] **底部数据库统计图表**：~~`features/stats/database-stats`~~ →
+      **已搬到「搜索」页**（Master 要求，见 Type 2.2；卡片外框与标题行一并去掉）。
+      组件本身不变：读 `GET /stats`（整个 VNDB 站点的条目数，与收藏统计的数据源不同），
       用 chart-kit v2 的 `PieChart`（`react-native-chart-kit/v2`）画视觉小说 /
       发行版 / 角色 / 制作人员 / 制作者 / 标签 / 特性的占比扇形图，
       交互走 **Tap Selection**（点扇区选中：其余淡出、选中块弹出；
       下方读数行显示该类别的精确条目数 + 占比，图例本身只有百分比）；
       颜色 / 文字走主题 token；骨架屏 + 失败降级
+- [x] **首页信息流 `features/home`（Master 要求）**：一行
+      `SegmentedControl` 切三档 —— **最新评价 / 即将发售 / 最新上架**，
+      栏目与条数都对齐 vndb.org 首页（三栏各 10 条，`FEED_COUNT`）
+  - [x] 「最新评价」= **竖向列表**（`features/review`）：抓 vndb.org 的 `/w`
+        （Browse reviews），一行给分数 / 作品名 / 作者 / 相对时间；
+        ⚠️ Kana **没有评价端点**（`/review` 404，只有 `/vn` 的 `has_review` 布尔），
+        与讨论 / 用户模块同款取舍：抓网站 + 冒烟把解析结构卡死
+  - [x] **点评价条目弹对话框看正文**（Master 要求）：`features/review/components/review-dialog`
+        —— **只显示四样**：作品名、评论用户、评论日期、评论内容；
+        评分 / 有用数 / 平台 / 语言 / 通关状态 / 评价版本**一律不显示**
+        （评分与作者列表行已经给过，作品信息在作品详情页里更全；
+        `scrape.ts` 仍解析这些字段，只是没展示）。作品名与用户名都是站内链接，
+        点之前先关对话框再跳详情页（否则会带着遮罩跳）；
+        整份列表**共用一个**对话框（同 `ImageViewer` 的做法）；
+        原来的站内评价页 `/review/{id}` 与 `review-screen.tsx` 一并删除（被取代了）
+  - [x] `components/dialog` —— 对话框外壳（居中卡片 + 遮罩 + 内部滚动），
+        走 **RN 原生 `Modal`** 而不是 HeroUI `Dialog.Portal`
+        （PortalHost 那个坑见 `features/browse/components/panel.tsx` 顶部）；
+        遮罩色取主题 `backdrop` token，不写死 `rgba(0,0,0,.5)`
+  - [x] 「即将发售」「最新上架」= **横向可滚动封面墙**（`VnCoverCarousel`），
+        只画封面 + 名称，右侧多露一格暗示能滑；点封面进站内作品详情
+  - [x] ⚠️ **两档都按「作品」而不是官网的「发行版」**（Master 选定）：发行版没有封面，
+        本项目也没有发行版详情页（无处可跳）
+  - [x] ⚠️ **`TBA` 在 Kana 里按「最大」参与排序** —— 只写 `sort: "released"`
+        的话整页都是「未定档」；两档分别用 `released > 今天`（升序）与
+        `released <= 今天`（降序）把它排掉，冒烟已卡住这个不变式
+  - [x] 封面墙字段集 `VN_COVER_CARD_FIELDS` 只要 id / title / `image.thumbnail`
+        （不要原图、不要日期 —— 卡片不显示，项目的规矩是「不为用不到的字段付流量」）
+  - [x] 冒烟新增 5 条（条数常量 / 两档的 TBA 与排序 / 评价列表解析 / 评价详情解析，
+        后两条打真实官网）
 - [x] 图片加载：列表封面从 `priority="low"` 升到 `normal`（原生的「优先级队列」
       才是 eager 的对应物，`loading="eager"` 只对 web 有效）
 - [x] 随机语录 / 随机一的 loading 用**骨架屏**（HeroUI `Skeleton`）
@@ -166,6 +197,41 @@
       选择存 `preferences.browseSort`（`listSort` 已随清单本地化废弃，被它取代）；
       深链 `?sort=` 参数不再支持（原来只有首页常用入口在用，那些入口已移除）
 - [x] `(tabs)/search` —— 关键词搜索（走 `searchrank` 排序）
+- [x] **搜索页支持四档**（Master 要求）：搜索框下加一行 `SegmentedControl`
+      —— **作品（默认）** / 人员 / 用户 / 厂商（即 VN / staff / user / producer；
+      控件上用短名，因为「制作人员」与「制作者」只差一个字，并排时用户分不清，
+      完整说法见 `SCOPE_LABEL` / `SCOPE_NOUN`）；四档共用同一个关键词，
+      换档不清空输入（对比着看更直观）
+  - [x] 抽出 `features/search`（feature-first）：
+        `search-logic`（范围 / 文案 / 行数据映射，纯逻辑）+ `hooks`
+        （`useStaffSearch` / `useProducerSearch` / `useUserLookup`）+ `components`
+        （`search-screen` / `vn-`·`catalog-`·`user-search-results`）；
+        路由 `app/(tabs)/search.tsx` 只剩一行 re-export
+  - [x] 抽出 `hooks/use-debounced-value`（350ms 防抖，原来内联在搜索页里）
+  - [x] `SearchResultRow` —— 作品以外的行（名称 + 罗马字原名 + 右侧次要信息 + 箭头）；
+        右侧信息：staff 显示 `s1234`，制作者显示「公司 · p24」，用户显示 `u2`
+  - [x] ⚠️ **staff 搜索按「名字行」匹配，同一个人会命中多行**（Master 报的真事故：
+        官网能搜到的「sukaji」本项目搜不到）。根因：`/staff` 的每个**名字**各占一行、
+        共享同一个 `id`（主名行 `ismain: true` + 别名行 `ismain: false`），
+        搜哪个名字就命中哪一行 ——「sukaji」命中的是别名行。
+        曾经为去重加 `ismain = 1` 过滤，**恰好把别名行全滤掉了**（搜别名一条不剩）。
+        现在不过滤，改为 `toStaffEntries` 按 `id` 客户端去重、优先主名行
+        （与官网一致：官网 `/s?q=sukaji` 也只给一行、显示命中的那个名字）
+  - [x] ⚠️ **用户只能精确匹配**（Kana 的 `GET /user` 没有模糊搜索，实测 `?q=yor`
+        查不到 `Yorhel`）：新增 `findUser` 端点（最多一条结果、不翻页），
+        「没找到」时必须说明「要写完整用户名或用户 ID（如 u2）」，
+        否则用户会以为是自己输错了
+  - [x] **移除了每档的搜索 hint**（Master 要求）：`SCOPE_PLACEHOLDER`（按档位给的
+        placeholder）与 `SCOPE_IDLE`（按档位给的空态提示）两张表全部删掉，
+        输入框只剩一句通用「搜索」；作品档原来的「热门标签」也已移除。
+        「用户只能精确匹配」这类限制改由**未命中时的文案**承担（`userMissDescription`）
+  - [x] **数据库统计扇形图从首页搬到搜索页**（Master 要求）：空输入时占下半屏，
+        并**去掉卡片外框与标题行**，直接展示图表（`DatabaseStats` 改成裸图表组件，
+        只留 12pt 左右留白；`Card` / `H5` 标题一并删除）。
+        搜索页的「没事干」状态正好有东西看，输入关键词后让位给结果列表
+  - [x] 冒烟新增 8 条（staff 主名 / 别名都能命中 / producer 搜索 / findUser 命中 /
+        findUser 不支持模糊匹配 / search-logic 纯逻辑 / staff 按 id 去重 /
+        即将发售与最新上架的 TBA 与排序 / 评价列表与详情抓取解析）
 - [x] `features/browse/components/FilterSheet` —— 高级筛选（评分 / 票数 / 语言 /
       平台 / 时长 / 开发状态 / 年代 / 内容完整度）
 - [x] `components/SegmentedControl`
@@ -198,7 +264,26 @@
 
 - [x] `features/vn/vn-detail-screen` —— VN 详情外壳（头部固定 + 页签路由）
 - [x] `features/catalog/detail-screens` —— 角色 / 制作者 / staff / 标签详情
-- [x] **staff 详情展示参与作品（Master 要求）**：概览 / 作品两个页签；
+- [x] **制作者详情的外链也放进页签**（Master 要求，与 VN 详情对齐）：
+      页签 概览 / 作品 / **外链**，概览只剩简介；
+      外观复用 VN 详情那一版卡片式列表，所以把它从
+      `features/vn/components/vn-ext-links-tab` 抽成共用组件
+      **`components/ext-link-cards`**（`SITE_LABEL` 站点名中文化 + 卡片行 + 外链箭头），
+      VN 详情页签变成三行包装（两处各写一份样式迟早对不上）；
+      页签沿用「始终全部显示、空内容由页签自己渲染空态」的约定
+      （制作者 / staff 两页的「外链」档后来也换成了 `SegmentedControl`，见下条）
+- [x] **制作者 / staff 详情改用 `SegmentedControl` + 抽出共用页签外壳**（Master 要求）
+  - [x] 新增 `features/catalog/components/catalog-detail-tabs`：三档（概览 / 作品 / 外链）
+        的分段控件 + 作品档（网格 / 列表切换 + 三态）与外链档都在里面；
+        这两个页面除了文案一模一样，各写一份必然对不上。
+        `detail-screens.tsx` 里两个详情函数因此各瘦身到 ~50 行
+  - [x] 页签从 HeroUI `Tabs` 换成 `SegmentedControl`：只有三档、档位名都两字，
+        选中态与应用其它地方（外观 / 内容设置 / 搜索范围 / 首页信息流）统一，
+        也不再需要手动挂 `Tabs.Indicator`（HeroUI 不注入，漏了就没选中底色）
+  - [x] **staff 的外链也抽成第三档**，item 样式与制作者一致（`ExtLinkCards` 卡片式），
+        概览只剩简介；staff 原来那种「label: name」纯文本行
+        （`components/typo#ExternalLinks`）随之删除 —— 全项目只剩卡片式一种外链样式
+- [x] **staff 详情展示参与作品**：概览 / 作品页签；
       `/vn` 的 `staff` 嵌套过滤器（新增 `vnWithStaff` + `queryVnsByStaff`）拉取
       该制作人员参与的全部作品（覆盖脚本 / 原画 / 音乐等全部职责），
       作品页签共用 `VnCollection` 支持网格 / 列表双视图（与制作者页签一致）
@@ -385,7 +470,15 @@
   - [x] 写入：`useUlistMutations`（PATCH / DELETE `/ulist`）、
         `useUlistReleaseHold`（PATCH / DELETE `/rlist`），成功后失效查询重取
 - [x] 清单 Tab（`UlistTabScreen`）
-  - [x] 浏览 / 标签筛选（`label` 过滤器下推；虚拟标签 0/7 不给筛）
+  - [x] **标签筛选改成纯客户端**（Master 要求）：进入清单本来就整份拉回来（分页），
+        切标签只是换个过滤条件，原来却换 `queryKey` 重新请求 + 回到全屏 loading。
+        现在 `useUlistInfinite()` **不带** `label` 过滤、queryKey 固定，
+        筛选走 `features/ulist/list-filter#filterByLabel`（纯逻辑，冒烟已测）
+        —— 切标签零请求、零 loading
+  - [x] ⚠️ **本地只能筛「已加载」的条目**（一页 50）：筛选态下列表底部只给一个
+        「加载更多」按钮（Master 要求：**不要**显示「N 条里筛出 M 条」这类读数；
+        各标签的真实条数胶囊上已经写着），补的是**未过滤**清单的下一页，
+        筛出的结果随之变多；空态也保留同一个出口
   - [x] **排序 UI 已移除**（Master 要求）：清单固定「加入时间新 → 旧」，
         原「加入 / 打分 / 开始 / 均分 / 标题」分段控件与 `ULIST_SORT_PARAM` 一并删除
   - [x] **「标签」caption 已移除**：筛选条只剩胶囊行（`UlistLabelFilter`）
@@ -474,6 +567,14 @@
       `/settings/content`（成人内容 / 每页条数）、`/settings/account`（Token 登录 / 退出）、
       `/settings/about`（版本 / 数据源 / 免责声明）
 - [x] `features/settings/components/SettingsShell` —— 四个二级页共用的返回栏 + 滚动外壳
+      （`centerContent` 让内容区 `flexGrow: 1`，页面才能把内容垂直居中 ——
+      ScrollView 的 contentContainer 默认按内容高度撑开，不给 flexGrow 的话
+      子元素里的 `flex-1` 高度是 0，`justify-center` 不会有任何效果）
+- [x] **账号页登录表单居中 + 给 Input 加 Label**（Master 要求）：整块垂直居中
+      （`flex-1 justify-center` + `max-w-sm` 免得平板上拉太宽），
+      输入框包进 HeroUI `TextField` + `Label`（`Label` 会通过 form-field 上下文
+      自动接到 `Input` 的无障碍标签上）；两个按钮从「各裹一层 `flex-1` 的 View」
+      改成 `Button` 自己带 `flex-1`
 - [x] `features/settings/components/SettingsItem` —— 基于 HeroUI `ListGroup.Item` 的
       「图标 + 标题 + 读数 + 箭头」行，危险操作用红色图标
 - [x] `features/settings/options.ts` —— 选项表只留一份（首页读数与分段控件共用同一套中文名）
@@ -529,3 +630,39 @@
 - [ ] 单测（`scripts/` 下目前只有冒烟脚本）
 - [ ] 真机回归：Android 7.0 / 主流分辨率 / 刘海屏
 - [ ] 背景图可读性真机走查（11 套主题 × 遮罩 0% / 50% / 100% 三档）
+
+### Type 4.6 · 复制（选中复制 + 长按整条复制）
+
+> Master 要求：「**选择性的**复制」——长按拖选、只复制其中一段，
+> 并且要**全局**有，不是逐页想起来才加。
+
+- [x] **普通文字全局可选中**：排版层（`components/typo` 的 `H1–H6` / `Body` /
+      `Paragraph`，以及 `components/muted` 的 `Muted`）默认带 `selectable={true}`，
+      长按 → 拖选 → 系统菜单「复制」。覆盖详情页标题 / 简介 / 语录 /
+      键值行 / 统计数字 / 评论与讨论正文（`post-content` 的最外层 `Text` 也补了 `selectable`）
+  - [x] 开关放在展开的 props **前面**，调用点显式传 `selectable={false}` 才赢
+  - [x] **可点的那一层里的文字显式关掉**（列表行标题 / 随机一部标题 /
+        语录页签角色名 / `LinkText`）：那一层已经有「长按整条复制」，
+        不关的话平台差异会让两套手势打架（Android 上系统选区可能先弹出来）
+  - [x] ⚠️ **HeroUI 的全局 `textProps` 白名单里没有 `selectable`**（只有
+        `adjustsFontSizeToFit` / `allowFontScaling` / `maxFontSizeMultiplier` /
+        `minimumFontScale`），所以覆盖不了 HeroUI 内部标签（按钮 / Chip / 页签文字）；
+        那些本来也都套在 Pressable 里，不受影响
+- [x] **点得动的一层改走「长按整条复制」**：`hooks/use-copy` 的 `useCopyProps`
+      （写剪贴板 + 成功后震动 + toast 报复制了什么），文本格式由纯函数
+      `utils/copy-text` 决定（冒烟已卡）
+  - [x] `entryCopyText` —— 「名字 + `(id)` + 官网链接」。只复制名字没用：
+        VNDB 上同名条目一搜一大把，带 id 与链接对方一点就打开
+  - [x] `vnCopyText` —— 作品版（传 `VnSummary` / `VnDetail` 即可）
+  - [x] `copyPreview` —— toast 只有一行，长文本先压空白再截断
+  - [x] 接入点：`VnListItem`（浏览 / 搜索 / 标签 / 清单 / 相关作品等**所有**作品列表行）、
+        首页「随机一部」与每日语录卡片里的作品名行、
+        `ExtLinkCards`（复制链接）、语录页签的角色名链接
+  - [x] 长按**不会**连带触发 `onPress`（RN `Pressability` 在长按命中后取消 press，
+        `node_modules/react-native/Libraries/Pressability/Pressability.js` 的
+        `isPressCanceledByLongPress`），所以进详情页 / 开外链的点击行为不受影响
+  - [x] 震动只在复制**成功**之后发；失败弹 toast；空文本直接不复制（不提示）
+- [x] **不加「长按可复制」之类的提示文案**（Master 明确要求）——只有读屏用的
+      `accessibilityHint`（`copyable.accessibilityHint`）
+- [ ] 真机验证两件事：① `selectable` 文字在 `FlashList` 行内长按是否正常弹选区；
+      ② 可选的文字套 `numberOfLines` 截断时，Android 选区范围是否正确

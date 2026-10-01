@@ -15,9 +15,18 @@ import { H5, Muted } from "@/components/typo";
 
 export function SettingsShell({
   title,
+  centerContent = false,
   children,
 }: {
   title: string;
+  /**
+   * 内容垂直居中（账号页的登录表单用）。
+   *
+   * ⚠️ 依赖内容容器的 `flexGrow: 1` —— ScrollView 的 contentContainer 默认按内容
+   * 高度撑开，不给 flexGrow 的话子元素里的 `flex-1` 高度就是 0，`justify-center`
+   * 不会有任何效果（RN 的老坑）。
+   */
+  centerContent?: boolean;
   children: ReactNode;
 }): JSX.Element {
   const router = useRouter();
@@ -41,7 +50,7 @@ export function SettingsShell({
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 48 }}
+        contentContainerStyle={{ flexGrow: centerContent ? 1 : undefined, paddingBottom: 48 }}
         // 账号页有输入框：键盘弹着时点「登录」应该直接生效，而不是先收键盘
         keyboardShouldPersistTaps="handled"
       >

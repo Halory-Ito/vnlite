@@ -35,9 +35,6 @@ export function VnDiscussionsTab({ vnId }: { vnId: string }): JSX.Element {
 
   return (
     <View className="flex-1">
-      <Muted type="body-xs" className="px-4 pt-3 pb-1">
-        共 {threads.length} 条讨论
-      </Muted>
       <FlashList<VndbThread>
         style={{ flex: 1 }}
         data={threads}

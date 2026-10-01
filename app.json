@@ -2,13 +2,14 @@
   "expo": {
     "name": "vnlite",
     "slug": "vnlite",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "heroui-native-app",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.halory.vnlite"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,6 +22,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "./plugins/with-android-abi-splits",
       [
         "expo-splash-screen",
         {

@@ -1,5 +1,5 @@
 /**
- * VNDB 数据库统计（`GET /stats`）—— 首页底部的全局条目占比扇形图。
+ * VNDB 数据库统计（`GET /stats`）—— 搜索页空输入时的全局条目占比扇形图。
  *
  * 数据是**整个 VNDB 站点**的累计条目数（收藏统计读的是你自己的清单，
  * 两者数据源不同，别混）。
@@ -8,18 +8,22 @@
  * **Tap Selection**：点扇区即选中（其余扇区淡出、选中块弹出），
  * 下方读数行给出该类别的**精确条目数 + 占比**（图例只有百分比）。
  *
+ * ⚠️ 原来它是首页的一张 `Card`（带「数据库统计 / vndb.org」标题行），
+ * Master 要求搬到搜索页并**去掉卡片外框**、只留图表本身 ——
+ * 所以标题行与 Card 一起删掉，只留一点左右留白。
+ *
  * 颜色走主题：第一块用 accent，其余固定色板（与收藏统计页同一套）；
  * 背景 / 文字都从主题 token 注入，换主题跟着变。
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Card, Skeleton, useThemeColor } from "heroui-native";
+import { Skeleton, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
 import { useWindowDimensions, View } from "react-native";
 import { PieChart } from "react-native-chart-kit/v2";
 
-import { H5, Muted } from "@/components/typo";
+import { Muted } from "@/components/typo";
 import { getStats } from "@/lib/api/endpoints/ulist";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
@@ -42,6 +46,8 @@ const CATEGORIES = [
 /** 扇形色板：第一块用主题 accent，其余固定（语义色不随主题乱变） */
 const SLICE_PALETTE = ["#2d9cdb", "#27ae60", "#f2994a", "#9b51e0", "#eb5757", "#56ccf2"];
 
+/** 图表左右留白（没有 Card 外框了，只留一点边距别贴到屏幕边） */
+const H_PADDING = 12;
 /** 图表整体高度；下半部分留给图例（7 项会折成 4 行），别把图例挤没 */
 const CHART_HEIGHT = 320;
 /** 图例预留高度（7 项 × 约 2 列） */
@@ -56,18 +62,17 @@ export function DatabaseStats(): JSX.Element {
   });
 
   return (
-    <Card className="mx-4 my-3">
-      <Card.Body className="gap-3">
-        <View className="flex-row items-baseline justify-between">
-          <H5>数据库统计</H5>
-          <Muted type="body-xs">vndb.org</Muted>
+    <View>
+      {stats.isLoading ? <StatsSkeleton /> : null}
+      {stats.isError ? (
+        <View className="py-10">
+          <Muted type="body-sm" className="text-center">
+            统计加载失败，稍后再试
+          </Muted>
         </View>
-
-        {stats.isLoading ? <StatsSkeleton /> : null}
-        {stats.isError ? <Muted type="body-sm">统计加载失败，稍后再试</Muted> : null}
-        {stats.data ? <StatsPie data={stats.data} /> : null}
-      </Card.Body>
-    </Card>
+      ) : null}
+      {stats.data ? <StatsPie data={stats.data} /> : null}
+    </View>
   );
 }
 
@@ -89,10 +94,10 @@ function StatsPie({ data }: { data: StatsResponse }): JSX.Element {
   const active = selected != null ? rows[selected] : undefined;
 
   return (
-    <View>
+    <View className="pt-2" style={{ paddingHorizontal: H_PADDING }}>
       <PieChart
-        // 卡片左右各 16pt（`mx-4`）内边距，图表的可用宽度
-        width={width - 32}
+        // 图表的可用宽度 = 屏宽 - 左右留白（已经没有 Card 的 `mx-4` 了）
+        width={width - H_PADDING * 2}
         height={CHART_HEIGHT}
         data={rows}
         labelKey="name"
@@ -133,11 +138,7 @@ function StatsPie({ data }: { data: StatsResponse }): JSX.Element {
               {total > 0 ? `${Math.round((active.value / total) * 100)}%` : "—"}
             </Muted>
           </>
-        ) : (
-          <Muted type="body-xs" className="opacity-70">
-            点按扇区查看条目数
-          </Muted>
-        )}
+        ) : null}
       </View>
     </View>
   );

@@ -174,6 +174,21 @@ export function getUser(
   return api.get(`/user?q=${encodeURIComponent(idOrName)}`, { signal });
 }
 
+/**
+ * 按用户名 / 用户 ID 查**一个**用户，查不到返回 `null`。
+ *
+ * ⚠️ **Kana 的用户接口只支持精确匹配，没有模糊搜索**（实测）：
+ *   `?q=Yorhel` → 命中；`?q=yor` → `{"yor": null}`。
+ * 用户名匹配不区分大小写，但必须写全；形如 `u123` 的串按 id 处理
+ * （不会拿去当用户名比）。所以搜索页的「用户」档最多只能给出一条结果，
+ * 限制也必须在 UI 上说明 —— 见 `features/search/search-logic.ts`。
+ */
+export async function findUser(idOrName: string, signal?: AbortSignal): Promise<UserInfo | null> {
+  const response = await getUser(idOrName, signal);
+  // 响应的键就是**原样传入的查询串**（大小写按传入的来），不是规范化后的用户名
+  return response[idOrName] ?? null;
+}
+
 export function getStats(signal?: AbortSignal): Promise<{
   chars: number;
   producers: number;

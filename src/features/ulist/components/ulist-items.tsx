@@ -5,11 +5,15 @@
  * 网格走共用的 `VnCoverGrid`（制作者详情的「作品」页签用的是同一个）；
  * 列表是清单专用的行（行上要显示我的打分 / 状态标签）。
  * 点条目 = 进**作品详情页**（改打分 / 标签走详情页右上角「编辑」）。
+ *
+ * `footer` 是调用方塞在列表底部的额外内容（筛选态的「已加载 N 条里筛出 M 条 +
+ * 加载更多」），两种视图都要能带 —— 网格那个的 footer 位置被内部占用了，
+ * 所以这里把两处都接上。
  */
 
 import { FlashList } from "@shopify/flash-list";
-import type { JSX } from "react";
-import { RefreshControl } from "react-native";
+import type { JSX, ReactElement } from "react";
+import { RefreshControl, View } from "react-native";
 
 import { Separator } from "@/components/separator";
 import { Muted } from "@/components/typo";
@@ -28,6 +32,8 @@ export interface UlistItemsProps {
   isFetchingNextPage: boolean;
   /** 点条目：进作品详情页（改打分 / 标签走详情页右上角的「编辑」） */
   onPressItem: (vnId: string) => void;
+  /** 列表底部附加内容（筛选说明 + 加载更多）。要单个元素，`VnCoverGrid` 只吃这种 */
+  footer?: ReactElement | null;
 }
 
 export function UlistItems({
@@ -38,13 +44,19 @@ export function UlistItems({
   onEndReached,
   isFetchingNextPage,
   onPressItem,
+  footer,
 }: UlistItemsProps): JSX.Element {
   const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />;
-  const footer = isFetchingNextPage ? (
-    <Muted type="body-xs" className="py-4 text-center">
-      加载更多…
-    </Muted>
-  ) : null;
+  // 「加载更多…」与调用方的附加内容（筛选说明）互斥显示，避免两块提示叠在一起
+  const bottom: ReactElement | null = isFetchingNextPage ? (
+    <View className="py-4">
+      <Muted type="body-xs" className="text-center">
+        加载更多…
+      </Muted>
+    </View>
+  ) : (
+    (footer ?? null)
+  );
 
   if (mode === "grid") {
     return (
@@ -57,7 +69,7 @@ export function UlistItems({
         onPressItem={onPressItem}
         onEndReached={onEndReached}
         refreshControl={refreshControl}
-        footer={footer}
+        footer={bottom}
       />
     );
   }
@@ -72,7 +84,7 @@ export function UlistItems({
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       refreshControl={refreshControl}
-      ListFooterComponent={footer}
+      ListFooterComponent={bottom}
     />
   );
 }

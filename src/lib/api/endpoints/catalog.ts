@@ -193,6 +193,20 @@ export function queryStaff(
   return api.query<Staff>(
     "/staff",
     {
+      /*
+       * ⚠️ **不要**为了去重而加 `ismain = 1` 过滤。
+       *
+       * `/staff` 的搜索是**按「名字行」匹配**的：一个人有多行（主名行
+       * `ismain: true` + 各别名行 `ismain: false`），共享同一个 `id`。
+       * 搜到哪一行取决于**搜的是哪个名字**：
+       *   `search=sukaji` → 命中别名行（ismain: false）
+       *   `search=SCA-自` → 命中主名行（ismain: true）
+       * 一旦用 `ismain = 1` 过滤，搜别名就一条都不剩（真事故：
+       * 官网能搜到「sukaji」，本项目搜不到）。
+       *
+       * 正确做法与官网一致：**不过滤**，按 `id` 在客户端去重
+       * （见 `features/search/search-logic#toStaffEntries`）。
+       */
       filters: options.search ? and(pred("search", "=", options.search)) : options.filters,
       fields: toFieldsString(STAFF_LIST_FIELDS),
       sort: options.sort ?? "searchrank",

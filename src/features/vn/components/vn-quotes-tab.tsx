@@ -5,6 +5,10 @@
  * 和最热门的排前面，和 VNDB 网站上「Quotes」区块的默认顺序一致。
  *
  * 只取前 50 条：热门作品动辄几百条语录，一次拉满既慢又没人翻到底。
+ *
+ * **复制分两种**（全项目统一，见 `hooks/use-copy` 与 `components/typo`）：
+ *   - 语录正文是普通文字 → 长按弹系统选区，**只复制其中一段**
+ *   - 角色名是站内链接（Pressable）→ 长按整条复制「角色名 + 官网链接」
  */
 
 import { Link } from "expo-router";
@@ -15,7 +19,9 @@ import { Pressable, ScrollView, View } from "react-native";
 import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted, Paragraph } from "@/components/typo";
+import { useCopyProps } from "@/hooks/use-copy";
 import type { Quote } from "@/lib/api/types";
+import { entryCopyText } from "@/utils/copy-text";
 
 import { useVnQuotes } from "../hooks";
 
@@ -28,9 +34,6 @@ export function VnQuotesTab({ vnId }: { vnId: string }): JSX.Element {
 
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Muted type="body-xs" className="px-4 pt-3 pb-1">
-        按评分排序，共 {data.length} 条
-      </Muted>
       {data.map((quote) => (
         <QuoteRow key={quote.id} quote={quote} />
       ))}
@@ -42,6 +45,9 @@ function QuoteRow({ quote }: { quote: Quote }): JSX.Element {
   // 图标只能吃具体色值（不吃 className），所以走主题 accent
   const accent = useThemeColor("accent");
   const character = quote.character;
+  const copyCharacter = useCopyProps(entryCopyText(character?.name ?? "", character?.id ?? ""), {
+    preview: character?.name,
+  });
 
   return (
     <View className="mx-4 mt-2 gap-2 rounded-lg bg-default-soft p-3">
@@ -50,8 +56,14 @@ function QuoteRow({ quote }: { quote: Quote }): JSX.Element {
       <View className="flex-row items-center justify-between gap-3">
         {character ? (
           <Link href={`/character/${character.id}`} asChild>
-            <Pressable className="shrink active:opacity-60" accessibilityRole="link">
-              <Muted type="body-xs" className="text-link" numberOfLines={1}>
+            <Pressable
+              className="shrink active:opacity-60"
+              accessibilityRole="link"
+              accessibilityHint={copyCharacter.accessibilityHint}
+              onLongPress={copyCharacter.onLongPress}
+              delayLongPress={copyCharacter.delayLongPress}
+            >
+              <Muted type="body-xs" className="text-link" numberOfLines={1} selectable={false}>
                 {character.name}
               </Muted>
             </Pressable>

@@ -12,6 +12,9 @@ expo-env.d.ts
 # `bun run bundle:check` 的产物
 .tmp-export/
 
+# 临时脚本（探测 / 打补丁用，不入库）
+.tmp-*
+
 # Uniwind (generated on first `expo start`)
 uniwind-types.d.ts
 

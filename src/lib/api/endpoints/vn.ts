@@ -8,7 +8,7 @@
 import { MAX_RESULTS_PER_PAGE } from "@/constants/config";
 
 import { api } from "../client";
-import { VN_DETAIL_FIELDS, VN_LIST_FIELDS } from "../fields";
+import { VN_COVER_CARD_FIELDS, VN_DETAIL_FIELDS, VN_LIST_FIELDS } from "../fields";
 import {
   byTag,
   byVn,
@@ -155,6 +155,60 @@ export function queryVnsByTag(
   options: VnQueryOptions = {}
 ): Promise<QueryResponse<VnSummary>> {
   return queryVns({ ...options, filters: ["and", byTag(tagId)] as Predicate });
+}
+
+/* -------------------------------------------------------------------------- */
+/* 首页信息流                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 即将发售（首页「即将发售」页签）。
+ *
+ * `released > 今天` + 按发售日**升序**：越近的越靠前。
+ * ⚠️ 一定要带这个过滤器：`TBA` 在 Kana 里按「最大」参与排序，
+ * 只写 `sort: "released"` 的话 TBA 会把整页占满。
+ */
+export function queryUpcomingVns(
+  today: string,
+  results = 10,
+  signal?: AbortSignal
+): Promise<QueryResponse<VnSummary>> {
+  return api.query<VnSummary>(
+    "/vn",
+    {
+      filters: ["and", ["released", ">", today]],
+      fields: toFieldsString(VN_COVER_CARD_FIELDS),
+      sort: "released",
+      reverse: false,
+      results: clampResults(results),
+    },
+    { signal }
+  );
+}
+
+/**
+ * 最新发售（首页「最新上架」页签）。
+ *
+ * `released <= 今天` + 按发售日**降序**。同样是为了排掉 TBA
+ * （不加 `<=` 的话 TBA 排在最前，出来的是「一堆未定档」而不是「刚发售」）。
+ * 边界含当天，与官网首页的 Just Released 一致。
+ */
+export function queryJustReleasedVns(
+  today: string,
+  results = 10,
+  signal?: AbortSignal
+): Promise<QueryResponse<VnSummary>> {
+  return api.query<VnSummary>(
+    "/vn",
+    {
+      filters: ["and", ["released", "<=", today]],
+      fields: toFieldsString(VN_COVER_CARD_FIELDS),
+      sort: "released",
+      reverse: true,
+      results: clampResults(results),
+    },
+    { signal }
+  );
 }
 
 /* -------------------------------------------------------------------------- */

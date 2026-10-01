@@ -35,9 +35,11 @@ import {
   summarizeCollection,
   topDevelopers,
 } from "@/features/stats/stats-logic";
+import { filterByLabel, itemHasLabel } from "@/features/ulist/list-filter";
 import { imageGate } from "@/hooks/use-preferences";
 import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
 import { migratePreferences } from "@/lib/storage/preferences";
+import { copyPreview, entryCopyText, vnCopyText } from "@/utils/copy-text";
 import { formatMonthDay } from "@/utils/format";
 
 let passed = 0;
@@ -291,6 +293,40 @@ async function main(): Promise<void> {
     );
   });
 
+  await check("清单标签本地筛选：filterByLabel（切标签不再重新请求）", () => {
+    const items = [
+      makeItem("v1", { labels: [{ id: 1, label: "Playing" }] }),
+      makeItem("v2", {
+        labels: [
+          { id: 2, label: "Finished" },
+          { id: 1, label: "Playing" },
+        ],
+      }),
+      makeItem("v3", { labels: [] }),
+      // labels 字段整个缺失（老数据 / 虚拟标签）也要安全
+      makeItem("v4"),
+    ];
+
+    // 全量 = 原样返回，但必须是**副本**（别把缓存里的数组直接交出去）
+    const all = filterByLabel(items, null);
+    assert(all.length === 4, `全量应有 4 条，实际 ${all.length}`);
+    assert(all !== items, "全量应返回副本，不是原数组");
+    assert(all[0] === items[0], "全量应保持原有顺序与元素");
+
+    const playing = filterByLabel(items, 1);
+    assert(playing.length === 2, `Playing 应有 2 条，实际 ${playing.length}`);
+    assert(
+      playing.every((item) => itemHasLabel(item, 1)),
+      "筛出来的条目都必须真的带这个标签"
+    );
+    assert(playing[0]?.id === "v1" && playing[1]?.id === "v2", "筛选应保持原有顺序");
+
+    // 一个标签都没有的条目不该命中任何筛选
+    assert(!itemHasLabel(items[2] as UListItem, 1), "空 labels 不该命中");
+    assert(!itemHasLabel(items[3] as UListItem, 1), "缺 labels 字段不该命中");
+    assert(filterByLabel(items, 99).length === 0, "不存在的标签应筛出 0 条");
+  });
+
   await check("imageGate：缺字段按露骨处理，三档行为正确", () => {
     assert(imageGate("hide", { sexual: 2 }).hidden, "hide + 露骨应隐藏");
     assert(!imageGate("hide", { sexual: 0, violence: 0 }).hidden, "hide + 安全不应隐藏");
@@ -404,6 +440,40 @@ async function main(): Promise<void> {
     assert(formatMonthDay("2026-09-30") === "9 月 30 日", "月份不应补零");
     assert(formatMonthDay("2026-12-01") === "12 月 1 日", "日期不应补零");
     assert(formatMonthDay("坏数据") === "坏数据", "解析不了时原样返回");
+  });
+
+  /* ---- 7. 长按复制的文本拼装（纯逻辑） ---- */
+  section("7. 长按复制的文本拼装");
+
+  await check("vnCopyText：名字 + (id) + 官网链接，且去掉首尾空白", () => {
+    assert(
+      vnCopyText({ id: "v2002", title: "  Steins;Gate  " }) ===
+        "Steins;Gate (v2002)\nhttps://vndb.org/v2002",
+      "作品应带 id 与链接"
+    );
+    // VNDB 的名字 / id 偶尔带空白，不 trim 的话粘出去会多出空格
+    assert(vnCopyText({ id: " v17 ", title: "CLANNAD" }).startsWith("CLANNAD (v17)"), "空白应清掉");
+    // 没有标题时别复制出「 (v17)」这种前面带空行的东西
+    assert(vnCopyText({ id: "v17", title: "" }) === "(v17)\nhttps://vndb.org/v17", "缺标题应兜底");
+    assert(vnCopyText({ id: "", title: "CLANNAD" }) === "CLANNAD", "没有 id 就只给名字");
+    assert(vnCopyText({ id: "", title: "" }) === "", "什么都没有应为空串（复制手势变空操作）");
+  });
+
+  await check("entryCopyText：角色 / 制作者 / staff / 标签同形状，缺项不留空壳", () => {
+    assert(
+      entryCopyText("Saber Alter", "c7") === "Saber Alter (c7)\nhttps://vndb.org/c7",
+      "角色应拼出官网链接"
+    );
+    assert(entryCopyText("  Key  ", "") === "Key", "没有 id 就只给名字");
+    assert(entryCopyText("", "p24") === "(p24)\nhttps://vndb.org/p24", "缺名字应兜底成 id + 链接");
+    assert(entryCopyText("", "") === "", "什么都没有应为空串（复制手势变空操作）");
+  });
+
+  await check("copyPreview：换行压成空格、超长截断", () => {
+    assert(copyPreview("あ　い\nう") === "あ い う", "连续空白应压成空格");
+    assert(copyPreview("短句", 10) === "短句", "没超长就不截");
+    const long = copyPreview("ねぇ、かなしい未来", 5);
+    assert(long === "ねぇ、かな…", `超长应截断，实际「${long}」`);
   });
 
   /* ---- 结果 ---- */

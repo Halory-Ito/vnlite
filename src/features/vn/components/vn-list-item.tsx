@@ -1,7 +1,7 @@
 /**
  * VN 列表行。列表页 / 搜索结果 / 标签页共用。
  *
- * 布局：竖版封面右侧信息。点击进入 `vn/[id]`。
+ * 布局：竖版封面右侧信息。点击进入 `vn/[id]`；**长按复制**「作品名 + 官网链接」。
  */
 
 import type { JSX, ReactNode } from "react";
@@ -10,9 +10,11 @@ import { Pressable, View } from "react-native";
 import { CoverImage } from "@/components/cover-image";
 import { Muted, Paragraph } from "@/components/typo";
 import { PlatformBadges, RatingBadge } from "@/components/ui";
+import { useCopyProps } from "@/hooks/use-copy";
 import { usePreferences } from "@/hooks/use-preferences";
 import type { VnSummary } from "@/lib/api/types";
 import type { CardField } from "@/lib/storage/preferences";
+import { vnCopyText } from "@/utils/copy-text";
 import { devStatusLabel, formatLength, formatReleased, languageLabel } from "@/utils/format";
 
 export interface VnListItemProps {
@@ -35,6 +37,8 @@ export function VnListItem({
 }: VnListItemProps): JSX.Element {
   const preferred = usePreferences().cardFields;
   const show = (field: CardField): boolean => (fields ?? preferred).includes(field);
+  // 长按整行复制作品名 —— 浏览 / 搜索 / 标签 / 清单的列表都靠这一处
+  const copyable = useCopyProps(vnCopyText(vn), { preview: vn.title });
 
   const inDevelopment = vn.devstatus === 1;
   const cancelled = vn.devstatus === 2;
@@ -44,9 +48,12 @@ export function VnListItem({
   return (
     <Pressable
       onPress={onPress ? () => onPress(vn.id) : undefined}
+      onLongPress={copyable.onLongPress}
+      delayLongPress={copyable.delayLongPress}
       className="flex-row gap-3 px-4 py-2.5 active:opacity-60"
       accessibilityRole="button"
       accessibilityLabel={vn.title}
+      accessibilityHint={copyable.accessibilityHint}
     >
       <CoverImage
         url={vn.image?.thumbnail ?? vn.image?.url}
@@ -60,7 +67,11 @@ export function VnListItem({
       />
 
       <View className="flex-1 justify-center gap-1 py-0.5">
-        <Paragraph className="line-clamp-2 font-medium">{vn.title}</Paragraph>
+        {/* `selectable={false}`：标题属于「整行可点」那一层，长按由行自己接管（复制作品名），
+            别让系统选区把手势抢走 */}
+        <Paragraph className="line-clamp-2 font-medium" selectable={false}>
+          {vn.title}
+        </Paragraph>
 
         {hasMeta ? (
           <View className="flex-row flex-wrap items-center gap-x-2 gap-y-0.5">

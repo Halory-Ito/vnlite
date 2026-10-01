@@ -114,9 +114,7 @@ export function VnInfiniteList({
                 <ActivityIndicator size="small" />
                 <Muted type="body-xs">加载更多…</Muted>
               </>
-            ) : (
-              <Muted type="body-xs">已加载 {items.length} 个</Muted>
-            )}
+            ) : null}
           </View>
         }
       />

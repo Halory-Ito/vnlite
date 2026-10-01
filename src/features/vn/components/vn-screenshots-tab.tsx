@@ -53,9 +53,6 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
     <View className="flex-1">
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="px-4 pt-2">
-          <Muted type="body-xs" className="pb-3">
-            共 {shots.length} 张 · 点开可缩放
-          </Muted>
           <View style={{ gap: 12 }}>
             {shots.map((shot, i) => (
               <ScreenshotCard
@@ -141,7 +138,7 @@ function ScreenshotCard({
       {gate.blurred ? (
         <View className="absolute bottom-1.5 right-2 rounded-full bg-background/80 px-2 py-0.5">
           <Muted type="body-xs" className="text-[10px]">
-            已模糊 · 点开可显示
+            已模糊
           </Muted>
         </View>
       ) : null}
