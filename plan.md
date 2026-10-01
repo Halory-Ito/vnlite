@@ -595,6 +595,30 @@
         要更小可开 ABI 拆分或改 AAB）
   - [x] 本地 Gradle 路线暂缓：Gradle 9.3.1（Windows 读不了 settings 脚本）
         与 9.4.1（Kotlin 元数据版本冲突）都过不去，详见 `docs/PLAN.md` §8
+  - [x] **版本 1.0.0 → 1.1.0**（2026-10-01）：补 `ios.bundleIdentifier = com.halory.vnlite`
+        （iOS 构建必需）与 `ios.infoPlist.ITSAppUsesNonExemptEncryption = false`
+        （TestFlight / App Store 必需，否则每次构建都告警）
+  - [x] **Android 按架构分包**（2026-10-01，Master 要求「根据手机架构产出多个安装包」）
+    - [x] ⚠️ **`eas.json` 没有 `splits` 选项** —— schema 里根本没这个字段
+          （`"build.preview.android.splits" is not allowed`，eas-cli 24.8.0 实测），
+          ABI 分包只能在 Gradle 层做
+    - [x] `plugins/with-android-abi-splits.js` —— config plugin 在 prebuild 之后往
+          `app/build.gradle` 的 android 块插 `splits { abi { … } }`；
+          托管工作流下不用为此提交整个 `android/` 目录
+    - [x] `include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"` +
+          **`universalApk true`**（架构不明的机器靠通用包装得上）
+    - [x] 锚点用 `android {` + `ndkVersion rootProject.ext.ndkVersion`（模板固定结构），
+          且**幂等**（含 `splits {` 就直接返回，prebuild 跑两遍也不会插两次）
+    - [x] 构建产物（v1.1.0，5 个 APK）：`arm64-v8a` **49.0 MB** /
+          `armeabi-v7a` 41.7 MB / `x86` 50.5 MB / `x86_64` 50.5 MB /
+          `universal` 116.9 MB —— 主流 64 位机装 49 MB 那个就够
+  - [x] `eas.json` 补 `preview-simulator`（iOS 模拟器包，**不需要证书**，
+        用来验证 iOS 工具链能跑通；真机 .ipa 仍需 Apple 凭据）
+  - [ ] **iOS 真机包待办**：EAS 报
+        `couldn't find any credentials suitable for internal distribution`
+        —— 要 Apple Developer 账号，在**交互模式**下跑
+        `eas build -p ios --profile preview`（登录 Apple ID 或配 App Store Connect
+        API Key）
 
 ### Type 4.4 · 图片查看器
 
