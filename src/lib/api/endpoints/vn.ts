@@ -229,19 +229,19 @@ export function queryRandomQuote(signal?: AbortSignal): Promise<QueryResponse<Qu
   );
 }
 
-/** 某 VN / 角色下的语录 */
+/** 某 VN / 角色下的语录（按 `score` 降序） */
 export function queryQuotes(options: {
   vnId?: string;
   characterId?: string;
   results?: number;
   signal?: AbortSignal;
-}) {
+}): Promise<QueryResponse<Quote>> {
   const filters = options.vnId
     ? quoteFromVn(options.vnId)
     : options.characterId
       ? quoteFromCharacter(options.characterId)
       : undefined;
-  return api.query(
+  return api.query<Quote>(
     "/quote",
     {
       filters,

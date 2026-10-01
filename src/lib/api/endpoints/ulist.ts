@@ -17,7 +17,7 @@
 
 import { EXCLUSIVE_STATUS_LABELS, UNSETTABLE_LABELS } from "../enums";
 import { api } from "../client";
-import { ULIST_FIELDS } from "../fields";
+import { ULIST_FIELDS, USER_VOTE_FIELDS } from "../fields";
 import { pred } from "../filters";
 import {
   toFieldsString,
@@ -78,6 +78,38 @@ export function queryList(options: UListQueryOptions = {}): Promise<QueryRespons
   );
 }
 
+/**
+ * 某用户**打过分的**清单条目（用户详情页「全部投票」列表）。
+ *
+ * 用虚拟标签 **7「已打分」** 做服务端过滤（`vote` 本身不能当过滤器，
+ * `["vote","=",80]` 会 400）。真踩过的坑：只按 `voted` 倒序排序的话，
+ * Kana 把 `voted = null` 的条目排在**最前面** —— 未打分的「愿望单」条目
+ * 会霸占第一页，打分记录要翻好几页才出现。走标签过滤则每页都是有效数据。
+ *
+ * ⚠️ **不请求 `count`**：`/ulist` 的 `count` 未登录一律 400
+ * （报的是 `Missing "user" parameter and not authenticated.`，
+ * 报错信息有误导性 —— 明明传了 `user`）。所以总数拿不到，
+ * 页面只能显示「已加载 N 条」+ 到底时的「没有更多了」。
+ */
+export function queryUserVotes(options: {
+  user: string;
+  page?: number;
+  results?: number;
+  signal?: AbortSignal;
+}): Promise<QueryResponse<UListItem>> {
+  return queryList({
+    user: options.user,
+    // 传了 `user` 时标签可以只写 id（见 Kana 文档的 label 过滤器说明）
+    filters: pred("label", "=", 7),
+    fields: USER_VOTE_FIELDS,
+    sort: "voted",
+    reverse: true,
+    results: Math.min(options.results ?? 50, 100),
+    page: options.page ?? 1,
+    signal: options.signal,
+  });
+}
+
 /** 拉取自己的完整清单（本地库用，分页循环由调用方控制以便显示进度） */
 export function fetchOwnListAll(
   options: { onProgress?: (loaded: number) => void; signal?: AbortSignal } = {}
@@ -128,11 +160,18 @@ export function authInfo(signal?: AbortSignal): Promise<AuthInfo> {
   return api.get<AuthInfo>("/authinfo", { signal, retry: false });
 }
 
+/**
+ * 查用户（id 或用户名）。
+ *
+ * ⚠️ 查询参数是 **`q`**，不是 `id` —— 传 `?id=` 会得到
+ * `400 Invalid argument`（踩过一次；之前这个函数没人调用，bug 一直没暴露）。
+ * 返回值是**以传入的查询串为键**的对象，键大小写按你传的来。
+ */
 export function getUser(
   idOrName: string,
   signal?: AbortSignal
 ): Promise<Record<string, UserInfo & { lengthvotes?: number }>> {
-  return api.get(`/user?id=${encodeURIComponent(idOrName)}`, { signal });
+  return api.get(`/user?q=${encodeURIComponent(idOrName)}`, { signal });
 }
 
 export function getStats(signal?: AbortSignal): Promise<{

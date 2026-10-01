@@ -17,7 +17,7 @@ import {
   TRAIT_DETAIL_FIELDS,
   TRAIT_LIST_FIELDS,
 } from "../fields";
-import { and, byTag, pred, vnWithCharacter, vnWithDeveloper } from "../filters";
+import { and, byTag, pred, vnWithCharacter, vnWithDeveloper, vnWithStaff } from "../filters";
 import {
   toFieldsString,
   type Character,
@@ -211,6 +211,25 @@ export function getStaff(id: string, signal?: AbortSignal): Promise<QueryRespons
       filters: ["and", ["id", "=", id]],
       fields: toFieldsString(STAFF_DETAIL_FIELDS),
       results: 1,
+    },
+    { signal }
+  );
+}
+
+/** 某 staff 参与的作品（`/vn` 的 `staff` 嵌套过滤器，覆盖全部职责） */
+export function queryVnsByStaff(
+  staffId: string,
+  signal?: AbortSignal
+): Promise<QueryResponse<unknown>> {
+  return api.query(
+    "/vn",
+    {
+      filters: vnWithStaff(staffId) as Predicate,
+      fields:
+        "id,title,alttitle,olang,released,rating,votecount,length,platforms,image.url,image.sexual,image.violence",
+      sort: "rating",
+      reverse: true,
+      results: MAX_RESULTS_PER_PAGE,
     },
     { signal }
   );

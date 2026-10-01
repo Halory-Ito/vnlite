@@ -30,6 +30,7 @@ import {
   getTag,
   queryVnsByCharacter,
   queryVnsByDeveloper,
+  queryVnsByStaff,
   queryVnsByTagId,
 } from "@/lib/api/endpoints/catalog";
 import { STALE_TIME } from "@/lib/query/client";
@@ -449,14 +450,28 @@ export function ProducerDetailScreen(): JSX.Element {
 /* staff                                                                       */
 /* -------------------------------------------------------------------------- */
 
+/** staff 详情的页签 */
+type StaffTab = "overview" | "works";
+
 export function StaffDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const viewMode = usePreferences().vnViewMode;
+  const [tab, setTab] = useState<StaffTab>("overview");
 
   const detail = useQuery({
     queryKey: queryKeys.staff.detail(id),
     queryFn: ({ signal }) => getStaff(id, signal),
     staleTime: STALE_TIME.catalog,
     select: (d) => d.results[0],
+  });
+
+  const vns = useQuery({
+    queryKey: queryKeys.staff.vns(id),
+    queryFn: ({ signal }) => queryVnsByStaff(id, signal),
+    staleTime: STALE_TIME.catalog,
+    select: (d) => d.results as VnSummary[],
+    enabled: Boolean(id),
   });
 
   const s = detail.data;
@@ -469,18 +484,70 @@ export function StaffDetailScreen(): JSX.Element {
       isError={detail.isError}
       error={detail.error}
       onRetry={() => void detail.refetch()}
+      // Tabs 自己管滚动（每个页签各自滚），外壳不要再套一层 ScrollView
+      scrollable={false}
     >
-      {s?.description ? (
-        <>
-          <Divider />
-          <SectionHeader title="简介" />
-          <View className="px-4 pb-4">
-            <CollapsibleText text={s.description} />
-          </View>
-        </>
-      ) : null}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as StaffTab)} className="flex-1">
+        <Tabs.List className="mx-3">
+          <Tabs.ScrollView>
+            {/* ⚠️ 指示块要自己挂：HeroUI 不会自动注入，漏了就没有「选中」的底色 */}
+            <Tabs.Indicator />
+            <Tabs.Trigger value="overview">
+              <Tabs.Label>概览</Tabs.Label>
+            </Tabs.Trigger>
+            <Tabs.Trigger value="works">
+              <Tabs.Label>作品</Tabs.Label>
+            </Tabs.Trigger>
+          </Tabs.ScrollView>
+        </Tabs.List>
 
-      <ExtLinks links={s?.extlinks} />
+        <View className="flex-1">
+          {tab === "overview" ? (
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+              {s?.description ? (
+                <>
+                  <SectionHeader title="简介" />
+                  <View className="px-4 pb-4">
+                    <CollapsibleText text={s.description} />
+                  </View>
+                </>
+              ) : (
+                <View className="px-4 py-4">
+                  <Muted type="body-sm">该制作人员没有登记简介</Muted>
+                </View>
+              )}
+
+              <ExtLinks links={s?.extlinks} />
+            </ScrollView>
+          ) : null}
+
+          {tab === "works" ? (
+            <View className="flex-1">
+              <View className="flex-row items-center justify-end px-4 pb-1 pt-2">
+                {/* 网格 / 列表切换（偏好与清单 Tab / 制作者页共用，跨启动记住） */}
+                <ViewModeButton
+                  value={viewMode}
+                  onChange={(mode) => void setPreference("vnViewMode", mode)}
+                />
+              </View>
+
+              {vns.isLoading ? (
+                <LoadingState label="拉取作品…" />
+              ) : vns.isError ? (
+                <ErrorState error={vns.error} onRetry={() => void vns.refetch()} />
+              ) : (vns.data?.length ?? 0) === 0 ? (
+                <EmptyState title="没有收录作品" description="VNDB 上这个制作人员名下还没有作品" />
+              ) : (
+                <VnCollection
+                  mode={viewMode}
+                  items={vns.data ?? []}
+                  onPressItem={(vnId) => router.push(`/vn/${vnId}`)}
+                />
+              )}
+            </View>
+          ) : null}
+        </View>
+      </Tabs>
     </DetailShell>
   );
 }

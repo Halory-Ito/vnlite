@@ -144,6 +144,13 @@
 - [x] **摇一摇换一部**（M4 增强）：`hooks/useShake`（expo-sensors 加速度计，
       只在首页聚焦时订阅、1.8g 阈值 + 1.5s 冷却），触发与「换一部」按钮同一条路径（带 haptics），
       卡片底部有「摇一摇手机也能换」提示
+- [x] **底部数据库统计图表（Master 要求）**：`features/stats/DatabaseStats`
+      读 `GET /stats`（整个 VNDB 站点的条目数，与收藏统计的数据源不同），
+      用 chart-kit v2 的 `PieChart`（`react-native-chart-kit/v2`）画视觉小说 /
+      发行版 / 角色 / 制作人员 / 制作者 / 标签 / 特性的占比扇形图，
+      交互走 **Tap Selection**（点扇区选中：其余淡出、选中块弹出；
+      下方读数行显示该类别的精确条目数 + 占比，图例本身只有百分比）；
+      颜色 / 文字走主题 token；骨架屏 + 失败降级
 - [x] 图片加载：列表封面从 `priority="low"` 升到 `normal`（原生的「优先级队列」
       才是 eager 的对应物，`loading="eager"` 只对 web 有效）
 - [x] 随机语录 / 随机一的 loading 用**骨架屏**（HeroUI `Skeleton`）
@@ -191,17 +198,27 @@
 
 - [x] `features/vn/VnDetailScreen` —— VN 详情外壳（头部固定 + 页签路由）
 - [x] `features/catalog/DetailScreens` —— 角色 / 制作者 / staff / 标签详情
-- [x] **VN 详情页签细化**：概览 / 角色 / 制作 / 版本 / **截图 / 关联 / 外链**
-  - [x] 截图 / 关联作品 / 外部链接从概览里拆成独立页签
+- [x] **staff 详情展示参与作品（Master 要求）**：概览 / 作品两个页签；
+      `/vn` 的 `staff` 嵌套过滤器（新增 `vnWithStaff` + `queryVnsByStaff`）拉取
+      该制作人员参与的全部作品（覆盖脚本 / 原画 / 音乐等全部职责），
+      作品页签共用 `VnCollection` 支持网格 / 列表双视图（与制作者页签一致）
+- [x] **VN 详情页签细化**：概览 / 角色 / 制作 / 版本 / **截图 / 关联 / 语录 / 讨论 / 外链**
+  - [x] 截图 / 关联作品 / 语录 / 讨论 / 外部链接从概览里拆成独立页签
         （它们都是列表型内容，混在概览里既把页面拉得极长、又只能挤在窄带里）
-  - [x] 7 个页签超出一屏宽 → 页签列表走 `Tabs.ScrollView`（自动把选中项滚进视野）
-  - [x] 七个页签**始终全部显示**，空内容由各页签渲染空态
+  - [x] 9 个页签超出一屏宽 → 页签列表走 `Tabs.ScrollView`（自动把选中项滚进视野）
+  - [x] 页签**始终全部显示**，空内容由各页签渲染空态
         （避免页签集合在不同作品间跳变，用户以为「功能没了」）
+  - [x] **语录页签（Master 要求）**：`VnQuotesTab` 读 `/quote` 的 `vn` 嵌套过滤器
+        （`queryQuotes({ vnId })`，按 `score` 降序，取前 50 条），
+        卡片式展示语录正文 + 角色链接 + 评分
+  - [x] ⚠️ **没有评价页签**：Kana API 不提供 reviews（`/review` 实测 404，
+        只有 `/vn` 的 `has_review` 布尔过滤器），拿不到正文 / 作者 / 分数 ——
+        经 Master 确认只做 API 支持得起的「语录」
   - [x] `VnOverviewTab` 只留基本属性 + 简介 + 标签
   - [x] `VnScreenshotsTab` 改成纵向列表，按 `dims` 还原宽高比（夹到 1:1 ~ 2.2:1）
   - [x] `VnRelationsTab` 按关联类型分组，标出官方 / 非官方
   - [x] `VnExtLinksTab` 做成卡片列表，站点名中文化
-  - [x] 按模块拆文件（概览 / 角色 / 制作 / 版本 / 截图 / 关联 / 外链各一个），
+  - [x] 按模块拆文件（概览 / 角色 / 制作 / 版本 / 截图 / 关联 / 语录 / 外链各一个），
         详情页外壳从 483 行降到 ~180 行
   - [x] 删掉因拆分而失去引用的 `components/HorizontalGallery`
   - [x] `VnOverviewTab` 简介默认折叠 6 行（`CollapsibleText` 用 `onTextLayout`
@@ -268,6 +285,83 @@
       并保证同时满足「压在选中块上 AA」「落在列表底上 AA」
 - [x] 冒烟新增断言：选中 / 未选中文字不能撞色；选中块与列表底色差阈值 10 → 25
 - [x] `VnDetailScreen` 补 `Tabs.Indicator`
+
+### Type 2.8 · 讨论模块（抓取 VNDB 网站）
+
+> ⚠️ Kana API **没有讨论 / 帖子端点**（`/thread`、`/threads`、`/post`、`/t` 实测全部 404），
+> 官方端点表也没有；讨论数据只存在于网站 HTML。经 Master 确认采用**抓网页**方案 ——
+> 这是「官网改版就会挂」的脆弱方案，已用冒烟把解析结构卡住。
+
+- [x] **抓取层抽成共享 lib**：`lib/scrape/html`（实体解码 / 去标签 / 挑战页识别 /
+      限流页识别）+ `lib/scrape/client`（Cookie 挑战、**限流退避**）——
+      讨论与用户两个模块共用同一套
+  - [x] **抓取限流处理**：请求太密会拿到 503「Crawlers are not permitted」，
+        识别后退避重试（1.2s / 3s），仍不行抛明确错误（而不是伪装成「解析失败」）
+- [x] `features/discussion/scrape.ts` —— 纯函数 HTML 解析，可被冒烟直接测
+  - [x] `parseThreadList` —— 帖子列表（标题 / 回复数 / 发起人 / 最后回复，`rel="next"` 判翻页）
+  - [x] `parseThreadPage` —— 单帖楼层（楼层号 / 作者 / 时间 / 编辑时间 / 正文节点树）
+  - [x] `parsePostNodes` —— 正文 HTML → 节点树（`br` / 粗体 / 斜体 / 下划线 /
+        链接 / 引用块 / 剧透块；report·edit 行丢弃；节点带稳定 `id` 供 React key）
+- [x] `features/discussion/client.ts` —— 网络层：过 VNDB 的「Checking browser」
+      Cookie 挑战（503 + 种 Cookie 图片 → 重试；手动 Cookie 罐 + RN 原生 jar 双保险）；
+      `fetchVnDiscussions`（讨论板列表）/ `fetchThread`（单帖正文，每页 25 楼）
+- [x] `features/discussion/hooks.ts` —— `useVnDiscussions` / `useThread` 无限翻页
+- [x] `features/discussion/components/VnDiscussionsTab.tsx` —— 帖子列表；
+      元信息用独立元素 + 间距排版（**不用 `内容 · 内容` 拼接**，Master 要求）
+- [x] `features/discussion/components/PostContent.tsx` —— 正文渲染：嵌套 `<Text>`
+      表达粗体 / 斜体 / 下划线 / 链接，引用块左竖线，剧透默认盖住点按显示
+- [x] `features/discussion/components/ThreadScreen.tsx` + 路由 `app/thread/[id]` ——
+      **站内帖子页**（不再跳浏览器）：楼层卡片 + 无限翻页 + 页脚「共 N 楼」
+- [x] VN 详情页新增「讨论」页签（现共 9 个页签）
+- [x] 冒烟新增真请求：反爬挑战能过 + 列表 / 单帖 HTML 结构还能解析（含引用块）
+- [x] `VNDB_WEB_BASE` 收敛到 `constants/config`
+
+### Type 2.9 · 用户详情页（抓取 VNDB 网站）
+
+> 入口来自讨论列表与帖子页的**昵称**（站内跳转，不开浏览器）。
+
+- [x] `features/user/scrape.ts` —— 纯函数解析 `/u2` 资料页：用户名 / 注册日期 /
+      编辑数 / 投票数与均分 / 游戏时长 / 清单规模 / 评价数 / 论坛统计 /
+      自我标记的特性 / 打分分布（10 档）/ 近期打分
+- [x] `features/user/client.ts` + `hooks.ts` —— `fetchUserProfile` / `useUserProfile`
+      （HTTP 走共用的 `lib/scrape/client`，同样含限流退避）
+- [x] `features/user/components/UserScreen.tsx` —— 三列概览（清单作品 / 投票数 /
+      发帖数）+ 资料行 + 特性分组 chip + 打分分布 + 近期打分（可点进作品详情）
+- [x] `features/user/components/VoteHistogram.tsx` —— 手绘直方图（10 档）
+- [x] 路由 `app/user/[id]`
+- [x] 讨论列表的「发起自 / 最后回复」与帖子页的作者昵称改为**可点**，
+      用 `text-link` 标示（讨论列表解析新增 `starterId` / `lastPosterId`）
+- [x] 冒烟新增真请求：资料页字段 + 列表能取到发起人 id
+- [x] **修复 `getUser` 的真 bug**：查询参数是 `q` 而不是 `id`，
+      写错会 `400 Invalid argument`（此前无人调用，bug 一直没暴露）
+- [x] **「全部投票」独立页面（Master 要求）**：**不放进资料页** ——
+      入口是「近期打分」标题**右侧**的「查看全部」按钮（`SectionHeader.trailing`），
+      点进新页面 `/user/{id}/votes`
+  - [x] 路由结构调整：`app/user/[id].tsx` → `app/user/[id]/index.tsx`，
+        新增 `app/user/[id]/votes.tsx`
+  - [x] 可视列由**头部筛选按钮**开面板控制（`VoteColumnsPanel`）——
+        复用浏览页的 `FullScreenPanel` + `FilterGroup` / `FilterChip`
+        （筛的不是数据而是外观，与「卡片显示」面板同类）
+  - [x] 7 个可选列：作品名称 / 评分 / 游玩时长 / 通关速度 / 投票时间 / 开始 / 完成
+        （默认前四项里的名称、评分、时长、投票时间）
+  - [x] **分页**：`/ulist` 每页 50 条，滚到底自动加载下一页，尾部「没有更多了」
+  - [x] ⚠️ **踩坑**：`/ulist` 的 `count` **未登录一律 400**
+        （报 `Missing "user" parameter and not authenticated.`，报错信息有误导性
+        —— 明明传了 `user`）。所以总数拿不到，只能报「已加载 N 条」
+  - [x] 列定义 / 取值 / 格式化抽到 `features/user/voteColumns.ts`，
+        面板与列表**同源**（各写一份迟早对不上）
+- [x] 「全部投票」数据层（服务两处）
+  - [x] `USER_VOTE_FIELDS` —— 瘦字段集（无封面 / 无 notes）；刻意不列 `vn.id`
+        （与顶层 id 相同会被 VNDB 省略，导航用 `UListItem.id`）
+  - [x] `queryUserVotes` —— 走 **Kana API**（`/ulist?user=…`），
+        用**虚拟标签 7「已打分」**做服务端过滤
+  - [x] ⚠️ **踩坑**：只按 `voted` 倒序排序时，Kana 把 `voted = null` 的条目排
+        在**最前面** —— 愿望单条目霸占第一页，打分记录要翻好几页才出现；
+        标签过滤后每页都是有效数据
+  - [x] 游玩时长 / 通关速度走**抓取** `/u…/lengthvotes`（`/ulist` 没有时长字段，
+        只有 `started` / `finished` 两个日期），按 vnId 合并进列表，抓不到显示「—」
+  - [x] 冒烟新增两条：`USER_VOTE_FIELDS` 合法 + 能取到打分记录；时长页解析
+  - [ ] 列开关的选择**暂存组件内**（跨启动不记住；要记住需加 preference 键）
 
 ---
 

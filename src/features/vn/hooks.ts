@@ -14,6 +14,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-quer
 
 import {
   queryCharactersByVn,
+  queryQuotes,
   queryReleasesByVn,
   queryVns,
   getVns,
@@ -115,6 +116,20 @@ export function useVnCharacters(id: string, enabled = true) {
     queryFn: ({ signal }) => queryCharactersByVn(id, signal),
     staleTime: STALE_TIME.vn,
     select: (data) => data.results as Character[],
+  });
+}
+
+/** 单条语录最多拉这么多（VNDB 的 `/quote` 上限 100）。热门作品语录很多，别一次拉满 */
+const QUOTE_LIMIT = 50;
+
+/** 某作品下的语录（`/quote` 的 `vn` 嵌套过滤器，按 score 降序） */
+export function useVnQuotes(id: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.quote.byVn(id),
+    enabled: enabled && Boolean(id),
+    queryFn: ({ signal }) => queryQuotes({ vnId: id, results: QUOTE_LIMIT, signal }),
+    staleTime: STALE_TIME.quote,
+    select: (data) => data.results,
   });
 }
 

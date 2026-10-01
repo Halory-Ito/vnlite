@@ -8,19 +8,20 @@
  * 详情页内容极长，以前要一路滚到底才能看到角色和发行版，滚动本身也浪费渲染。
  * 现在每个「列表型内容」都独立成页签：
  *
- *   概览 / 角色 / 制作 / 版本 / 截图 / 关联 / 外链
+ *   概览 / 角色 / 制作 / 版本 / 截图 / 关联 / 语录 / 讨论 / 外链
  *
- * 其中截图 / 关联作品 / 外部链接是从概览里**再拆出来**的 ——
+ * 其中截图 / 关联作品 / 语录 / 讨论 / 外部链接是从概览里**再拆出来**的 ——
  * 它们都是列表型内容，混在概览里既把页面拉得极长，又只能挤在一条窄带里展示。
  *
- * ⚠️ 7 个页签在手机宽度下放不下，所以列表必须走 `Tabs.ScrollView`
+ * ⚠️ 9 个页签在手机宽度下放不下，所以列表必须走 `Tabs.ScrollView`
  * （`Tabs.List` 只认「唯一子节点是 ScrollView」这个形状来开启滚动模式），
  * 它还会自动把选中的页签滚到视野中间。
  *
  * ## 数据策略
  *
- * 概览一次拿全量字段（含截图 / 关联 / 外链）；角色 / 制作 / 版本各自独立请求，
- * 因为列表页的字段集不含它们，而且不进那个页签就没必要拉。
+ * 概览一次拿全量字段（含截图 / 关联 / 外链）；角色 / 制作 / 版本 / 语录 / 讨论
+ * 各自独立请求，因为列表页的字段集不含它们，而且不进那个页签就没必要拉。
+ * 其中「讨论」抓的是 VNDB **网站 HTML**（Kana API 没有讨论端点），见 features/discussion。
  */
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -35,6 +36,7 @@ import { ImageViewer, type ViewerImage } from "@/components/ImageViewer";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ScreenState";
 import { H3, Muted } from "@/components/Typo";
 import { StatBlock } from "@/components/ui";
+import { VnDiscussionsTab } from "@/features/discussion/components/VnDiscussionsTab";
 import { UlistEditEntry } from "@/features/ulist/components/UlistEditEntry";
 import { UlistToggleButton } from "@/features/ulist/components/UlistToggleButton";
 import { useUlistItem } from "@/features/ulist/hooks";
@@ -52,6 +54,7 @@ import {
 import { VnCharactersTab } from "./components/VnCharactersTab";
 import { VnExtLinksTab } from "./components/VnExtLinksTab";
 import { VnOverviewTab } from "./components/VnOverviewTab";
+import { VnQuotesTab } from "./components/VnQuotesTab";
 import { VnRelationsTab } from "./components/VnRelationsTab";
 import { VnReleasesTab } from "./components/VnReleasesTab";
 import { VnScreenshotsTab } from "./components/VnScreenshotsTab";
@@ -65,6 +68,8 @@ type TabKey =
   | "releases"
   | "screenshots"
   | "relations"
+  | "quotes"
+  | "discussions"
   | "extlinks";
 
 /**
@@ -72,10 +77,14 @@ type TabKey =
  *
  * 集中在这里而不是散在 JSX 里，是为了让「有哪些页签」一眼可见。
  *
- * ⚠️ 七个页签**始终全部显示**，即使某个页签当前作品没有内容 ——
+ * ⚠️ 页签**始终全部显示**，即使某个页签当前作品没有内容 ——
  * 由各页签自己渲染空态。理由：角色 / 制作 / 版本要单独发请求才能知道有没有内容，
  * 拿不到结果前无法预判；如果只有部分页签会消失，页签集合会在不同作品间跳变，
  * 用户会以为「功能没了」。统一显示 + 统一空态更可预测。
+ *
+ * ⚠️ 没有「评价」页签：Kana API 不提供 reviews（只有 `/vn` 的 `has_review` 布尔过滤器），
+ * 拿不到正文 / 作者 / 分数，所以只做 API 支持得起的「语录」。
+ * 「讨论」页签的数据走抓取 VNDB 网站（API 同样没有讨论端点），见 features/discussion。
  */
 const TABS: readonly { key: TabKey; label: string }[] = [
   { key: "overview", label: "概览" },
@@ -84,6 +93,8 @@ const TABS: readonly { key: TabKey; label: string }[] = [
   { key: "releases", label: "版本" },
   { key: "screenshots", label: "截图" },
   { key: "relations", label: "关联" },
+  { key: "quotes", label: "语录" },
+  { key: "discussions", label: "讨论" },
   { key: "extlinks", label: "外链" },
 ] as const;
 
@@ -168,7 +179,7 @@ export default function VnDetailScreen(): JSX.Element {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1">
         <Tabs.List className="mx-3">
-          {/* 7 个页签放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
+          {/* 9 个页签放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
           <Tabs.ScrollView>
             {/* ⚠️ 指示块要自己挂：HeroUI 不会自动注入，漏了就没有「选中」的底色 */}
             <Tabs.Indicator />
@@ -181,13 +192,15 @@ export default function VnDetailScreen(): JSX.Element {
         </Tabs.List>
 
         <View className="flex-1">
-          {/* 只渲染当前页签，避免七个页签的内容都挂在树上 */}
+          {/* 只渲染当前页签，避免八个页签的内容都挂在树上 */}
           {tab === "overview" ? <VnOverviewTab vn={vn} /> : null}
           {tab === "characters" ? <VnCharactersTab vnId={vn.id} /> : null}
           {tab === "staff" ? <VnStaffTab vn={vn} /> : null}
           {tab === "releases" ? <VnReleasesTab vnId={vn.id} /> : null}
           {tab === "screenshots" ? <VnScreenshotsTab vn={vn} /> : null}
           {tab === "relations" ? <VnRelationsTab vn={vn} /> : null}
+          {tab === "quotes" ? <VnQuotesTab vnId={vn.id} /> : null}
+          {tab === "discussions" ? <VnDiscussionsTab vnId={vn.id} /> : null}
           {tab === "extlinks" ? <VnExtLinksTab vn={vn} /> : null}
         </View>
       </Tabs>

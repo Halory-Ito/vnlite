@@ -110,6 +110,15 @@ export const vnWithCharacter = (characterId: string): SimplePredicate =>
 export const vnWithDeveloper = (producerId: string): SimplePredicate =>
   nested("developer", pred("id", "=", producerId));
 
+/**
+ * `/vn` 的 `staff` 嵌套：**某个制作人员参与过哪些作品**。
+ *
+ * ⚠️ 与 `/character` 的 `seiyuu` 嵌套不同：`staff` 覆盖脚本 / 原画 / 音乐等
+ * 全部职责，不只是声优；VNDB 的 staff id 形如 `s123`。
+ */
+export const vnWithStaff = (staffId: string): SimplePredicate =>
+  nested("staff", pred("id", "=", staffId));
+
 /* -------------------------------------------------------------------------- */
 /* 标签                                                                        */
 /* -------------------------------------------------------------------------- */

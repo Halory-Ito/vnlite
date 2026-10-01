@@ -315,6 +315,17 @@ async function main(): Promise<void> {
     assert(r.results.length > 0, "c23（Ever17 主角）应该有登场作品");
   });
 
+  /*
+   * `/vn` 的 `staff` 嵌套同样容易写错端点 —— staff 详情页的「作品」页签
+   * 全靠它。s545 是 STAFF_DETAIL 字段探测用的同一位，真请求过一遍。
+   */
+  await check("queryVnsByStaff 用对了过滤器", async () => {
+    const { queryVnsByStaff } = await import("@/lib/api/endpoints/catalog");
+    const r = await queryVnsByStaff("s545");
+    assert(r.results.length > 0, "s545 应该参与过作品");
+    assert(Boolean((r.results[0] as { id?: string }).id), "应返回作品 id");
+  });
+
   await check("getVns 超过 100 个应抛错", async () => {
     const { getVns } = await import("@/lib/api/endpoints/vn");
     const ids = Array.from({ length: 101 }, (_, i) => `v${i + 1}`);
@@ -327,6 +338,13 @@ async function main(): Promise<void> {
     assert(threw, "应抛 RangeError");
   });
 
+  await check("getStats 返回 VNDB 数据库统计（首页底部图表依赖）", async () => {
+    const { getStats } = await import("@/lib/api/endpoints/ulist");
+    const s = await getStats();
+    assert(s.vn > 0 && s.releases > 0, "应返回正数条目");
+    assert(s.chars > 0 && s.tags > 0, "角色 / 标签数也应存在");
+  });
+
   await check("getTag + queryTags", async () => {
     const t = await getTag("105");
     assert(t.results.length === 1, "标签应存在");
@@ -337,6 +355,15 @@ async function main(): Promise<void> {
   await check("读公开用户清单（u2，不需要 token）", async () => {
     const r = await queryList({ user: "u2", results: 2 });
     assert(Array.isArray(r.results), "应返回数组");
+  });
+
+  // ⚠️ 查询参数是 `q`；写错成 `id` 会 400。这个函数此前没人调用，bug 埋了很久
+  await check("getUser 用 q 参数（传 id 会 400）", async () => {
+    const { getUser } = await import("@/lib/api/endpoints/ulist");
+    const byId = await getUser("u2");
+    assert(byId.u2?.username === "Yorhel", "按 id 应查到 Yorhel");
+    const byName = await getUser("Yorhel");
+    assert(byName.Yorhel?.id === "u2", "按用户名也应查到 u2");
   });
 
   await check("getListItem 单条读取（清单编辑页 / 详情入口依赖）", async () => {
@@ -394,6 +421,94 @@ async function main(): Promise<void> {
   await check("queryRandomQuote 字段集合法（每日语录依赖）", async () => {
     const r = await queryRandomQuote();
     assert(typeof r.results[0]?.quote === "string", "应返回一条带 quote 的语录");
+  });
+
+  await check("queryQuotes 按 vn 取语录（VN 详情 · 语录页签依赖）", async () => {
+    const { queryQuotes } = await import("@/lib/api/endpoints/vn");
+    const r = await queryQuotes({ vnId: "v17", results: 5 });
+    assert(r.results.length > 0, "v17 应该有语录");
+    assert(typeof r.results[0]?.quote === "string", "应返回带 quote 的语录");
+  });
+
+  /*
+   * 讨论模块走的是**网站 HTML 抓取**（Kana API 没有讨论端点）。
+   * 这条真请求覆盖两件事：反爬 Cookie 挑战能过、列表 HTML 结构还能解析。
+   * 官网改版导致解析失效时，这里会先红。
+   */
+  await check("抓取并解析 VNDB 讨论板（discussion module 依赖）", async () => {
+    const { fetchVnDiscussions } = await import("@/features/discussion/client");
+    const page = await fetchVnDiscussions("v17", 1);
+    assert(page.threads.length > 0, "v17 应有讨论帖");
+    const first = page.threads[0];
+    assert(Boolean(first && /^t\d+$/.test(first.id)), `thread id 形状不对：${first?.id}`);
+    assert(Boolean(first?.title), "应解析出标题");
+    assert(typeof first?.replies === "number", "回复数应为数字");
+  });
+
+  /*
+   * 站内帖子页要抓单帖正文（每页 25 楼）并把 HTML 解析成节点树：
+   * t950 是官方建议贴，正文里有引用块、链接、粗体，正好覆盖解析分支。
+   */
+  await check("抓取并解析讨论帖正文（站内帖子页依赖）", async () => {
+    const { fetchThread } = await import("@/features/discussion/client");
+    const page = await fetchThread("t950", 1);
+    assert(page.posts.length > 0, "t950 应有楼层");
+    assert(Boolean(page.title), "应解析出帖子标题");
+    const first = page.posts[0];
+    assert(Boolean(first && first.number > 0), "楼层号应大于 0");
+    assert(Boolean(first && first.content.length > 0), "正文节点不应为空");
+    const hasQuote = page.posts.some((post) => post.content.some((node) => node.type === "quote"));
+    assert(hasQuote, "t950 应解析出引用块");
+    assert(
+      page.posts.some((post) => post.authorId?.startsWith("u")),
+      "楼层作者应带出用户 id（用户页跳转靠它）"
+    );
+  });
+
+  /*
+   * 用户资料页：`GET /user` 只有 id / username / lengthvotes，
+   * 注册时间 / 投票分布 / 清单规模 / 论坛统计全靠抓 HTML。
+   */
+  await check("抓取并解析用户资料页（用户详情页依赖）", async () => {
+    const { fetchUserProfile } = await import("@/features/user/client");
+    const profile = await fetchUserProfile("u2");
+    assert(profile !== null, "u2 应能解析出资料");
+    assert(profile?.username === "Yorhel", `用户名应为 Yorhel，实际 ${profile?.username}`);
+    assert(profile?.registered === "2007-09-28", `注册日期应对，实际 ${profile?.registered}`);
+    assert((profile?.votes ?? 0) > 0, "应有投票数");
+    assert((profile?.voteDistribution.length ?? 0) === 10, "打分分布应有 10 档");
+    assert((profile?.recentVotes.length ?? 0) > 0, "应有近期打分");
+    assert((profile?.traits.length ?? 0) > 0, "应有自我标记的特性");
+  });
+
+  await check("讨论列表能取到发起人 / 最后回复者的用户 id", async () => {
+    const { fetchVnDiscussions } = await import("@/features/discussion/client");
+    const page = await fetchVnDiscussions("v17", 1);
+    const withStarter = page.threads.find((thread) => thread.starterId);
+    assert(Boolean(withStarter), "至少一条帖子应带出发起人 id");
+    assert(withStarter?.starterId?.startsWith("u"), `用户 id 形状不对：${withStarter?.starterId}`);
+  });
+
+  // 用户详情页「全部投票」：走 API，验证瘦字段集合法 + 确实能取到打分记录
+  await check("USER_VOTE_FIELDS 合法 + 能取到他人打分记录", async () => {
+    const { queryUserVotes } = await import("@/lib/api/endpoints/ulist");
+    const r = await queryUserVotes({ user: "u2", results: 10 });
+    assert(r.results.length > 0, "u2 应有打分记录");
+    const voted = r.results.filter((item) => item.vote != null);
+    assert(voted.length > 0, "应能筛出带 vote 的条目");
+    assert(Boolean(voted[0]?.vn?.title), "应带回 vn.title");
+    assert(voted[0]?.voted != null, "应带回投票时间戳");
+  });
+
+  // 游玩时长：`/ulist` 没有这个字段，只能抓 `/u…/lengthvotes`
+  await check("抓取并解析用户游玩时长（/ulist 没有该字段）", async () => {
+    const { fetchUserLengthVotes } = await import("@/features/user/client");
+    const page = await fetchUserLengthVotes("u2", 1);
+    assert(page.entries.length > 0, "u2 应有游玩时长记录");
+    const first = page.entries[0];
+    assert(Boolean(first?.vnId.startsWith("v")), `作品 id 形状不对：${first?.vnId}`);
+    assert(/\d/.test(first?.time ?? ""), `时长应有数字，实际 ${first?.time}`);
+    assert(/^\d{4}-\d{2}-\d{2}$/.test(first?.date ?? ""), `日期形状不对：${first?.date}`);
   });
 
   await check("ULIST_TAG_FIELDS 合法（收藏统计 · 游戏类型依赖）", async () => {

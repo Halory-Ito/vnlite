@@ -350,6 +350,25 @@ export const ULIST_FIELDS = [
 ] as const satisfies readonly FieldSpec<UListItem>[];
 
 /**
+ * 别人清单里的**投票记录**字段（用户详情页「全部投票」列表用）。
+ *
+ * 比 `ULIST_FIELDS` 瘦得多：只要作品名、评分、投票时间与起止日期。
+ * 不要封面 —— 这一列列表一次就是上百条，省下来能少传一大截；
+ * 不要 `notes` —— 评论性内容不该出现在别人资料页里。
+ *
+ * ⚠️ 刻意**不列** `vn.id`：与顶层 `id` 相同的字段 VNDB 会省略（请求了也不返回，
+ * 见上面 `ULIST_FIELDS` 的说明）。导航一律用 `UListItem.id`。
+ */
+export const USER_VOTE_FIELDS = [
+  "id",
+  "vote",
+  "voted",
+  "started",
+  "finished",
+  "vn.title",
+] as const satisfies readonly FieldSpec<UListItem>[];
+
+/**
  * `/ulist` 统计字段（收藏统计页用）。
  *
  * 只取聚合真正需要的三样：发售年份（`vn.released`）、厂商（`vn.developers`）、

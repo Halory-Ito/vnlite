@@ -36,6 +36,9 @@ export const FIELD_SEP = ",";
 /** 用户去 vndb.org 创建 token 的地址（设置页引导用） */
 export const TOKEN_CREATE_URL = "https://vndb.org/u/tokens";
 
+/** VNDB 网站根地址（讨论模块抓取 HTML 用；Kana API 不提供讨论数据） */
+export const VNDB_WEB_BASE = "https://vndb.org";
+
 /** 客户端信息，用于 User-Agent（移动端 fetch 禁止自定义该头，仅存档） */
 export const CLIENT_INFO = {
   name: "vnlite",
