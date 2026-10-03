@@ -8,20 +8,21 @@
  * 详情页内容极长，以前要一路滚到底才能看到角色和发行版，滚动本身也浪费渲染。
  * 现在每个「列表型内容」都独立成页签：
  *
- *   概览 / 角色 / 制作 / 版本 / 截图 / 关联 / 语录 / 讨论 / 外链
+ *   概览 / 角色 / 制作 / 版本 / 截图 / 关联 / 语录 / 讨论 / 攻略 / 外链
  *
- * 其中截图 / 关联作品 / 语录 / 讨论 / 外部链接是从概览里**再拆出来**的 ——
+ * 其中截图 / 关联作品 / 语录 / 讨论 / 攻略 / 外部链接是从概览里**再拆出来**的 ——
  * 它们都是列表型内容，混在概览里既把页面拉得极长，又只能挤在一条窄带里展示。
  *
- * ⚠️ 9 个页签在手机宽度下放不下，所以列表必须走 `Tabs.ScrollView`
+ * ⚠️ 10 个页签在手机宽度下放不下，所以列表必须走 `Tabs.ScrollView`
  * （`Tabs.List` 只认「唯一子节点是 ScrollView」这个形状来开启滚动模式），
  * 它还会自动把选中的页签滚到视野中间。
  *
  * ## 数据策略
  *
- * 概览一次拿全量字段（含截图 / 关联 / 外链）；角色 / 制作 / 版本 / 语录 / 讨论
+ * 概览一次拿全量字段（含截图 / 关联 / 外链）；角色 / 制作 / 版本 / 语录 / 讨论 / 攻略
  * 各自独立请求，因为列表页的字段集不含它们，而且不进那个页签就没必要拉。
- * 其中「讨论」抓的是 VNDB **网站 HTML**（Kana API 没有讨论端点），见 features/discussion。
+ * 其中「讨论」抓的是 VNDB **网站 HTML**（Kana API 没有讨论端点），见 features/discussion；
+ * 「攻略」走的是独立的静态 JSON 仓库（API 同样没有），见 features/walkthrough。
  */
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -40,6 +41,7 @@ import { VnDiscussionsTab } from "@/features/discussion/components/vn-discussion
 import { UlistEditEntry } from "@/features/ulist/components/ulist-edit-entry";
 import { UlistToggleButton } from "@/features/ulist/components/ulist-toggle-button";
 import { useUlistItem } from "@/features/ulist/hooks";
+import { VnWalkthroughTab } from "@/features/walkthrough/components/walkthrough-tab";
 import { useSession } from "@/hooks/use-session";
 import type { VnDetail } from "@/lib/api/types";
 import {
@@ -70,6 +72,7 @@ type TabKey =
   | "relations"
   | "quotes"
   | "discussions"
+  | "walkthrough"
   | "extlinks";
 
 /**
@@ -85,6 +88,7 @@ type TabKey =
  * ⚠️ 没有「评价」页签：Kana API 不提供 reviews（只有 `/vn` 的 `has_review` 布尔过滤器），
  * 拿不到正文 / 作者 / 分数，所以只做 API 支持得起的「语录」。
  * 「讨论」页签的数据走抓取 VNDB 网站（API 同样没有讨论端点），见 features/discussion。
+ * 「攻略」页签的数据走独立仓库的静态 JSON（API 也没有），见 features/walkthrough。
  */
 const TABS: readonly { key: TabKey; label: string }[] = [
   { key: "overview", label: "概览" },
@@ -95,6 +99,7 @@ const TABS: readonly { key: TabKey; label: string }[] = [
   { key: "relations", label: "关联" },
   { key: "quotes", label: "语录" },
   { key: "discussions", label: "讨论" },
+  { key: "walkthrough", label: "攻略" },
   { key: "extlinks", label: "外链" },
 ] as const;
 
@@ -179,7 +184,7 @@ export default function VnDetailScreen(): JSX.Element {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1">
         <Tabs.List className="mx-3">
-          {/* 9 个页签放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
+          {/* 10 个页签放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
           <Tabs.ScrollView>
             {/* ⚠️ 指示块要自己挂：HeroUI 不会自动注入，漏了就没有「选中」的底色 */}
             <Tabs.Indicator />
@@ -192,7 +197,7 @@ export default function VnDetailScreen(): JSX.Element {
         </Tabs.List>
 
         <View className="flex-1">
-          {/* 只渲染当前页签，避免八个页签的内容都挂在树上 */}
+          {/* 只渲染当前页签，避免九个页签的内容都挂在树上 */}
           {tab === "overview" ? <VnOverviewTab vn={vn} /> : null}
           {tab === "characters" ? <VnCharactersTab vnId={vn.id} /> : null}
           {tab === "staff" ? <VnStaffTab vn={vn} /> : null}
@@ -201,6 +206,7 @@ export default function VnDetailScreen(): JSX.Element {
           {tab === "relations" ? <VnRelationsTab vn={vn} /> : null}
           {tab === "quotes" ? <VnQuotesTab vnId={vn.id} /> : null}
           {tab === "discussions" ? <VnDiscussionsTab vnId={vn.id} /> : null}
+          {tab === "walkthrough" ? <VnWalkthroughTab vnId={vn.id} /> : null}
           {tab === "extlinks" ? <VnExtLinksTab vn={vn} /> : null}
         </View>
       </Tabs>

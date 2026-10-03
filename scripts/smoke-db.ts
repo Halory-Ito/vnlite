@@ -293,6 +293,20 @@ async function main(): Promise<void> {
     );
   });
 
+  await check("剧透保护：老数据没这一项 → 默认关闭；脏值回退为 false", () => {
+    // 攻略模块上线前的老用户：存储里根本没有这个键，默认必须是「关」
+    // （默认开会让人一进攻略页签看到满屏圆点，且没有任何提示为什么）
+    assert(migratePreferences({}).spoilerShield === false, "老数据应默认关闭剧透保护");
+    assert(migratePreferences({ pageSize: 50 }).spoilerShield === false, "缺省应补 false");
+    // 严格 true 才算开：手改存储存成 "true" / 1 之类一律按关处理
+    assert(migratePreferences({ spoilerShield: true }).spoilerShield === true, "true 应保留");
+    assert(
+      migratePreferences({ spoilerShield: "true" }).spoilerShield === false,
+      "字符串 'true' 不应被当成开启"
+    );
+    assert(migratePreferences({ spoilerShield: 1 }).spoilerShield === false, "1 不应被当成开启");
+  });
+
   await check("清单标签本地筛选：filterByLabel（切标签不再重新请求）", () => {
     const items = [
       makeItem("v1", { labels: [{ id: 1, label: "Playing" }] }),

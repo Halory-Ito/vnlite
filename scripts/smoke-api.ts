@@ -3,9 +3,10 @@
  *
  *   bun run scripts/smoke-api.ts
  *
- * 覆盖：字段集合法性、过滤器编译、嵌套过滤器、限流器、错误映射、端点封装。
+ * 覆盖：字段集合法性、过滤器编译、嵌套过滤器、限流器、错误映射、端点封装，
+ * 以及攻略仓库（静态 JSON，见 features/walkthrough）的解析容错与真实结构。
  * 这是 M0 的验收依据 —— 编译期类型只能保证「字段名是 VnSummary 上有的」，
- * 真正的合法性必须打真实接口才知道。
+ * 真正的合法性必须打真实接口 / 真实数据才知道。
  */
 
 import { api } from "@/lib/api/client";
@@ -30,6 +31,27 @@ import {
 import { toFieldsString, type Predicate } from "@/lib/api/types";
 import { RateLimiter } from "@/lib/api/rate-limiter";
 import { GAME_TYPE_TAGS } from "@/features/stats/stats-logic";
+import { overflowVids } from "@/features/walkthrough/cache";
+import { fetchWalkthrough, fetchWalkthroughIndex } from "@/features/walkthrough/client";
+import {
+  EMPTY_MARKS,
+  hasAnyMark,
+  isDone,
+  isStarred,
+  markStepsDone,
+  parseMarks,
+  toggleEnding,
+  toggleStepMark,
+} from "@/features/walkthrough/marks";
+import { parseWalkthrough, parseWalkthroughIndex } from "@/features/walkthrough/parse";
+import {
+  countStats,
+  endingMeta,
+  findEntry,
+  groupSteps,
+  markProgress,
+  maskText,
+} from "@/features/walkthrough/select";
 
 let passed = 0;
 let failed = 0;
@@ -648,12 +670,48 @@ async function main(): Promise<void> {
     assert(detail.date !== null, "应有日期");
     assert(detail.score === null || (detail.score >= 0 && detail.score <= 10), "分数应在 0–10");
     assert(detail.content.length > 0, "正文节点树不应为空");
-    // 平台 / 语言 / 通关状态是从 abbr[title] 里认出来的
-    assert(detail.platforms.length + detail.languages.length > 0, "应认出平台或语言");
-    assert(
-      detail.platforms.every((p) => !detail.languages.includes(p)),
-      "平台与语言不能混在一起"
-    );
+  });
+
+  /*
+   * 平台 / 语言 / 通关状态是从 `abbr[title]` 里认出来的，而**作者可以不填**。
+   *
+   * ⚠️ 不能拿「最新那条」来断言它们存在 —— 实测最新 10 条评价里有 6 条一个
+   * `abbr` 都没有（w18538 / w18533 / w18530 / w18529 / w18528 / w18527），
+   * 那是作者留空，不是官网改版。原来那条断言就是这么把偶然内容当成了契约，
+   * 于是「最新那条恰好留空」时冒红，而解析其实完全正常。
+   *
+   * 正确的做法是扫几条、找**确实填了**的那条 —— 这样白名单失效（官网换了
+   * `Windows` / `Japanese` / `complete` 的写法）才会红，那才是真正的回归信号。
+   */
+  await check("评价的 abbr 白名单仍能认出平台 / 语言 / 通关状态", async () => {
+    const { fetchLatestReviews } = await import("@/features/review/client");
+    const { fetchVndbHtml } = await import("@/lib/scrape/client");
+    const { parseReviewPage } = await import("@/features/review/scrape");
+
+    const list = await fetchLatestReviews();
+    // 6 条足够：留空率约 6 成，扫 6 条还一条都没填上的概率很低
+    const SCAN = 6;
+    let sawPlatform = false;
+    let sawLanguage = false;
+    let sawStatus = false;
+
+    for (const entry of list.reviews.slice(0, SCAN)) {
+      const detail = parseReviewPage(await fetchVndbHtml(`/${entry.id}`), entry.id);
+      if (!detail) continue;
+      if (detail.platforms.length > 0) sawPlatform = true;
+      if (detail.languages.length > 0) sawLanguage = true;
+      if (detail.status !== null) sawStatus = true;
+      assert(
+        detail.platforms.every((p) => !detail.languages.includes(p)),
+        "平台与语言不能混在一起"
+      );
+      // 三个维度都见过了就不必继续抓 —— 抓网页有频率限制，别白花钱
+      if (sawPlatform && sawLanguage && sawStatus) break;
+    }
+
+    assert(sawPlatform, `扫了最新 ${SCAN} 条评价都没认出平台 —— abbr 白名单可能已随官网改版失效`);
+    assert(sawLanguage, `扫了最新 ${SCAN} 条评价都没认出语言 —— abbr 白名单可能已失效`);
+    assert(sawStatus, `扫了最新 ${SCAN} 条评价都没认出通关状态 —— abbr 白名单可能已失效`);
   });
 
   await check("清单行导航 id 取顶层：/ulist 的 vn 子对象不带 id", async () => {
@@ -928,6 +986,345 @@ async function main(): Promise<void> {
   await check("加互斥标签时自动清掉旧的", () => {
     const result = toggleLabel([1], 2);
     assert(!result.includes(1) && result.includes(2), "应 1 被 2 替换");
+  });
+
+  /* ---- 7. 攻略（静态 JSON 仓库 + 纯逻辑） ---- */
+  await section("7. 攻略模块（features/walkthrough）");
+
+  /*
+   * 解析容错是这里最要紧的：攻略是**别人维护的仓库**，字段随时可能变。
+   * 所以先用构造出来的脏数据验证「坏条目被丢掉、好数据仍能解析」，
+   * 再打一次真实仓库确认线上结构仍然对得上。
+   */
+  await check("索引解析：缺 vid / path 的坏条目被丢掉，其余完整保留", () => {
+    const index = parseWalkthroughIndex({
+      schemaVersion: 1,
+      count: 2,
+      latestUpdatedAt: "2026-10-03",
+      walkthroughs: [
+        {
+          vid: "v4",
+          path: "walkthroughs/1-10000/v4.json",
+          updatedAt: "2026-03-24",
+          name: { "zh-cn": "CLANNAD" },
+        },
+        // 缺 path → 定位不到文件，整条丢
+        { vid: "v9", updatedAt: "2026-01-01" },
+        { path: "walkthroughs/v9.json" },
+        // 不是对象 → 丢
+        "garbage",
+        null,
+      ],
+    });
+
+    assert(index.walkthroughs.length === 1, `应只剩 1 条，实际 ${index.walkthroughs.length}`);
+    assert(index.walkthroughs[0].vid === "v4", "vid 应为 v4");
+    // 缺省计数补 0，而不是 undefined / NaN
+    assert(index.walkthroughs[0].level === 0, "缺省 level 应补 0");
+    assert(index.walkthroughs[0].name["zh-cn"] === "CLANNAD", "多语言名应保留");
+  });
+
+  await check("索引解析：walkthroughs 不是数组时抛错（拿到的不是索引文件）", () => {
+    let threw = false;
+    try {
+      parseWalkthroughIndex({ schemaVersion: 1, walkthroughs: "nope" });
+    } catch {
+      threw = true;
+    }
+    assert(threw, "结构不对时必须抛错，不能静默返回空索引");
+  });
+
+  await check("攻略解析：未知枚举保留原值，空 content 的步骤与无 name 的结局被丢掉", () => {
+    const walkthrough = parseWalkthrough(
+      {
+        vid: "v4",
+        level: 1,
+        updatedAt: "2026-03-24",
+        routes: [
+          {
+            id: "r1",
+            name: "游戏攻略",
+            endings: [
+              {
+                id: "e1",
+                name: "TRUE END",
+                type: "some_future_type",
+                steps: [
+                  { id: "s1", type: "save", content: "SAVE 1", subfix: "初期" },
+                  // 空 content 的步骤没有意义
+                  { id: "s2", type: "choice", content: "   " },
+                  { id: "s3", type: "choice" },
+                  // 缺 type 默认按 choice 处理（仓库里绝大多数是 choice）
+                  { id: "s4", content: "睡了" },
+                ],
+              },
+              // 没有 name 的结局丢
+              { id: "e2", type: "bad", steps: [] },
+            ],
+          },
+        ],
+      },
+      "v4"
+    );
+
+    assert(walkthrough.routes.length === 1, "应只剩 1 条线路");
+    assert(walkthrough.routes[0].endings.length === 1, "应只剩 1 个结局");
+    const steps = walkthrough.routes[0].endings[0].steps ?? [];
+    assert(steps.length === 2, `应只剩 2 个步骤，实际 ${steps.length}`);
+    assert(steps[1].type === "choice", "缺 type 的步骤应默认成 choice");
+    // ⚠️ 未知结局类型必须保留 —— 丢掉等于让攻略凭空少一段
+    assert(walkthrough.routes[0].endings[0].type === "some_future_type", "未知结局类型应原样保留");
+    assert(endingMeta("some_future_type").label === "", "未知类型不该给用户显示英文枚举");
+  });
+
+  await check("攻略解析：vid 缺失时用调用方传入的兜底值", () => {
+    const walkthrough = parseWalkthrough({ routes: [] }, "v17");
+    assert(walkthrough.vid === "v17", "应回退到 fallbackVid");
+    assert(walkthrough.routes.length === 0, "空线路是合法结果，由组件渲染空态");
+  });
+
+  await check("分页查找：大小写不敏感，找不到时返回 undefined", () => {
+    const index = parseWalkthroughIndex({
+      walkthroughs: [{ vid: "v4", path: "p/v4.json" }],
+    });
+    assert(findEntry(index, "v4") !== undefined, "v4 应命中");
+    assert(findEntry(index, "V4") !== undefined, "V4 应命中（比较前统一小写）");
+    assert(findEntry(index, "v99999") === undefined, "不在索引里应返回 undefined");
+    assert(findEntry(undefined, "v4") === undefined, "索引未就绪时应返回 undefined");
+  });
+
+  await check("步骤分段：同名 group 归成一段，连续无 group 的合成一段，key 取首个步骤 id", () => {
+    const groups = groupSteps([
+      { id: "s1", type: "choice", content: "a", group: "第一章" },
+      { id: "s2", type: "choice", content: "b", group: "第一章" },
+      { id: "s3", type: "choice", content: "c", group: "第二章" },
+      { id: "s4", type: "choice", content: "d" },
+      { id: "s5", type: "choice", content: "e" },
+    ]);
+
+    // 第一章(2) + 第二章(1) + 无 group(2) = 3 段
+    assert(groups.length === 3, `应分成 3 段，实际 ${groups.length}`);
+    assert(groups[0].steps.length === 2, "前两步同章节，应合成一段");
+    assert(groups[0].key === "s1", "key 应取该段第一个步骤的 id");
+    // 无 group 的连续步骤合成一段、标题为空（渲染时不画标题行）
+    assert(groups[2].title === "", "无 group 的段标题应为空");
+    assert(groups[2].steps.length === 2, "连续无 group 的步骤应合成一段");
+    // ⚠️ 章节名不能当 key：全篇都没写 group 时标题都是 ""，会撞成一个 key
+    assert(groups[0].key !== groups[1].key, "不同段的 key 必须不同");
+  });
+
+  await check("统计：实际数一遍，不信任索引里的 *Count", () => {
+    const walkthrough = parseWalkthrough(
+      {
+        routes: [
+          { name: "a", endings: [{ name: "x", steps: [{ content: "1" }, { content: "2" }] }] },
+          { name: "b", endings: [{ name: "y", steps: [{ content: "3" }] }, { name: "z" }] },
+        ],
+      },
+      "v1"
+    );
+    const stats = countStats(walkthrough);
+    assert(stats.routes === 2, `线路数应为 2，实际 ${stats.routes}`);
+    assert(stats.endings === 3, `结局数应为 3，实际 ${stats.endings}`);
+    assert(stats.steps === 3, `步骤数应为 3，实际 ${stats.steps}`);
+  });
+
+  await check("剧透打码：按等长替换，空白原样保留", () => {
+    const text = "SAVE 1";
+    const masked = maskText(text);
+    assert(masked.length === text.length, `打码后长度应不变：${masked.length} vs ${text.length}`);
+    assert(masked.includes(" "), "空格必须保留，否则读不成句");
+    assert(!masked.includes("S"), "原文字符不应残留");
+  });
+
+  await check("LRU 淘汰：只动没钉住的，且不改传入数组", () => {
+    const ledger = [
+      { vid: "v1", accessedAt: 100, pinned: false },
+      { vid: "v2", accessedAt: 300, pinned: false },
+      { vid: "v3", accessedAt: 200, pinned: false },
+      { vid: "v4", accessedAt: 400, pinned: false },
+    ];
+    // 留最近 2 个（v4 / v2），淘汰最旧的 v1 / v3
+    const stale = overflowVids(ledger, 2);
+    assert(stale.length === 2, `应淘汰 2 个，实际 ${stale.length}`);
+    assert(stale.includes("v1") && stale.includes("v3"), "应淘汰最旧的两个");
+    assert(!stale.includes("v4") && !stale.includes("v2"), "最近的必须留着");
+    // 不得改动传入的数组（Hermes 没有 toSorted，只能在副本上排）
+    assert(ledger[0].vid === "v1", "入参不应被就地排序");
+    assert(overflowVids(ledger, 10).length === 0, "未超上限时不该淘汰任何项");
+  });
+
+  await check("标记过的攻略不被 LRU 淘汰（pinned 优先于上限）", () => {
+    // 4 条全是最新的未标记项 + 1 条很旧但**标记过**的
+    const ledger = [
+      { vid: "vOld", accessedAt: 1, pinned: true },
+      { vid: "v1", accessedAt: 300, pinned: false },
+      { vid: "v2", accessedAt: 200, pinned: false },
+      { vid: "v3", accessedAt: 100, pinned: false },
+    ];
+    // 上限 1：可淘汰项有 3 条，多出 2 条 → 淘汰最旧的 v3 / v2
+    const stale = overflowVids(ledger, 1);
+    assert(!stale.includes("vOld"), "⚠️ 标记过的篇目绝不能被淘汰（会丢用户进度）");
+    assert(stale.includes("v3") && stale.includes("v2"), "应淘汰最旧的两个未标记项");
+
+    // 全都标记过 → 一条都不淘汰（宁可多占磁盘，也不自动删用户数据）
+    const allPinned = ledger.map((e) => ({ vid: e.vid, accessedAt: e.accessedAt, pinned: true }));
+    assert(overflowVids(allPinned, 1).length === 0, "全部 pinned 时不该淘汰任何项");
+  });
+
+  /* ---- 8. 攻略标记 ---- */
+  await section("8. 攻略标记（进度 / 重点 / 已达成）");
+
+  await check("标记解析：脏数据收敛，空标记键不留", () => {
+    const marks = parseMarks(
+      {
+        endings: ["e1", "e1", 42, null],
+        steps: {
+          s1: { done: true },
+          // 只认严格 true："true" / 1 一律当作没标记
+          s2: { done: "true" },
+          s3: {},
+          s4: { done: true, starred: true },
+          s5: "garbage",
+        },
+        updatedAt: 1000,
+      },
+      "v4"
+    );
+
+    // endings 去重且只保留字符串
+    assert(marks.endings.length === 1 && marks.endings[0] === "e1", "endings 应去重并丢掉非字符串");
+    assert(isDone(marks, "s1") === true, "s1 应标记为已走过");
+    assert(isDone(marks, "s2") === false, "字符串 'true' 不算已走过");
+    assert(isStarred(marks, "s3") === false, "空对象不该变成有效标记");
+    // 两个空壳键不该留在存储里
+    assert(!("s3" in marks.steps), "空标记键应被丢掉");
+    assert(!("s5" in marks.steps), "非对象值应被丢掉");
+    assert(isStarred(marks, "s4") === true, "s4 的重点标记应保留");
+    assert(hasAnyMark(marks) === true, "应判定为有标记");
+  });
+
+  await check("标记解析：非对象输入退化成空标记而不是崩", () => {
+    for (const bad of [null, 42, "x", []]) {
+      const marks = parseMarks(bad, "v17");
+      assert(marks.endings.length === 0, "应为空");
+      assert(hasAnyMark(marks) === false, "应判定为无标记");
+    }
+  });
+
+  await check("步骤标记取反：两个标记互不影响，取消后不留空壳", () => {
+    let marks = { ...EMPTY_MARKS, vid: "v4" };
+
+    marks = toggleStepMark(marks, "s1", "done");
+    assert(isDone(marks, "s1"), "应标记为已走过");
+    assert(isStarred(marks, "s1") === false, "不该顺带变成重点");
+
+    marks = toggleStepMark(marks, "s1", "starred");
+    assert(isDone(marks, "s1") && isStarred(marks, "s1"), "两个标记应共存");
+
+    marks = toggleStepMark(marks, "s1", "done");
+    assert(isDone(marks, "s1") === false, "应取消已走过");
+    // 重点还在 → 键必须留着
+    assert("s1" in marks.steps, "重点还在时不应删键");
+
+    marks = toggleStepMark(marks, "s1", "starred");
+    assert("s1" in marks.steps === false, "⚠️ 两个标记都取消后必须删键，不留空壳");
+  });
+
+  await check("段落完成：批量标记且不取消已有的重点", () => {
+    let marks = { ...EMPTY_MARKS, vid: "v4" };
+    marks = toggleStepMark(marks, "s2", "starred");
+
+    marks = markStepsDone(marks, ["s1", "s2", "s3"]);
+    assert(isDone(marks, "s1") && isDone(marks, "s2") && isDone(marks, "s3"), "整段应标为已走过");
+    assert(isStarred(marks, "s2"), "已有的重点标记不该被覆盖掉");
+
+    // 空数组是合法输入（不该产生新对象，也算一次无谓写盘）
+    const before = marks;
+    assert(markStepsDone(marks, []) === before, "空数组应原样返回");
+  });
+
+  await check("结局达成取反 + 进度统计只数存在的条目", () => {
+    const walkthrough = parseWalkthrough(
+      {
+        routes: [
+          {
+            name: "a",
+            endings: [
+              {
+                id: "e1",
+                name: "x",
+                steps: [
+                  { id: "s1", content: "1" },
+                  { id: "s2", content: "2" },
+                ],
+              },
+              { id: "e2", name: "y", steps: [{ id: "s3", content: "3" }] },
+            ],
+          },
+        ],
+      },
+      "v1"
+    );
+
+    let marks = { ...EMPTY_MARKS, vid: "v1" };
+    marks = toggleEnding(marks, "e1");
+    marks = toggleStepMark(marks, "s1", "done");
+    marks = toggleStepMark(marks, "s3", "starred");
+
+    const p = markProgress(walkthrough, marks);
+    assert(p.totalEndings === 2 && p.totalSteps === 3, "总数应现算");
+    assert(p.achievedEndings === 1, "已达成应为 1");
+    assert(p.doneSteps === 1, "已走过应为 1");
+    assert(p.starredSteps === 1, "重点应为 1");
+
+    // 孤立标记（作者重排步骤导致 id 消失）不计入分子，否则进度会虚高
+    marks = toggleStepMark(marks, "gone", "done");
+    assert(markProgress(walkthrough, marks).doneSteps === 1, "孤立标记不该计入进度");
+
+    marks = toggleEnding(marks, "e1");
+    assert(markProgress(walkthrough, marks).achievedEndings === 0, "再次点击应取消达成");
+  });
+
+  /* ---- 真实仓库 ---- */
+  await check("拉取真实攻略索引（两个源需至少一个可用）", async () => {
+    const index = await fetchWalkthroughIndex();
+    assert(index.walkthroughs.length > 0, "索引不应为空");
+    assert(index.count > 0, "count 应为正");
+    for (const entry of index.walkthroughs) {
+      // 路径形状错了就取不到文件 —— 索引里必须每条都带可用路径
+      assert(/^walkthroughs\/.+\.json$/.test(entry.path), `path 形状不对：${entry.path}`);
+      assert(/^v\d+$/.test(entry.vid), `vid 形状不对：${entry.vid}`);
+    }
+  });
+
+  await check("拉取真实单篇攻略并统计（CLANNAD：1 线路 16 结局）", async () => {
+    const index = await fetchWalkthroughIndex();
+    const entry = findEntry(index, "v4");
+    assert(entry !== undefined, "v4 应在索引里");
+
+    const walkthrough = await fetchWalkthrough(entry!.vid, entry!.path);
+    assert(walkthrough.routes.length > 0, "应至少有 1 条线路");
+    assert(walkthrough.vid === "v4", `vid 应为 v4，实际 ${walkthrough.vid}`);
+
+    const stats = countStats(walkthrough);
+    assert(stats.endings > 1, "CLANNAD 是多结局作品");
+    assert(stats.steps > 100, `步骤数应上百，实际 ${stats.steps}`);
+
+    // 步骤形状：id / type / content 必须齐全，且 type 是已知的那几种
+    const KNOWN = new Set(["choice", "save", "load", "note"]);
+    for (const route of walkthrough.routes) {
+      for (const ending of route.endings) {
+        for (const step of ending.steps ?? []) {
+          assert(typeof step.id === "string" && step.id !== "", "步骤缺 id");
+          assert(typeof step.content === "string" && step.content !== "", "步骤缺 content");
+          // `choice` 是绝大多数，先判它省掉一次 Set 查找
+          if (step.type !== "choice") {
+            assert(KNOWN.has(step.type), `出现未预期的步骤类型：${step.type}`);
+          }
+        }
+      }
+    }
   });
 
   /* ---- 汇总 ---- */

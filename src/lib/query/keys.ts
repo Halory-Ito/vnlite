@@ -111,6 +111,17 @@ export const queryKeys = {
     detail: (id: string) => ["review", "detail", id] as const,
   },
 
+  /* ---- 攻略（静态 JSON 仓库，不是 Kana API，见 features/walkthrough） ---- */
+  walkthrough: {
+    all: ["walkthrough"] as const,
+    /** 全部攻略的索引（vid → 文件路径 + 统计）。全应用共用一份 */
+    index: () => ["walkthrough", "index"] as const,
+    /** 某个作品的单篇攻略 */
+    byVn: (vnId: string) => ["walkthrough", "byVn", vnId] as const,
+    /** 某个作品的本地标记（已走过 / 重点 / 已达成结局） */
+    marks: (vnId: string) => ["walkthrough", "marks", vnId] as const,
+  },
+
   /* ---- 首页信息流 ---- */
   home: {
     all: ["home"] as const,

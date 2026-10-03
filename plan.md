@@ -287,10 +287,10 @@
       `/vn` 的 `staff` 嵌套过滤器（新增 `vnWithStaff` + `queryVnsByStaff`）拉取
       该制作人员参与的全部作品（覆盖脚本 / 原画 / 音乐等全部职责），
       作品页签共用 `VnCollection` 支持网格 / 列表双视图（与制作者页签一致）
-- [x] **VN 详情页签细化**：概览 / 角色 / 制作 / 版本 / **截图 / 关联 / 语录 / 讨论 / 外链**
-  - [x] 截图 / 关联作品 / 语录 / 讨论 / 外部链接从概览里拆成独立页签
+- [x] **VN 详情页签细化**：概览 / 角色 / 制作 / 版本 / **截图 / 关联 / 语录 / 讨论 / 攻略 / 外链**
+  - [x] 截图 / 关联作品 / 语录 / 讨论 / 攻略 / 外部链接从概览里拆成独立页签
         （它们都是列表型内容，混在概览里既把页面拉得极长、又只能挤在窄带里）
-  - [x] 9 个页签超出一屏宽 → 页签列表走 `Tabs.ScrollView`（自动把选中项滚进视野）
+  - [x] 10 个页签超出一屏宽 → 页签列表走 `Tabs.ScrollView`（自动把选中项滚进视野）
   - [x] 页签**始终全部显示**，空内容由各页签渲染空态
         （避免页签集合在不同作品间跳变，用户以为「功能没了」）
   - [x] **语录页签（Master 要求）**：`VnQuotesTab` 读 `/quote` 的 `vn` 嵌套过滤器
@@ -397,9 +397,203 @@
       表达粗体 / 斜体 / 下划线 / 链接，引用块左竖线，剧透默认盖住点按显示
 - [x] `features/discussion/components/thread-screen.tsx` + 路由 `app/thread/[id]` ——
       **站内帖子页**（不再跳浏览器）：楼层卡片 + 无限翻页 + 页脚「共 N 楼」
-- [x] VN 详情页新增「讨论」页签（现共 9 个页签）
+- [x] VN 详情页新增「讨论」页签（现共 10 个页签）
 - [x] 冒烟新增真请求：反爬挑战能过 + 列表 / 单帖 HTML 结构还能解析（含引用块）
 - [x] `VNDB_WEB_BASE` 收敛到 `constants/config`
+
+### Type 2.10 · 攻略页签（独立静态 JSON 仓库）
+
+> ⚠️ Kana API **没有攻略端点**，攻略数据来自独立仓库
+> `Halory-Ito/vnlite-walkthrough-and-guide`（纯静态 JSON，Master 提供）。
+> 和「讨论」不同的是这里**没有反爬与限流**（CDN 上的公开文件），
+> 真正的风险是「别人改了字段」——所以重点放在**解析容错**而不是重试退避。
+
+- [x] **数据源与降级**（`constants/config`）
+  - [x] `WALKTHROUGH_REPO_URL` / `WALKTHROUGH_INDEX_PATH` / `WALKTHROUGH_SOURCES`
+  - [x] **两个源逐个降级**：GitHub 原始文件 → jsDelivr 镜像（Master 提供的镜像地址）。
+        内容同源，谁先通用谁；全失败才算失败。镜像响应快且带 CORS `*`，
+        正好解决国内直连 GitHub 经常超时的问题
+  - [x] 单源超时 6 秒自己实现（`AbortSignal.timeout` 在 Hermes 上不可用），
+        并把调用方的 `signal` 一并接上（切页签要能取消）
+- [x] `features/walkthrough/types.ts` —— 解析**后**的类型（不是 JSON 原样镜像）
+- [x] `features/walkthrough/parse.ts` —— 纯函数解析，冒烟直接覆盖
+  - [x] 缺字段补默认值、坏条目整条丢弃、未知枚举**原样保留**
+        （结局 / 步骤类型可能新增，丢掉等于让攻略凭空少一段）
+  - [x] `walkthroughs` 不是数组时抛错 —— 静默当空索引会把「取不到索引」
+        说成「这部作品没有攻略」，是最容易说错话的地方
+- [x] `features/walkthrough/cache.ts` —— AsyncStorage 落盘
+  - [x] **打开即存**（Master 要求）：正文一到就落本地，不必手动点保存；
+        「不是所有游戏攻略」由 LRU 兜底 —— 未标记的只留最近 20 篇
+  - [x] **钉住（pinned）**：标记过的攻略永不参与淘汰（用户要反复回来对照）；
+        `pinned` 只许 false → true，从缓存回填不会把已钉住的降级
+  - [x] 缓存**不按时间淘汰**，何时重取交给 React Query 的 `staleTime` ——
+        这里只管「有没有一份可用的」，所以断网时索引仍能判断「这篇有没有攻略」
+  - [x] ⚠️ **「清空浏览缓存」跳过标记**（`MARKS_PREFIX`）：标记是用户数据，
+        清缓存清掉进度会非常意外
+- [x] **本地标记**（Master 要求：步骤「已走过 / 重点」+ 结局「已达成」）
+  - [x] `features/walkthrough/marks.ts` —— 纯函数操作 + 独立键
+        `vnlite.walkthrough_marks.<vid>`（与正文分开存，
+        正是为了上一条那个「清缓存不清进度」）
+  - [x] `parseMarks` 容错：只认严格 `true`，两个标记都取消后**删键不留空壳**，
+        `endings` 去重、坏元素丢弃，非对象输入退化成空标记而不是崩
+  - [x] `markStepsDone` 批量标记**不覆盖**已有的「重点」（段落「完成」用）
+  - [x] 打第一个标记 → `pinWalkthrough` 把该篇钉住
+        （离线看不到正文，标记也就没有意义）
+  - [x] ⚠️ **刻意不做孤儿标记清理**：作者重排步骤后旧 id 会失效，那条标记就静静躺着。
+        静默删用户数据比留一个看不见的孤儿更糟
+  - [x] `features/walkthrough/use-marks.ts` —— 用 React Query 托管
+        （切页签重挂不必等异步读取，不会闪一下空进度）；
+        `setQueryData` 乐观更新，点一下立刻有反应
+  - [x] 组件只吃 `WalkthroughMarkApi` 接口，不关心存储怎么实现
+- [x] **标记的交互**（`walkthrough-step-row.tsx`，一行三个互不抢触的点击区）
+  - [x] **复选框 = 已走过、星 = 重点、内容 = 剧透遮罩解锁**
+        （Master 要求：圆圈会被读成「单选 / 当前项」，而「我走过这一步」是
+        逐条勾掉的多选语义，所以必须是方框）
+  - [x] **直接用 HeroUI 的 `Checkbox`**（Master 要求），不自研 —— 手搓的版本要自己
+        补 hitSlop / 按压反馈 / `role="checkbox"` / `accessibilityState` /
+        勾号淡入动画，而 HeroUI 全都自带（受控用法：`isSelected` + `onSelectedChange`）
+  - [x] ⚠️ 用受控模式而不是 `defaultSelected`：标记的写入是异步的
+        （先改内存、再落盘 AsyncStorage），必须由组件完全持有状态，
+        否则关掉再打开会回到初始值
+  - [x] 只补 `accessibilityLabel`：库已经自己设了 `role="checkbox"` /
+        `aria-checked` / `accessibilityState`，重复传会被它的 `...props` 覆盖
+  - [x] 步骤的「已走过」与结局的「已达成」**共用同一个 `Checkbox`** ——
+        同屏里两个形状不一样的「勾」会被读成两种东西
+  - [x] HeroUI 的 Checkbox **没有 color prop**（只有 `variant` primary/secondary，
+        且默认按是否在 surface 上自动选），所以结局「已达成」的语义色
+        改由**整行的 success 左边框**承担，不去覆盖库的配色
+  - [x] ⚠️ **不打序号**（Master 要求）：攻略是照着走的流程，不是按编号查阅的清单；
+        编号占掉一列宽度却不带来信息 —— 「走到哪」由复选框与进度汇总表达
+  - [x] `check` 图标仍留在图标集里：它还做 `choice` 步骤类型的图标
+  - [x] ⚠️ **不做「整行点一下 = 已走过」**：那会让剧透保护失效 ——
+        点内容想看原文，结果把步骤标成走过了
+  - [x] 已走过的步骤整行压暗，扫一眼就知道走到哪
+  - [x] 未标记的星只留 35% 透明，避免满页实心星
+  - [x] 结局行右侧加「已达成」复选框（**独立于展开箭头**），
+        达成的整行换语义色左边框
+  - [x] **段落级「完成」**：最长的攻略 507 步，逐行打勾不现实；
+        每段标题行一个「完成本段（N 步）」，全段已标记时自动变「取消本段完成」
+  - [x] 无标题的段不挂「完成」（那类段通常很短，逐行点更省事）
+- [x] **进度汇总**（头部）：`结局 x/y`、`步骤 x/y`、`重点 n`，满进度追加 ✓；
+      **不受剧透保护影响** —— 自己的进度不是剧透
+  - [x] `markProgress` 的总数一律**现算**（攻略更新后步骤会增减，
+        用上次的总数会算出超过 100%）；孤立标记不计入分子（否则数字虚高）
+  - [x] 有标记时露出「清除本篇标记」
+- [x] `features/walkthrough/select.ts` —— 纯展示映射：结局类型 / 步骤类型 →
+      文案 + 图标 + 语义色，按 `group` 步骤分段，统计，进度
+  - [x] 统计与进度**实际数一遍**，不信任索引里的 `*Count`
+        （作者改正文忘了重跑生成脚本时会对不上）
+  - [x] `groupSteps` 的 key 取**该段首个步骤 id**：章节名不能当 key
+        （全篇都没写 group 时标题都是空串，会撞成一个 key）
+- [x] `features/walkthrough/hooks.ts` —— `useWalkthroughIndex` / `useWalkthrough`
+      / `useWalkthroughMarks`
+  - [x] 两级串起来：索引决定「有没有攻略」，拿到路径才请求正文
+  - [x] 网络失败**静默回落**本地缓存（攻略不是关键路径，不值得弹错误页）；
+        只有「既没网络又没缓存」才进错误态
+  - [x] `retry: false` —— 客户端内部已在源之间降级过，再叠加重试只是拉长等待
+  - [x] 标记的 hook 必须排在提前 return **之前**（rules-of-hooks）
+- [x] `features/walkthrough/components/walkthrough-tab.tsx` —— 页签主体
+  - [x] 三种「没有内容」严格分开：索引加载中 / 确实没攻略 / 请求失败
+  - [x] 沿用页签约定：**始终显示**，空内容自己渲染空态并说明「由社区维护，覆盖有限」
+- [x] `features/walkthrough/components/walkthrough-routes.tsx` —— **HeroUI `Accordion`** 线路 → 结局 → 步骤
+  - [x] **线路用 `Accordion` 而不是手写折叠**（Master 要求；也顺带修好了展开慢）
+  - [x] `selectionMode="multiple"`：攻略的常见用法是**对照着看**（开着A 线确认选项、
+        翻 B 线的分支），`single` 会强制收起另一条，来回对照要反复点
+  - [x] 默认全收起：先给全局概览（有哪些线路、多少结局），再逐层深入
+  - [x] `Accordion.Content` 收起时**返回 null**（不是 `display:none`）→
+        收起的线路**完全不渲染结局**。这是手写折叠做不到的（手写只能自己判断渲不渲染）
+  - [x] ⚠️ `hideSeparator` 必须开：HeroUI 默认在**每对子节点之间**插发丝线，
+        而每条线路自带底板，中间夹一条线像渲染错了；且 Root 用 `Children.map`
+        把分隔线**穿插**进子节点之间，不藏的话 `gap` 会在「卡片/线/卡片」各留一次、间距翻倍
+  - [x] ⚠️ 样式只能挂在子组件上：根组件 `classNames` 只认 `container`/`separator`/`base`，
+        没有 trigger / content 槽位（试过直接传 `classNames={{ trigger: … }}` 会编译报错）
+  - [x] `Accordion.Indicator` 自带旋转箭头，省掉手写 chevronRight / chevronDown 切换
+  - [x] `Accordion.Trigger` 默认 `padding-block` 是 spacing*4（16px），
+        十几条线路排下来太松 → 压到 `py-2`，间距交给根容器 `gap-2`
+  - [x] 结局默认全部收起，同屏能纵览所有结局名（单个结局最多 507 步）
+  - [x] 步骤**只在展开时挂载**，收起的结局零渲染成本
+  - [x] **结局也用 `Accordion`**（Master 要求）——**嵌套**在线路那个里面，
+        不并成一层：并进去两层的展开状态会混进同一个扁平集合，
+        出现「结局开着但线路收起、重开线路时结局还开着」
+  - [x] `Accordion.Indicator` 放在 `Item` 下、**不放 Trigger 里** ——
+        放进去点箭头会连带触发 Trigger 的展开逻辑
+  - [x] 达成条件单独一行（flag / 前置周目是攻略最有价值的部分之一）
+  - [x] ⚠️ **HeroUI `Accordion.Trigger` 的 `className` 落在内层 Pressable 上**：
+        它渲染成 `Header(View) > Pressable`，`Header` 拿不到 className。
+        所以**把 Trigger 放进 `flex-row` 里时，`flex-1` 必须加在外面那层普通 View 上** ——
+        否则作为 flex 子节点的是 Header（按内容宽度收缩），
+        Trigger 的 `flex-1` 跑到内层去按**高度**伸缩、完全没用，
+        表现是「结局名 徽标 ☑ ⌄」后面拖一截空白（Master 反馈的布局问题）
+  - [x] 顺带要覆盖 Trigger 的底样式：`flex-direction: row` 会让「结局名 + 达成条件」
+        并排、`align-items: center` 让它们水平居中 → 用 `flex-col items-stretch` 改回纵向撑满；
+        `p-0` 清掉内边距（外层已经给了 px-3 py-2.5）
+  - [x] 线路那边不受影响：`Accordion.Item` 是 column 容器且默认 `align-items: stretch`，
+        直接子节点的 Trigger 会自动撑满
+  - [x] **长结局分批挂载**（Master 反馈「steps 多的结局展开有明显延迟」）：
+        实测最长一篇单个结局 **171 步**（3 个结局 > 100 步），一行里有 1 个
+        HeroUI `Checkbox`（内部 3 个 `Animated.createAnimatedComponent` + 3 个 shared value），
+        171 行一次提交里建几百个组件与动画节点 → 展开瞬间卡顿
+    - [x] 首次只挂 60 行 → 点一下**立刻**展开
+    - [x] `InteractionManager.runAfterInteractions` 在动画结束后每次补 60 行
+    - [x] ⚠️ 必须 `handle.cancel()`：`Accordion.Content` 收起时整体卸载，
+          不取消就会对同一个结局重复排队，展开几次越挂越多
+    - [x] 补到 240 行就停，剩下的给「显示更多」按钮 —— 给未来数据兜底
+          （现在的最长结局 171 行早就低于此值）
+    - [x] ⚠️ **不用 FlashList 虚拟化**：页签的滚动容器是外层 `ScrollView`
+          （页头 + 线路 + 结局都在里面），竖向虚拟列表嵌进竖向 ScrollView
+          是典型的 nested VirtualizedLists，两个滚动容器会互抢手势
+    - [x] `WalkthroughSteps` 自己也包 `memo`：Accordion 根的展开状态一变
+          所有 Item 都会重渲染，这里 props 不变就能整体跳过
+- [x] `features/walkthrough/components/walkthrough-steps.tsx` +
+      `walkthrough-step-row.tsx` —— 步骤列表（行与列表拆开，单文件不至于超 200 行）
+  - [x] 复选框 + 类型图标 + 语义色；存档 / 读档必须一眼可辨（错了会毁掉一整周目）
+  - [x] `subfix`（存档备注，如「初期」）与 `prefix`（作者的重点标记）都渲染出来
+  - [x] 章节标题行用 `bg-separator` 拉一条分隔线，视觉上把长列表切成段
+- [x] `features/walkthrough/components/walkthrough-meta.tsx` —— 头部
+  - [x] 完整度（`level` 1=详细 / 2=简略）+ 实际统计 + 相对更新时间
+  - [x] 渲染作者写的 `tips`（绝大多数就是剧透警告），放在最上面
+  - [x] 明示数据来源并可点开仓库 —— 攻略不覆盖全部作品，要说清这是社区数据
+- [x] **剧透保护**（Master 要求）
+  - [x] `Preferences.spoilerShield` + 设置页「内容显示」的开关（默认关 ——
+        用户是主动点开这个页签的）；迁移时只认严格 `true`，脏值一律按关处理
+  - [x] `components/spoiler-text.tsx` —— **等长**圆点打码，点一下显示原文
+  - [x] ⚠️ 不用遮罩层：遮罩揭开的瞬间行高 / 换行位置全变，一行塌成三行，
+        整个列表往下跳，用户刚点开就被甩出去。等长圆点保留字符数，排版基本一致
+  - [x] 结局名 / 达成条件 / 步骤内容全部打码（达成条件里的 flag 也是剧透）
+- [x] 图标：`icon-glyphs` 补 `check` / `floppyDisk` / `arrowRotateLeft` /
+      `route` / `triangleExclamation` / `chevronDown`（Gravity UI，逐字节对照上游 svgs）
+- [x] `queryKeys.walkthrough`（含 `marks`）+ `STALE_TIME.walkthrough`（6 小时；
+      落盘不再按时间淘汰，重取时机全交给它）
+- [x] **长列表性能**（Master 反馈「展开和标记很慢」后定位）
+  - [x] 先用真实数据（最大一篇 v810，717 步 / 137KB）实测**纯 JS**：
+        `groupSteps` 0.018ms、`markProgress` 0.017ms、`JSON.stringify(marks)` 0.001ms
+        → **合计 0.04ms，数据逻辑不是瓶颈**，问题在渲染与存储 I/O
+  - [x] 步骤行删掉 4 个**死的** `useThemeColor`（删图标/星标后遗留，但仍被传进 `toneColor`，
+        所以 lint 抓不到）：每次渲染少 684 次 CSS 变量订阅抖动
+  - [x] `WalkthroughStepRow` 包 `memo` + `use-marks` 的回调全部 `useCallback` 稳定化
+        → 打一个勾只重渲染 1 行，不是整段几百行
+  - [x] ⚠️ `queryKeys.walkthrough.marks(vid)` **必须 `useMemo` 包住**：
+        它每次返回**新数组**，直接当依赖会让上面所有 `useCallback` 白做、
+        `memo` 全部失效（这个坑踩过一次）
+  - [x] 回调改用 `client.getQueryData(key)` 在调用时读最新值，
+        不闭包捕获 `marks`（也不用 ref —— `react/refs` 规则禁止渲染期写 `ref.current`）
+  - [x] `pinWalkthrough` 加进程内 `pinnedInSession` 集合：它原本每次调用都要从
+        AsyncStorage 读**整篇正文**（最大 137KB）+`JSON.parse`，
+        只为了看一眼 `pinned` 是不是 true，而**每次打标记**都会调
+  - [x] `groupSteps` 用 `useMemo`（配合行级 memo 才有意义）
+  - [ ] 首次挂载 500+ 行仍未虚拟化（要虚拟化得换 `FlashList`，
+        会改变滚动行为，暂不做）
+- [x] 冒烟新增 17 项（`smoke:api` 第 7 / 8 节）：索引 / 正文的解析容错、
+      未知枚举保留、分段 key、统计、打码等长、LRU 淘汰（含**标记过的不淘汰**）、
+      标记的取反 / 批量 / 进度（含孤立标记不计入分子），以及**两次真实请求**
+      （索引结构 + CLANNAD 全篇步骤形状）
+- [x] `smoke:db` 补 `spoilerShield` 的迁移断言
+- [x] **Master 手动精简后的现状**（后续改动务必以此为准，别恢复回去）：
+  - [x] 步骤行**去掉**类型图标与「重点」星标，只留复选框
+  - [x] **去掉**段落级「完成」按钮（`groupSteps` 之外的批量标记）
+  - [x] 头部**去掉**完整度 / 统计 / 更新时间 / 数据来源链接 / 进度小段
+        （只留作者的 `tips` 与重点计数），相应 props 一并收窄，避免留下死 prop
+  - [x] 线路行**去掉**「第 N 条 / 共 M 条」序号与结局计数
 
 ### Type 2.9 · 用户详情页（抓取 VNDB 网站）
 
@@ -614,6 +808,8 @@
           `universal` 116.9 MB —— 主流 64 位机装 49 MB 那个就够
   - [x] `eas.json` 补 `preview-simulator`（iOS 模拟器包，**不需要证书**，
         用来验证 iOS 工具链能跑通；真机 .ipa 仍需 Apple 凭据）
+    - [x] v1.1.0 模拟器构建 **FINISHED**，产物 31.8 MB —— 说明 prebuild / CocoaPods /
+          编译整条 iOS 链路是通的，缺的只是签名凭据
   - [ ] **iOS 真机包待办**：EAS 报
         `couldn't find any credentials suitable for internal distribution`
         —— 要 Apple Developer 账号，在**交互模式**下跑

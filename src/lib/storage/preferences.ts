@@ -107,6 +107,13 @@ export interface Preferences {
   cardFields: CardField[];
   /** 首次使用是否已看过引导 */
   hasSeenOnboarding: boolean;
+  /**
+   * **剧透保护**：攻略页签里把结局名与步骤内容打码，点一下才显示。
+   *
+   * 默认关 —— 攻略本来就是主动点开页签来看的，多数人不想多点一次。
+   * 攻略仓库自带 `tips`（作者的剧透警告），那是数据，这里是应用自己的兜底。
+   */
+  spoilerShield: boolean;
 
   /* ---- 主题 ---- */
   /** 明暗三态 */
@@ -138,6 +145,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   browseSort: { field: "votecount", reverse: true },
   cardFields: [...CARD_FIELD],
   hasSeenOnboarding: false,
+  spoilerShield: false,
   colorScheme: "system",
   themeId: "air",
   showBackground: true,
@@ -220,6 +228,9 @@ export function migratePreferences(stored: Record<string, unknown>): Preferences
   next.cardFields = Array.isArray(next.cardFields)
     ? next.cardFields.filter(isCardField)
     : [...CARD_FIELD];
+
+  // 剧透保护是布尔开关：手改过存储时可能存成 "true" / 1 之类，只认严格 true
+  next.spoilerShield = next.spoilerShield === true;
 
   delete (next as unknown as Record<string, unknown>).backgroundDim;
   return next;

@@ -21,6 +21,7 @@ import { NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useSession } from "@/hooks/use-session";
 import { clearContentCache } from "@/lib/query/client";
+import { clearWalkthroughCache } from "@/features/walkthrough/cache";
 import { getTheme } from "@/theme/themes";
 
 export default function MeScreen(): JSX.Element {
@@ -31,7 +32,11 @@ export default function MeScreen(): JSX.Element {
   const theme = getTheme(preferences.themeId);
 
   const clearCache = () => {
-    void clearContentCache().then(() => toast.show("已清空浏览缓存"));
+    // 内存缓存（所有业务数据）+ 攻略的落盘缓存一起清：
+    // 攻略索引有 ~190KB 且带 24h TTL，只清内存的话用户会觉得「清完还在」
+    void Promise.all([clearContentCache(), clearWalkthroughCache()]).then(() =>
+      toast.show("已清空浏览缓存")
+    );
   };
 
   return (

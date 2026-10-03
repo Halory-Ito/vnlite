@@ -39,6 +39,36 @@ export const TOKEN_CREATE_URL = "https://vndb.org/u/tokens";
 /** VNDB 网站根地址（讨论模块抓取 HTML 用；Kana API 不提供讨论数据） */
 export const VNDB_WEB_BASE = "https://vndb.org";
 
+/* -------------------------------------------------------------------------- */
+/* 攻略数据源                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 攻略仓库（VN 详情页「攻略」页签的数据来源）。
+ *
+ * Kana API 没有任何攻略端点，所以攻略来自这个独立的 GitHub 仓库 ——
+ * 纯静态 JSON，`index.json` 是索引（vid → 文件路径 + 统计），单篇攻略按 vid 单独一个文件。
+ */
+export const WALKTHROUGH_REPO_URL = "https://github.com/Halory-Ito/vnlite-walkthrough-and-guide";
+
+/** 索引文件路径（相对仓库根） */
+export const WALKTHROUGH_INDEX_PATH = "index.json";
+
+/**
+ * 取文件的源，**按顺序重试**。
+ *
+ * 1. GitHub 原始文件：权威，但国内直连经常超时
+ * 2. jsDelivr 镜像：国内可用性好、响应快，且带 `Access-Control-Allow-Origin: *`
+ *
+ * 两者内容同源（都指向 main 分支），所以谁先通用谁；全失败才算请求失败。
+ * 攻略页签本身对延迟敏感 —— 单个源挂住时不该让用户干等，客户端超时要短（见
+ * `features/walkthrough/client.ts`）。
+ */
+export const WALKTHROUGH_SOURCES = [
+  "https://raw.githubusercontent.com/Halory-Ito/vnlite-walkthrough-and-guide/main",
+  "https://cdn.jsdelivr.net/gh/Halory-Ito/vnlite-walkthrough-and-guide@main",
+] as const;
+
 /** 客户端信息，用于 User-Agent（移动端 fetch 禁止自定义该头，仅存档） */
 export const CLIENT_INFO = {
   name: "vnlite",
