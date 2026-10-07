@@ -11,7 +11,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useThemeColor } from "heroui-native";
 import type { JSX, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { CollapsibleText, ExpandToggle, useCollapsedList } from "@/components/collapsible";
@@ -22,6 +22,7 @@ import { Divider, Separator } from "@/components/separator";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { H2, H6, Muted } from "@/components/typo";
 import { KeyValueRow, SectionHeader, TagChip } from "@/components/ui";
+import { useRecordHistory } from "@/features/history/hooks";
 import { VnListItem } from "@/features/vn/components/vn-list-item";
 
 import { CatalogDetailTabs, type CatalogTab } from "./components/catalog-detail-tabs";
@@ -200,6 +201,7 @@ function RelatedVns({
 
 export function CharacterDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
+  const recordView = useRecordHistory();
 
   const detail = useQuery({
     queryKey: queryKeys.character.detail(id),
@@ -216,6 +218,11 @@ export function CharacterDetailScreen(): JSX.Element {
   });
 
   const c = detail.data;
+
+  // 记录浏览历史
+  useEffect(() => {
+    if (c) recordView("character", c.id, c.name, c.original, c.image?.thumbnail);
+  }, [c, recordView]);
   // 特性可能有几十条（VNDB 的角色特性是「标签墙」），默认只铺 12 个
   const traits = useCollapsedList(c?.traits ?? [], TRAIT_LIMIT);
 
@@ -327,6 +334,7 @@ export function ProducerDetailScreen(): JSX.Element {
   const router = useRouter();
   const viewMode = usePreferences().vnViewMode;
   const [tab, setTab] = useState<CatalogTab>("overview");
+  const recordView = useRecordHistory();
 
   const detail = useQuery({
     queryKey: queryKeys.producer.detail(id),
@@ -344,6 +352,11 @@ export function ProducerDetailScreen(): JSX.Element {
   });
 
   const p = detail.data;
+
+  // 记录浏览历史
+  useEffect(() => {
+    if (p) recordView("producer", p.id, p.name, p.original);
+  }, [p, recordView]);
 
   return (
     <DetailShell
@@ -409,6 +422,7 @@ export function StaffDetailScreen(): JSX.Element {
   const router = useRouter();
   const viewMode = usePreferences().vnViewMode;
   const [tab, setTab] = useState<CatalogTab>("overview");
+  const recordView = useRecordHistory();
 
   const detail = useQuery({
     queryKey: queryKeys.staff.detail(id),
@@ -426,6 +440,11 @@ export function StaffDetailScreen(): JSX.Element {
   });
 
   const s = detail.data;
+
+  // 记录浏览历史
+  useEffect(() => {
+    if (s) recordView("staff", s.id, s.name, s.original);
+  }, [s, recordView]);
 
   return (
     <DetailShell

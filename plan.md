@@ -886,3 +886,62 @@
       `accessibilityHint`（`copyable.accessibilityHint`）
 - [ ] 真机验证两件事：① `selectable` 文字在 `FlashList` 行内长按是否正常弹选区；
       ② 可选的文字套 `numberOfLines` 截断时，Android 选区范围是否正确
+
+---
+
+## Module 5 · 浏览历史
+
+### Type 5.1 · 历史记录数据层
+
+- [x] SQLite 迁移 v4：`history` 表（type / entry_id / title / subtitle / image_url /
+      viewed_at，唯一索引 `(type, entry_id)`）
+- [x] `lib/db/dao/history.ts` —— recordView / getHistoryPage / getHistoryCount /
+      clearHistory / deleteHistoryEntry
+  - [x] 查询接口按**类型集合**工作（`IN (?, ?)`），「人员」档 = 角色 + 制作人员
+  - [x] 唯一索引兜住去重：重复浏览同一条只更新 `viewed_at`，不新增行
+- [x] `features/history/hooks.ts` —— **走 React Query**（与项目其它数据层一致，
+      不手写 `useEffect + setState`）：`useRecordHistory` / `useHistoryInfinite` /
+      `useHistoryCount` / `useClearHistory` / `useRemoveHistoryEntry`
+- [x] `queryKeys.history`（list / count，按展示档位分段）
+
+### Type 5.2 · 历史记录页面
+
+- [x] `features/history/history-screen.tsx` —— 顶部 `SegmentedControl` 切四档 +
+      **FlashList** 分页（触底自动加载）+ 空/错误态
+- [x] Header（`BackBar` 右侧 `trailing`）常驻三个操作：
+  - [x] **日期筛选**：图标按钮（`clock`）打开 `TimeRangePanel`
+  - [x] **视图切换**（仅作品档）：复用 `ViewModeButton`
+  - [x] **清空**：HeroUI `Button isIconOnly`，**常显**（Master 要求）
+- [x] **清空二次确认走项目自己的 `AppDialog`**，不用系统 `Alert`（Master 要求）
+- [x] `features/history/components/history-item.tsx` —— 行组件
+      （封面/头像 + 标题 + 原名 + 相对时间；无图条目用时钟图标兜底）；
+      点进详情页，长按删除单条
+- [x] `features/history/components/history-list.tsx` —— 集合视图：
+      **作品档支持网格 / 列表切换**（网格复用 `VnCoverGrid`，存 `preferences.vnViewMode`）
+- [x] `features/history/components/time-range-panel.tsx` —— **日期筛选面板**
+      （复用 `FullScreenPanel` + `FilterGroup` / `FilterChip`）：
+      **自定义开始 / 结束日期**（Master 要求，不能只给固定时间段），
+      上面一排「全部 / 今天 / 近 7 天 / 近 30 天」只是快速填日期的捷径；
+      草稿在面板内，点「应用」才生效，未填满 / 无效 / 顺序错误挡住
+- [x] `features/history/components/date-otp-field.tsx` —— **`InputOTP` 日期输入**
+      （Master 要求）：8 位数字 `YYYYMMDD` 数字键盘逐位输入，**不用手敲 `-`**；
+      年月日三组用 `InputOTP.Separator` 分隔；槽位用 `style` 收窄以适配手机宽度
+- [x] `history-constants` 日期筛选纯函数：`presetDateFilter`（快捷 → 具体日期）、
+      `isoToDigits` / `digitsToIso`（OTP 数字串 ↔ ISO）、
+      `dateDigitsRangeErrors`（位数 / 有效性 / 顺序校验）、
+      `dateFilterBounds`（→ 时间上下界，**含首尾整天**）
+- [x] `utils/format#formatRelativeTime` —— 刚刚 / 分钟 / 小时 / 天 / 日期（纯函数）
+- [x] 路由 `app/history.tsx`
+- [x] 「我的」页添加入口（`clock` 图标）
+
+### Type 5.3 · 详情页接入
+
+- [x] VN 详情页调用 `useRecordHistory`
+- [x] 角色 / 厂商 / staff 详情页调用 `useRecordHistory`
+- [x] 用户详情页调用 `useRecordHistory`
+
+### Type 5.4 · 质量
+
+- [x] 冒烟测试：history DAO 的 CRUD + 分页 + 去重 + 「人员」档聚合 + 空集合短路 +
+      日期上下界过滤；`formatRelativeTime` / `presetDateFilter` / `isoToDigits` /
+      `digitsToIso` / `dateDigitsRangeErrors` / `dateFilterBounds` 的纯逻辑

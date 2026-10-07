@@ -14,6 +14,7 @@ import { Database } from "bun:sqlite";
 
 import type { Producer, UListItem } from "@/lib/api/types";
 import * as accountDao from "@/lib/db/dao/account";
+import * as historyDao from "@/lib/db/dao/history";
 import {
   getDatabase,
   setDatabaseProvider,
@@ -36,11 +37,18 @@ import {
   topDevelopers,
 } from "@/features/stats/stats-logic";
 import { filterByLabel, itemHasLabel } from "@/features/ulist/list-filter";
+import {
+  dateDigitsRangeErrors,
+  dateFilterBounds,
+  digitsToIso,
+  isoToDigits,
+  presetDateFilter,
+} from "@/features/history/history-constants";
 import { imageGate } from "@/hooks/use-preferences";
 import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
 import { migratePreferences } from "@/lib/storage/preferences";
 import { copyPreview, entryCopyText, vnCopyText } from "@/utils/copy-text";
-import { formatMonthDay } from "@/utils/format";
+import { formatMonthDay, formatRelativeTime } from "@/utils/format";
 
 let passed = 0;
 let failed = 0;
@@ -456,6 +464,22 @@ async function main(): Promise<void> {
     assert(formatMonthDay("坏数据") === "坏数据", "解析不了时原样返回");
   });
 
+  await check("formatRelativeTime：刚刚 / 分钟 / 小时 / 天 / 日期", () => {
+    const now = Date.now();
+    assert(formatRelativeTime(now) === "刚刚", "刚发生应为刚刚");
+    assert(formatRelativeTime(now - 5 * 60_000) === "5 分钟前", "5 分钟前");
+    assert(formatRelativeTime(now - 3 * 60 * 60_000) === "3 小时前", "3 小时前");
+    assert(formatRelativeTime(now - 2 * 24 * 60 * 60_000) === "2 天前", "2 天前");
+    // 超过 30 天退回具体日期
+    assert(
+      formatRelativeTime(now - 40 * 24 * 60 * 60_000)?.includes("-") === true,
+      "40 天前应是日期"
+    );
+    assert(formatRelativeTime(0) === null, "0 应为 null");
+    assert(formatRelativeTime(null) === null, "null 应为 null");
+    assert(formatRelativeTime(now + 1000) === null, "未来时间应为 null");
+  });
+
   /* ---- 7. 长按复制的文本拼装（纯逻辑） ---- */
   section("7. 长按复制的文本拼装");
 
@@ -488,6 +512,150 @@ async function main(): Promise<void> {
     assert(copyPreview("短句", 10) === "短句", "没超长就不截");
     const long = copyPreview("ねぇ、かなしい未来", 5);
     assert(long === "ねぇ、かな…", `超长应截断，实际「${long}」`);
+  });
+
+  /* ---- 8. 浏览历史 DAO ---- */
+  section("8. 浏览历史 DAO");
+
+  await check("recordView / getHistoryPage / getHistoryCount 往返", async () => {
+    await historyDao.recordView("vn", "v1", "CLANNAD", "クラナド", "https://t.vndb.org/cv1.jpg");
+    await new Promise((r) => setTimeout(r, 1));
+    await historyDao.recordView("vn", "v2", "Steins;Gate", null, null);
+    await new Promise((r) => setTimeout(r, 1));
+    await historyDao.recordView("character", "c1", "Saber", "セイバー", null);
+
+    const page = await historyDao.getHistoryPage(["vn"], 0, 10);
+    assert(page.length === 2, `应有 2 条 VN 历史，实际 ${page.length}`);
+    assert(page[0]?.entryId === "v2", "应按浏览时间倒序");
+    assert(page[0]?.title === "Steins;Gate", "标题不对");
+    assert(page[0]?.subtitle === null, "subtitle 应为 null");
+    assert(page[0]?.imageUrl === null, "imageUrl 应为 null");
+
+    const count = await historyDao.getHistoryCount(["vn"]);
+    assert(count === 2, `VN 历史应有 2 条，实际 ${count}`);
+
+    const charCount = await historyDao.getHistoryCount(["character"]);
+    assert(charCount === 1, `角色历史应有 1 条，实际 ${charCount}`);
+  });
+
+  await check("「人员」档聚合 角色 + 制作人员", async () => {
+    await historyDao.recordView("staff", "s1", "ゆずソフト staff", null, null);
+    const people = await historyDao.getHistoryPage(["character", "staff"], 0, 10);
+    assert(people.length === 2, `人员档应有 2 条，实际 ${people.length}`);
+    const peopleCount = await historyDao.getHistoryCount(["character", "staff"]);
+    assert(peopleCount === 2, `人员档计数应为 2，实际 ${peopleCount}`);
+    // 空类型集合短路，不该抛错
+    assert((await historyDao.getHistoryCount([])) === 0, "空集合计数应为 0");
+    assert((await historyDao.getHistoryPage([], 0, 10)).length === 0, "空集合应为空数组");
+  });
+
+  await check("recordView 去重：同一条目再次浏览更新 viewed_at", async () => {
+    await historyDao.recordView("vn", "v1", "CLANNAD", "クラナド", null);
+    // 等 1ms 确保时间戳不同
+    await new Promise((r) => setTimeout(r, 1));
+    await historyDao.recordView("vn", "v1", "CLANNAD", "クラナド", null);
+
+    const count = await historyDao.getHistoryCount(["vn"]);
+    assert(count === 2, `去重后仍应有 2 条，实际 ${count}`);
+
+    const page = await historyDao.getHistoryPage(["vn"], 0, 10);
+    const v1 = page.find((e) => e.entryId === "v1");
+    assert(v1?.title === "CLANNAD", "标题应更新");
+  });
+
+  await check("getHistoryPage 分页", async () => {
+    // 先清空 VN 档
+    await historyDao.clearHistory(["vn"]);
+    for (let i = 0; i < 5; i++) {
+      await historyDao.recordView("vn", `v${i}`, `VN ${i}`, null, null);
+      await new Promise((r) => setTimeout(r, 1));
+    }
+    const page1 = await historyDao.getHistoryPage(["vn"], 0, 3);
+    assert(page1.length === 3, `第一页应有 3 条，实际 ${page1.length}`);
+    const page2 = await historyDao.getHistoryPage(["vn"], 3, 3);
+    assert(page2.length === 2, `第二页应有 2 条，实际 ${page2.length}`);
+  });
+
+  await check("deleteHistoryEntry 删除单条", async () => {
+    await historyDao.deleteHistoryEntry("vn", "v0");
+    const count = await historyDao.getHistoryCount(["vn"]);
+    assert(count === 4, `删除后应有 4 条，实际 ${count}`);
+  });
+
+  await check("clearHistory 清空全部", async () => {
+    await historyDao.clearHistory();
+    const count = await historyDao.getHistoryCount(["vn"]);
+    assert(count === 0, `清空后应有 0 条，实际 ${count}`);
+    const peopleCount = await historyDao.getHistoryCount(["character", "staff"]);
+    assert(peopleCount === 0, `清空后人员档也应有 0 条，实际 ${peopleCount}`);
+  });
+
+  await check("日期筛选：presetDateFilter 的快捷时间段", () => {
+    // 2026-10-07 12:00 本地时间
+    const now = new Date(2026, 9, 7, 12, 0, 0, 0);
+    const all = presetDateFilter("all", now);
+    assert(all.start === "" && all.end === "", "全部应为空");
+    const today = presetDateFilter("today", now);
+    assert(today.start === "2026-10-07" && today.end === "2026-10-07", "今天应首尾同一天");
+    // 近 7 天 = 含今天在内共 7 天
+    const week = presetDateFilter("week", now);
+    assert(week.start === "2026-10-01" && week.end === "2026-10-07", `近 7 天不对：${week.start}`);
+    const month = presetDateFilter("month", now);
+    assert(
+      month.start === "2026-09-08" && month.end === "2026-10-07",
+      `近 30 天不对：${month.start}`
+    );
+  });
+
+  await check("日期筛选：isoToDigits / digitsToIso 互转", () => {
+    assert(isoToDigits("2026-10-07") === "20261007", "ISO 应转成 8 位数字");
+    assert(isoToDigits("") === "" && isoToDigits("2026") === "2026", "空 / 残缺原样（去非数字）");
+    assert(digitsToIso("20261007") === "2026-10-07", "8 位数字应转成 ISO");
+    assert(digitsToIso("2026") === "", "不足 8 位应返回空串");
+  });
+
+  await check("日期筛选：dateDigitsRangeErrors 校验位数 / 有效性 / 顺序", () => {
+    assert(dateDigitsRangeErrors("", "").start === null, "空值应合法");
+    assert(dateDigitsRangeErrors("2026", "").start === "请填满 8 位", "未填满应提示补位");
+    assert(dateDigitsRangeErrors("20260231", "").start === "日期无效", "不存在的日期应报无效");
+    assert(
+      dateDigitsRangeErrors("20260501", "20260401").end === "结束日期早于开始日期",
+      "结束早于开始应报错"
+    );
+    assert(dateDigitsRangeErrors("20260401", "20260501").end === null, "正常顺序应合法");
+    assert(dateDigitsRangeErrors("20261007", "").end === null, "只填开始应合法");
+  });
+
+  await check("日期筛选：dateFilterBounds 含首尾整天", () => {
+    const { since, until } = dateFilterBounds({ start: "2026-10-01", end: "2026-10-07" });
+    assert(since === new Date(2026, 9, 1, 0, 0, 0, 0).getTime(), "开始应取当天零点");
+    assert(until === new Date(2026, 9, 7, 23, 59, 59, 999).getTime(), "结束应取当天最后一毫秒");
+    const open = dateFilterBounds({ start: "", end: "" });
+    assert(open.since === null && open.until === null, "空筛选应两端不限");
+    assert(dateFilterBounds({ start: "2026-10-01", end: "" }).until === null, "只填开始则结束不限");
+  });
+
+  await check("getHistoryPage / getHistoryCount 按日期上下界过滤", async () => {
+    await historyDao.clearHistory();
+    await historyDao.recordView("vn", "v1", "A", null, null);
+    const now = Date.now();
+    assert(
+      (await historyDao.getHistoryCount(["vn"], { since: now + 60_000 })) === 0,
+      "下界在未来应查不到"
+    );
+    assert(
+      (await historyDao.getHistoryCount(["vn"], { until: now - 60_000 })) === 0,
+      "上界在过去应查不到"
+    );
+    assert(
+      (await historyDao.getHistoryCount(["vn"], { since: now - 60_000, until: now + 60_000 })) ===
+        1,
+      "落在区间内应查到"
+    );
+    assert(
+      (await historyDao.getHistoryPage(["vn"], 0, 10, { since: now + 60_000 })).length === 0,
+      "分页也应尊重日期上下界"
+    );
   });
 
   /* ---- 结果 ---- */

@@ -42,8 +42,10 @@ import { UlistEditEntry } from "@/features/ulist/components/ulist-edit-entry";
 import { UlistToggleButton } from "@/features/ulist/components/ulist-toggle-button";
 import { useUlistItem } from "@/features/ulist/hooks";
 import { VnWalkthroughTab } from "@/features/walkthrough/components/walkthrough-tab";
+import { useRecordHistory } from "@/features/history/hooks";
 import { useSession } from "@/hooks/use-session";
 import type { VnDetail } from "@/lib/api/types";
+import { useEffect } from "react";
 import {
   devStatusLabel,
   formatCount,
@@ -116,12 +118,17 @@ export default function VnDetailScreen(): JSX.Element {
   const [coverOpen, setCoverOpen] = useState(false);
   // 箭头图标取主题 muted（不能写死 iOS 系统灰 #8E8E93，换主题后对不上）
   const muted = useThemeColor("muted");
+  const recordView = useRecordHistory();
+  const vn = detail.data;
+
+  // 记录浏览历史（数据加载完成后）
+  useEffect(() => {
+    if (vn) recordView("vn", vn.id, vn.title, vn.alttitle, vn.image?.thumbnail);
+  }, [vn, recordView]);
 
   if (detail.isLoading) return <LoadingState label="加载作品信息…" />;
   if (detail.isError)
     return <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />;
-
-  const vn = detail.data;
   if (!vn) return <EmptyState title="作品不存在" description="它可能已从 VNDB 删除" />;
 
   const myVote = myListItem.data?.vote ?? null;

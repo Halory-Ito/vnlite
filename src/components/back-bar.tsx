@@ -7,7 +7,7 @@
 
 import { useRouter } from "expo-router";
 import { useThemeColor } from "heroui-native";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Pressable, View } from "react-native";
 
 import { Icon } from "@/components/icon";
@@ -17,9 +17,11 @@ export interface BackBarProps {
   title?: string;
   /** 不传就 `router.back()` */
   onPress?: () => void;
+  /** 右侧操作区（如「清空」按钮） */
+  trailing?: ReactNode;
 }
 
-export function BackBar({ title, onPress }: BackBarProps): JSX.Element {
+export function BackBar({ title, onPress, trailing }: BackBarProps): JSX.Element {
   const router = useRouter();
   const muted = useThemeColor("muted");
 
@@ -38,7 +40,10 @@ export function BackBar({ title, onPress }: BackBarProps): JSX.Element {
         <H5 numberOfLines={1} className="flex-1">
           {title}
         </H5>
-      ) : null}
+      ) : (
+        <View className="flex-1" />
+      )}
+      {trailing}
     </View>
   );
 }

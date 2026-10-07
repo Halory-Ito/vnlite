@@ -151,4 +151,12 @@ export const queryKeys = {
     user: (id: string) => ["account", "user", id] as const,
     stats: () => ["account", "stats"] as const,
   },
+
+  /* ---- 浏览历史（本地 SQLite，见 features/history） ---- */
+  history: {
+    all: ["history"] as const,
+    /** `tab` 是展示档位（vn / people / user / producer），start / end 是自定义日期 */
+    list: (tab: string, start: string, end: string) =>
+      ["history", "list", tab, start, end] as const,
+  },
 } as const;

@@ -66,6 +66,31 @@ export function formatRelativeDays(raw: string | null | undefined): string | nul
   return `${Math.floor(days / 365)} 年前`;
 }
 
+/**
+ * unix 毫秒 → `刚刚` / `N 分钟前` / `N 小时前` / `N 天前` / `YYYY-MM-DD`。
+ *
+ * 浏览历史用（记录的是毫秒时间戳）。超过 30 天退回具体日期。
+ */
+export function formatRelativeTime(timestamp: number | null | undefined): string | null {
+  if (!timestamp) return null;
+  const diff = Date.now() - timestamp;
+  if (diff < 0) return null;
+
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} 天前`;
+
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 /** unix 秒 → `2024-01-05` */
 export function formatUnixDate(timestamp: number | null | undefined): string | null {
   if (!timestamp) return null;

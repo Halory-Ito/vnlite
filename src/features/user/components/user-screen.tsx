@@ -11,6 +11,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Chip, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
+import { useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { BackBar } from "@/components/back-bar";
@@ -18,6 +19,7 @@ import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted } from "@/components/typo";
 import { KeyValueRow, SectionHeader, StatBlock } from "@/components/ui";
+import { useRecordHistory } from "@/features/history/hooks";
 import { formatCount } from "@/utils/format";
 
 import { useUserProfile } from "../hooks";
@@ -27,6 +29,12 @@ import { VoteHistogram } from "./vote-histogram";
 export function UserScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const { data, isLoading, isError, error, refetch } = useUserProfile(id);
+  const recordView = useRecordHistory();
+
+  // 记录浏览历史
+  useEffect(() => {
+    if (data) recordView("user", data.id, data.username);
+  }, [data, recordView]);
 
   return (
     <View className="flex-1">
