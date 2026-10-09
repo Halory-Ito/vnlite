@@ -4,7 +4,10 @@
  * 流程（Q1 = A：粘贴 Token）：
  *   1. 用户在设置页粘贴 token
  *   2. 调 `GET /authinfo` 验证，同时拿到 id / username / permissions
- *   3. 验证通过才落 SecureStore，并写入本地 `account` 表
+ *   3. 验证通过后写入本地 `account` 表（Token 已在步骤 2 前存入 SecureStore）
+ *
+ * Token 只在两种情况下才会被删除：用户主动退出，或服务端返回 401。
+ * 超时 / 断网等一律保留。
  *
  * 权限判断：读私有清单需要 `listread`，写清单需要 `listwrite`。
  * 两者都没有就只能当游客浏览。
@@ -13,7 +16,7 @@
 import { setTokenProvider, type TokenProvider } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { authInfo } from "@/lib/api/endpoints/ulist";
-import { upsertAccount } from "@/lib/db/dao/account";
+import { clearAccount, getAccount, upsertAccount } from "@/lib/db/dao/account";
 
 import { clearToken, getToken, peekToken, setToken } from "./secure";
 
@@ -61,34 +64,71 @@ export function hasPermission(permission: "listread" | "listwrite"): boolean {
   return current.status === "authenticated" && current.account.permissions.includes(permission);
 }
 
-/** 应用启动时调用：读本地 token 并验证有效性 */
+/**
+ * 服务端返回 401（Token 失效 / 被用户在 vndb.org 删除）时的统一处理。
+ *
+ * 这是除「用户主动退出」外**唯一**允许删除 Token 的入口。超时 / 断网 / 5xx
+ * 一律不走这里，Token 会被保留。
+ */
+export async function handleUnauthorized(): Promise<void> {
+  await clearToken();
+  await clearAccount();
+  emit({ status: "guest" });
+}
+
+/**
+ * 应用启动时调用：读本地 token 并校验。
+ *
+ * Token 生命周期（Master 规则）：
+ *   - **只有 401** 才代表 Token 真的失效（用户在 vndb.org 上删了），此时才允许
+ *     在本地删除 Token 与账号缓存；
+ *   - 超时 / 断网 / 5xx 等一律**保留** Token，避免网络抖动误删有效 Token。
+ *
+ * authinfo 只负责校准账号信息：非 401 失败时，只要本地有缓存账号就继续维持登录，
+ * 避免把用户踢成游客。
+ */
 export async function restoreSession(): Promise<SessionState> {
   const token = await getToken();
   if (!token) {
     emit({ status: "guest" });
     return current;
   }
+
+  // 先用缓存账号乐观进入登录态，再异步校准
+  const cached = await getAccount();
+  if (cached) emit({ status: "authenticated", account: cached });
+
   try {
     const info = await authInfo();
     const account: Account = {
       userId: info.id,
       username: info.username,
       permissions: info.permissions ?? [],
-      loggedInAt: Date.now(),
+      // 沿用首次登录时间，不要每次冷启动都覆盖
+      loggedInAt: cached?.loggedInAt ?? Date.now(),
     };
     await upsertAccount(account);
     emit({ status: "authenticated", account });
   } catch (error) {
-    // token 失效：清掉，重回游客态。不要在这里弹错误，静默降级即可
-    if (error instanceof ApiError && error.needsAuth) await clearToken();
-    emit({ status: "guest" });
+    if (error instanceof ApiError && error.needsAuth) {
+      // 401：Token 确实失效，删掉并退回游客
+      await handleUnauthorized();
+    } else if (!cached) {
+      // 非 401（超时 / 断网等）：保留 Token，下次启动再用它重试
+      emit({ status: "guest" });
+    }
+    // 非 401 且有缓存账号：维持上面已进入的登录态
   }
   return current;
 }
 
 /**
  * 校验并登录。
- * 校验失败抛 `ApiError`（401），由 UI 展示，不会污染本地存储。
+ *
+ * Token 生命周期（Master 规则）：只有 401 才允许删除 Token，其它失败一律保留。
+ *   - 已有旧 Token（换 Token 场景）：任何失败都还原旧 Token，绝不删除；
+ *   - 没有旧 Token：401 说明刚输入的这个 Token 无效 → 清掉；超时 / 断网则保留，
+ *     留给下次冷启动重新校验。
  */
 export async function loginWithToken(rawToken: string): Promise<Account> {
   const token = normalizeToken(rawToken);
@@ -109,15 +149,22 @@ export async function loginWithToken(rawToken: string): Promise<Account> {
     emit({ status: "authenticated", account });
     return account;
   } catch (error) {
-    // 还原，避免用无效 token 继续发请求
-    if (previous) await setToken(previous);
-    else await clearToken();
+    if (previous) {
+      // 换 Token 失败：还原旧 Token
+      await setToken(previous);
+    } else if (error instanceof ApiError && error.needsAuth) {
+      // 401：刚输入的 Token 被否决，清掉
+      await handleUnauthorized();
+    }
+    // 非 401 且没有旧 Token：保留本次输入的 Token，交给下次冷启动校验
     throw error;
   }
 }
 
+/** 用户主动退出：清除 Token 与账号缓存 */
 export async function logout(): Promise<void> {
   await clearToken();
+  await clearAccount();
   emit({ status: "guest" });
 }
 

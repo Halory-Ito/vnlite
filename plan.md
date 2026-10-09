@@ -650,6 +650,19 @@
 
 - [x] 粘贴 Token 登录 + `/authinfo` 权限校验
 - [x] 权限检查（`listread` / `listwrite` 缺失时给出提示）
+- [x] **Token 生命周期（Master 规则）**：只有 401 才允许在本地删除 Token，其它
+      情况（超时 / 断网 / 5xx）一律保留；另有用户主动退出
+  - [x] `restoreSession`：仅在 401（`ApiError.needsAuth`）时走统一入口
+        `handleUnauthorized()`（清 Token + 账号缓存 → 游客）；非 401 保留 Token
+  - [x] 运行时的 401 同样即时登出：`query/client.ts` 的 `QueryCache` /
+        `MutationCache` `onError` 检测到 401 调用 `handleUnauthorized()`，
+        不必等下次冷启动
+  - [x] 冷启动「缓存账号乐观登录 → authinfo 异步校准」：非 401 失败且有缓存账号
+        时维持登录态，避免网络抖动把用户踢成游客
+  - [x] `loginWithToken`：换 Token 失败一律还原旧 Token；无旧 Token 时仅 401 清掉
+        刚输入的新 Token，超时 / 断网保留
+  - [x] `logout` 同时清理 Token 与本地 `account` 缓存，保持登出彻底
+  - [x] `loggedInAt` 首次登录时间不再被每次冷启动覆盖
 
 ### Type 3.2 · 清单（**VNDB 直读直写**）
 

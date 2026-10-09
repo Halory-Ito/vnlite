@@ -5,9 +5,10 @@
  * 好处是用户随时可以「清缓存」且不会丢清单；同时离线时仍能看自己的清单。
  */
 
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/lib/api/errors";
+import { handleUnauthorized } from "@/lib/storage/session";
 
 /** 业务数据的内存缓存时长。VNDB 条目几乎不变，可以放很久 */
 export const STALE_TIME = {
@@ -27,7 +28,16 @@ export const STALE_TIME = {
   account: 5 * 60 * 1000,
 } as const;
 
+/** 401 统一处理：清 Token 退回游客。只有 401 会走这里（见 session.handleUnauthorized） */
+function onUnauthorized(error: unknown): void {
+  if (error instanceof ApiError && error.needsAuth) void handleUnauthorized();
+}
+
 export const queryClient = new QueryClient({
+  // 运行时任意请求出现 401（如用户在使用中于 vndb.org 删除 Token）都即时登出，
+  // 不必等到下次冷启动
+  queryCache: new QueryCache({ onError: onUnauthorized }),
+  mutationCache: new MutationCache({ onError: onUnauthorized }),
   defaultOptions: {
     queries: {
       // 业务数据默认不重试，避免白白消耗限流配额
