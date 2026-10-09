@@ -100,6 +100,18 @@ const MIGRATIONS: string[][] = [
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_history_entry ON history (type, entry_id);`,
     `CREATE INDEX IF NOT EXISTS idx_history_viewed ON history (viewed_at DESC);`,
   ],
+
+  // v5 —— 游玩记录（游戏计时器每结束一次写一条）
+  [
+    `CREATE TABLE IF NOT EXISTS play_session (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      vn_id        TEXT NOT NULL,             -- 作品 id（如 v17）
+      started_at   INTEGER NOT NULL,          -- 本次会话开始（unix 毫秒，墙钟）
+      ended_at     INTEGER NOT NULL,          -- 结束（unix 毫秒）
+      duration_ms  INTEGER NOT NULL           -- 实际游玩时长（不含暂停）
+    );`,
+    `CREATE INDEX IF NOT EXISTS idx_play_session_vn ON play_session (vn_id, started_at DESC);`,
+  ],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

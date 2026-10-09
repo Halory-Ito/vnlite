@@ -15,6 +15,7 @@ import { Database } from "bun:sqlite";
 import type { Producer, UListItem } from "@/lib/api/types";
 import * as accountDao from "@/lib/db/dao/account";
 import * as historyDao from "@/lib/db/dao/history";
+import * as playSessionDao from "@/lib/db/dao/play-session";
 import {
   getDatabase,
   setDatabaseProvider,
@@ -44,6 +45,26 @@ import {
   isoToDigits,
   presetDateFilter,
 } from "@/features/history/history-constants";
+import { formatGameDuration } from "@/features/game-timer/format";
+import {
+  elapsedMs,
+  getGameTimer,
+  pauseGameTimer,
+  resumeGameTimer,
+  sanitizeGameTimer,
+  startGameTimer,
+  stopGameTimer,
+} from "@/features/game-timer/store";
+import {
+  currentWeekIndex,
+  monthSessionCount,
+  monthTotalMs,
+  summarizeSessions,
+  weeklyBuckets,
+  weeksOfMonth,
+} from "@/features/play-records/play-stats";
+import { formatPlayDuration, formatPlayDurationShort } from "@/features/play-records/format";
+import type { PlaySession } from "@/lib/db/dao/play-session";
 import { imageGate } from "@/hooks/use-preferences";
 import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
 import { migratePreferences } from "@/lib/storage/preferences";
@@ -52,6 +73,12 @@ import { formatMonthDay, formatRelativeTime } from "@/utils/format";
 
 let passed = 0;
 let failed = 0;
+
+/** 构造一条测试用游玩会话（某天 10:00 开始，持续 ms 毫秒） */
+function sessionAt(year: number, month: number, day: number, ms: number): PlaySession {
+  const startedAt = new Date(year, month - 1, day, 10, 0, 0, 0).getTime();
+  return { id: ms, vnId: "v1", startedAt, endedAt: startedAt + ms, durationMs: ms };
+}
 
 async function check(name: string, fn: () => Promise<void> | void): Promise<void> {
   try {
@@ -656,6 +683,148 @@ async function main(): Promise<void> {
       (await historyDao.getHistoryPage(["vn"], 0, 10, { since: now + 60_000 })).length === 0,
       "分页也应尊重日期上下界"
     );
+  });
+
+  /* ---- 游戏计时 ---- */
+
+  await check("play_session DAO：写入 / 查询 / 删除（v5 迁移）", async () => {
+    await playSessionDao.clearPlaySessions("v-test");
+    await playSessionDao.insertPlaySession({
+      vnId: "v-test",
+      startedAt: 1000,
+      endedAt: 2000,
+      durationMs: 1000,
+    });
+    await playSessionDao.insertPlaySession({
+      vnId: "v-test",
+      startedAt: 3000,
+      endedAt: 5000,
+      durationMs: 2000,
+    });
+    const list = await playSessionDao.getPlaySessions("v-test");
+    assert(list.length === 2, `应有 2 条，实际 ${list.length}`);
+    assert(list[0]!.startedAt === 3000, "应按开始时间倒序");
+    await playSessionDao.deletePlaySession(list[0]!.id);
+    assert((await playSessionDao.getPlaySessions("v-test")).length === 1, "删除后应剩 1 条");
+    await playSessionDao.clearPlaySessions("v-test");
+    assert((await playSessionDao.getPlaySessions("v-test")).length === 0, "清空后应为空");
+  });
+
+  await check("游戏计时：formatGameDuration 时:分:秒", () => {
+    assert(formatGameDuration(0) === "00:00:00", "0 应显示 00:00:00");
+    assert(formatGameDuration(59_999) === "00:00:59", "不满 1 分钟进位到秒");
+    assert(formatGameDuration(60_000) === "00:01:00", "1 分钟应是 00:01:00");
+    assert(formatGameDuration(3_600_000) === "01:00:00", "1 小时应是 01:00:00");
+    assert(formatGameDuration(3_599_000) === "00:59:59", "59 分 59 秒");
+    assert(formatGameDuration(90 * 3_600_000) === "90:00:00", "小时不封顶");
+    assert(formatGameDuration(-1000) === "00:00:00", "负数按 0 处理");
+  });
+
+  await check("游戏计时：start / pause / resume / stop 状态流转", () => {
+    // 先确保空闲
+    stopGameTimer();
+    assert(getGameTimer().status === "idle", "初始应为空闲");
+
+    startGameTimer("v1", "CLANNAD");
+    const started = getGameTimer();
+    assert(started.status === "running", "开始后应为运行中");
+    assert(started.vnId === "v1" && started.vnTitle === "CLANNAD", "应记住作品");
+    assert(started.accumulatedMs === 0 && started.segmentStartedAt != null, "段起点应就绪");
+    assert(started.sessionStartedAt === started.segmentStartedAt, "会话起点应与段起点一致");
+    // 运行中：耗时随时间增长（注入固定的 now）
+    assert(elapsedMs(started, started.segmentStartedAt! + 5_000) === 5_000, "运行 5 秒应计 5 秒");
+
+    pauseGameTimer();
+    const paused = getGameTimer();
+    assert(paused.status === "paused" && paused.segmentStartedAt === null, "暂停后段起点应清空");
+    const frozen = paused.accumulatedMs;
+    assert(frozen >= 0 && frozen < 3_000, `暂停应冻结到一个合理值，实际 ${frozen}`);
+    assert(elapsedMs(paused, frozen + 999_999) === frozen, "暂停后耗时不再增长");
+    assert(paused.sessionStartedAt === started.sessionStartedAt, "暂停不应改会话起点");
+
+    resumeGameTimer();
+    const resumed = getGameTimer();
+    assert(resumed.status === "running" && resumed.segmentStartedAt != null, "继续后应重新计时段");
+    assert(resumed.accumulatedMs === frozen, "继续应保留之前累计");
+    assert(
+      elapsedMs(resumed, resumed.segmentStartedAt! + 1_000) === frozen + 1_000,
+      "继续后接着计"
+    );
+
+    const finished = stopGameTimer();
+    assert(getGameTimer().status === "idle", "结束后应回到空闲");
+    assert(finished != null, "结束应返回成果");
+    assert(finished!.vnId === "v1" && finished!.durationMs >= frozen, "成果应带作品与实际时长");
+
+    // 空操作不应抛错 / 改变状态
+    pauseGameTimer();
+    resumeGameTimer();
+    assert(stopGameTimer() === null, "空档位结束应返回 null");
+
+    // 持久化脏数据兜底
+    assert(sanitizeGameTimer(null).status === "idle", "null 应回空闲");
+    assert(
+      sanitizeGameTimer({ ...started, status: "running", segmentStartedAt: null }).status ===
+        "paused",
+      "running 无段起点应降级为暂停"
+    );
+    assert(sanitizeGameTimer({ ...started, vnId: "" }).status === "idle", "空 vnId 应回空闲");
+  });
+
+  await check("游玩记录：formatPlayDuration / Short", () => {
+    assert(formatPlayDuration(30_000) === "30 秒", "不足 1 分钟显示秒");
+    assert(formatPlayDuration(60_000) === "1 分钟", "整分钟");
+    assert(formatPlayDuration(45 * 60_000) === "45 分钟", "45 分钟");
+    assert(formatPlayDuration(3_600_000) === "1 小时", "整小时");
+    assert(formatPlayDuration(5_040_000) === "1 小时 24 分", "1 小时 24 分");
+    assert(formatPlayDurationShort(30_000) === "1 m", "不足 1 分钟按 1 分钟");
+    assert(formatPlayDurationShort(90 * 60_000) === "1.5 h", "1.5 小时");
+    assert(formatPlayDurationShort(20 * 3_600_000) === "20 h", "超过 10 小时取整");
+  });
+
+  await check("游玩记录：summarizeSessions 聚合", () => {
+    const sessions: PlaySession[] = [
+      { id: 1, vnId: "v1", startedAt: 1000, endedAt: 2000, durationMs: 60 * 60_000 },
+      { id: 2, vnId: "v1", startedAt: 3000, endedAt: 4000, durationMs: 30 * 60_000 },
+    ];
+    const stats = summarizeSessions(sessions);
+    assert(stats.count === 2, "应统计 2 次");
+    assert(stats.totalMs === 90 * 60_000, "总时长应为 90 分钟");
+    assert(stats.averageMs === 45 * 60_000, "平均每次 45 分钟");
+    assert(stats.longestMs === 60 * 60_000, "最长一次 60 分钟");
+    assert(stats.lastPlayedAt === 3000, "最近一次取最大 startedAt");
+    assert(summarizeSessions([]).count === 0, "空记录应全 0");
+  });
+
+  await check("游玩记录：weeklyBuckets 按周次聚合 + monthTotalMs", () => {
+    // 2026-10：1-7 第1周、8-14 第2周…
+    const sessions = [
+      sessionAt(2026, 10, 3, 1_800_000), // 第1周 30 分
+      sessionAt(2026, 10, 9, 3_600_000), // 第2周 60 分
+      sessionAt(2026, 10, 10, 3_600_000), // 第2周 60 分
+      sessionAt(2026, 9, 20, 9_999_999), // 其它月，不计入
+    ];
+    const buckets = weeklyBuckets(sessions, 2026, 9); // 10 月 → monthIndex 9
+    assert(buckets.length === 5, "31 天的月应有 5 周");
+    assert(buckets[0]!.ms === 1_800_000, "第1周应为 30 分");
+    assert(buckets[1]!.ms === 7_200_000, "第2周应为 120 分");
+    assert(buckets[2]!.ms === 0 && buckets[4]!.ms === 0, "无数据周应为 0");
+    assert(buckets[0]!.range === "1-7" && buckets[4]!.range === "29-31", "日期范围按实际月长");
+    assert(monthTotalMs(sessions, 2026, 9) === 9_000_000, "本月合计 150 分");
+    assert(monthTotalMs(sessions, 2026, 8) === 9_999_999, "上月只含 9 月那条");
+  });
+
+  await check("游玩记录：weeksOfMonth 随月长变化 + currentWeekIndex + 月计数", () => {
+    assert(weeksOfMonth(2026, 1).length === 4, "2 月 28 天只有 4 周");
+    assert(weeksOfMonth(2026, 9).length === 5, "10 月 31 天有 5 周");
+    const feb = weeksOfMonth(2026, 1);
+    assert(feb[3]!.start === 22 && feb[3]!.end === 28, "最后一档收到月末");
+    const now = new Date(2026, 9, 9, 12, 0, 0, 0); // 2026-10-09 → 8-14 这一档
+    assert(currentWeekIndex(2026, 9, now) === 1, "今天应命中第 2 周");
+    assert(currentWeekIndex(2026, 8, now) === -1, "选中的不是当前月应无高亮");
+    const sessions = [sessionAt(2026, 10, 3, 60_000), sessionAt(2026, 10, 9, 60_000)];
+    assert(monthSessionCount(sessions, 2026, 9) === 2, "本月应计 2 次");
+    assert(monthSessionCount(sessions, 2026, 8) === 0, "上月应为 0");
   });
 
   /* ---- 结果 ---- */

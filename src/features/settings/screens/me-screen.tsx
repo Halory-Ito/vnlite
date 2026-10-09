@@ -64,7 +64,11 @@ export default function MeScreen(): JSX.Element {
         <SettingsItem icon="chartPie" label="收藏统计" onPress={() => router.push("/stats")} />
         <Divider className="mx-4" />
 
-        <SettingsItem icon="clock" label="浏览历史" onPress={() => router.push("/history")} />
+        <SettingsItem
+          icon="clockArrowRotateLeft"
+          label="浏览历史"
+          onPress={() => router.push("/history")}
+        />
         <Divider className="mx-4" />
 
         <SettingsItem icon="trashBin" label="清空浏览缓存" tone="danger" onPress={clearCache} />

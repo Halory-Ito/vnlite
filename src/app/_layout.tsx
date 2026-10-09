@@ -9,6 +9,10 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { queryClient } from "@/lib/query/client";
 import { restoreSession } from "@/lib/storage/session";
+import { GameTimerOverlay } from "@/features/game-timer/components/game-timer-overlay";
+import { initGameTimerNotification } from "@/features/game-timer/notification";
+import { initGameTimerOverlayWindow } from "@/features/game-timer/overlay-window";
+import { initGameTimerPersistence } from "@/features/game-timer/persistence";
 import { ThemeProvider } from "@/theme/theme-provider";
 
 import "../global.css";
@@ -18,6 +22,15 @@ export default function RootLayout(): JSX.Element {
   // 清单数据不落库（服务端直读），所以这里没有清单同步要做
   useEffect(() => {
     void restoreSession();
+    // 计时相关：持久化（后台运行）、系统通知、系统悬浮球；统一在卸载时清理
+    const cleanups = [
+      initGameTimerPersistence(),
+      initGameTimerNotification(),
+      initGameTimerOverlayWindow(),
+    ];
+    return () => {
+      for (const cleanup of cleanups) cleanup();
+    };
   }, []);
 
   /*
@@ -48,6 +61,8 @@ export default function RootLayout(): JSX.Element {
                 >
                   <Stack.Screen name="(tabs)" />
                 </Stack>
+                {/* 全局游戏计时浮层：放在 Stack 之后，跨页面常驻且盖在最上层 */}
+                <GameTimerOverlay />
                 <StatusBar style="auto" />
               </SafeAreaScreen>
             </ThemeProvider>

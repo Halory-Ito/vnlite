@@ -49,6 +49,16 @@
         // 「id-索引」是刻意的合键，索引参与反而是唯一性保证
         "react/no-array-index-key": "off"
       }
+    },
+    {
+      "files": ["src/features/game-timer/components/game-timer-overlay.tsx"],
+      "rules": {
+        // reanimated 的 shared value 就是要 `.value =` 原地改（在 worklet 里），
+        // React Compiler 的不可变规则在这里是误报
+        "react/immutability": "off",
+        // `Gesture.Pan()` / `Tap()` / `Race()` 是手势工厂，不是组件
+        "react/capitalized-calls": "off"
+      }
     }
   ]
 }

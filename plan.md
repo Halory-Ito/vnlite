@@ -922,10 +922,12 @@
 - [x] `features/history/history-screen.tsx` —— 顶部 `SegmentedControl` 切四档 +
       **FlashList** 分页（触底自动加载）+ 空/错误态
 - [x] Header（`BackBar` 右侧 `trailing`）常驻三个操作：
-  - [x] **日期筛选**：图标按钮（`clock`）打开 `TimeRangePanel`
+  - [x] **日期筛选**：图标按钮（`calendar` 日历图标）打开 `TimeRangePanel`
   - [x] **视图切换**（仅作品档）：复用 `ViewModeButton`
   - [x] **清空**：HeroUI `Button isIconOnly`，**常显**（Master 要求）
 - [x] **清空二次确认走项目自己的 `AppDialog`**，不用系统 `Alert`（Master 要求）
+- [x] **清空弹窗支持勾选分类**（Master 要求）：多选「作品 / 人员 / 用户 / 厂商」，
+      默认全选，未勾任何一项时「清空」按钮禁用
 - [x] `features/history/components/history-item.tsx` —— 行组件
       （封面/头像 + 标题 + 原名 + 相对时间；无图条目用时钟图标兜底）；
       点进详情页，长按删除单条
@@ -945,7 +947,7 @@
       `dateFilterBounds`（→ 时间上下界，**含首尾整天**）
 - [x] `utils/format#formatRelativeTime` —— 刚刚 / 分钟 / 小时 / 天 / 日期（纯函数）
 - [x] 路由 `app/history.tsx`
-- [x] 「我的」页添加入口（`clock` 图标）
+- [x] 「我的」页添加入口（`clockArrowRotateLeft` 历史图标）
 
 ### Type 5.3 · 详情页接入
 
@@ -958,3 +960,90 @@
 - [x] 冒烟测试：history DAO 的 CRUD + 分页 + 去重 + 「人员」档聚合 + 空集合短路 +
       日期上下界过滤；`formatRelativeTime` / `presetDateFilter` / `isoToDigits` /
       `digitsToIso` / `dateDigitsRangeErrors` / `dateFilterBounds` 的纯逻辑
+
+---
+
+## Module 6 · 游戏计时
+
+### Type 6.1 · 全局计时状态
+
+- [x] `features/game-timer/store.ts` —— 模块级单例 + 订阅者（与 `preferences` /
+      `session` 同一套 `useSyncExternalStore` 模式），**跨页面常驻**，不随路由卸载
+  - [x] 用「本段起点 `segmentStartedAt` + 已累计 `accumulatedMs`」表达耗时，
+        后台 / 掉帧 / 卡顿都不掉时间；另存 `sessionStartedAt` 作为会话落记录的起点
+  - [x] 全局**同时只有一个**计时器；动作 start / pause / resume / togglePause / stop
+  - [x] 状态带作品名与封面（`coverUrl`，通知大图用）；
+        `stopGameTimer` 返回本次会话成果（起止 + 实际时长）供落库；
+        `sanitizeGameTimer` 兜底持久化脏数据
+- [x] `features/game-timer/persistence.ts` —— 计时状态持久化到 AsyncStorage，
+      **冷启动按时间戳恢复**：后台 / 杀进程期间也一直在计（Master 要求「后台运行」）
+  - [x] 与 store 分离，store 保持纯净可被 bun 冒烟直接 import
+  - [x] 水合期间用户已点「开始游戏」则不覆盖
+- [x] `features/game-timer/hooks.ts` —— `useGameTimer`（只随动作变化）+
+      `useElapsedMs`（运行中由独立秒级时钟源驱动，暂停 / 空闲时定时器自动停）
+- [x] `features/game-timer/format.ts` —— `formatGameDuration`：毫秒 → `HH:MM:SS`（含秒）
+- [x] 图标 `play` / `pause` / `stop`（Gravity UI）
+
+### Type 6.2 · 详情页入口
+
+- [x] VN 详情页新增「开始游戏」按钮（`components/start-game-button.tsx`），
+      位于三列概览下方
+  - [x] 全局唯一计时器：空闲 → 开始；本作运行中 → 置灰「计时中」；
+        本作暂停 → 「继续游戏」；其他作品计时中 → 置灰提示
+
+### Type 6.3 · 全局浮层
+
+- [x] `features/game-timer/components/game-timer-overlay.tsx` —— 挂在根布局
+      （`app/_layout.tsx` 的 `Stack` 之后），跨页面盖在最上层
+  - [x] 默认圆形显示 `HH:MM:SS`；点一下额外展开「暂停 / 继续」与「结束」按钮
+  - [x] **可拖动**（Master 要求）：gesture-handler 的 `Pan` + `Tap` 用 `Race` 组合
+        （拖了就拖、没拖就点），位置夹在屏幕安全区内；操作按钮行随圆形一起移动
+  - [x] 暂停时圆形转中性色；外层 `pointerEvents="box-none"`，不吃底层触摸
+  - [x] 点「结束」→ 落一条游玩记录并失效记录页签
+- [x] 样式全部走 uniwind + HeroUI token
+
+### Type 6.5 · 游玩记录（详情页「记录」页签）
+
+- [x] SQLite 迁移 v5：`play_session` 表（vn_id / started_at / ended_at / duration_ms + `vn_id, started_at DESC` 索引）
+- [x] `lib/db/dao/play-session.ts` —— insert / getPlaySessions / delete / clear
+- [x] `features/play-records/play-stats.ts` —— 纯函数：`summarizeSessions`
+      （总时长 / 次数 / 平均 / 最长 / 最近）+ `weeksOfMonth` / `weeklyBuckets`
+      （按**实际月长**切周：1-7 / 8-14 / … 收月末）+ `monthTotalMs` / `monthSessionCount` /
+      `currentWeekIndex` / `currentYearMonth`
+- [x] `features/play-records/format.ts` —— `formatPlayDuration`（`1 小时 24 分`）/
+      `formatPlayDurationShort`（统计块 `1.5 h`）/ 日期、`HH:MM` 时间、`YYYY 年 M 月`
+- [x] `features/play-records/hooks.ts` —— `usePlaySessions`（本地查询）
+- [x] `features/play-records/components/play-records-tab.tsx` —— 「图表 / 列表」两视图
+      （`SegmentedControl` 切换）
+  - [x] 图表视图：四块统计（总时长 / 次数 / 平均每次 / 最长一次）+ 按月按周的
+        **手绘竖条**（Master 嫌 chart-kit 丑后重做）：读数在柱顶、日期范围在柱底、
+        今天所在周满色高亮、其余周半透明；顶部圆钮切换年月 + 本月合计
+        （配色 / 圆角 / 间距全走主题 token 与 uniwind，与「厂商 Top」横条同一思路）
+  - [x] 列表视图：每次游玩的日期、起止时间与时长
+- [x] VN 详情页页签表新增「记录」
+
+### Type 6.6 · 系统通知（锁屏可见）
+
+- [x] 引入 `@notifee/react-native`（原生模块，需 EAS 开发构建；Expo Go 不支持）
+- [x] `features/game-timer/notification.ts` —— 常驻通知：封面大图 + 游戏名称 +
+      计时（`HH:MM:SS`）+「暂停 / 继续」「结束」按钮；`visibility: PUBLIC` 锁屏可见；
+      计时中每秒刷新，暂停 / 空闲时停刷新；按钮走 store 动作
+- [x] `features/game-timer/actions.ts` —— 共享 `finishGameTimer`（停计时 → 落记录 → 失效），
+      浮层与通知按钮共用
+
+### Type 6.7 · 系统悬浮球（跨 App 悬浮）
+
+- [x] 引入 `react-native-android-overlay`（原生模块，需 EAS 开发构建；Android only）
+- [x] `features/game-timer/overlay-window.ts` —— 计时开始即显示、结束即收起；
+      动态 `import` + try/catch，未链接（Expo Go / iOS）时静默降级
+- [x] `features/game-timer/components/overlay-window-view.tsx` —— 悬浮球里渲染的组件：
+      独立 AppRegistry 根、不依赖 HeroUI/Theme Provider，配色自取主题 token
+- [x] 自定义入口 `index.js`：先引 `expo-router/entry`，再 `AppRegistry.registerComponent`
+      注册「GameTimerOverlayWindow」；`package.json` 的 `main` 指向它
+
+### Type 6.4 · 质量
+
+- [x] 冒烟测试：`formatGameDuration` 的时分秒 / 小时不封顶；
+      start / pause / resume / stop 状态流转、暂停冻结、`stopGameTimer` 成果、
+      `sanitizeGameTimer` 脏数据兜底；`play_session` DAO 的写 / 查 / 删（验证 v5 迁移）；
+      `formatPlayDuration` / `summarizeSessions` / `weeklyBuckets` / `monthTotalMs` 的纯逻辑

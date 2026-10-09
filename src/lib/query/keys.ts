@@ -159,4 +159,11 @@ export const queryKeys = {
     list: (tab: string, start: string, end: string) =>
       ["history", "list", tab, start, end] as const,
   },
+
+  /* ---- 游玩记录（本地 SQLite，见 features/play-records） ---- */
+  playRecords: {
+    all: ["playRecords"] as const,
+    /** 某作品的全部游玩记录 */
+    list: (vnId: string) => ["playRecords", "list", vnId] as const,
+  },
 } as const;

@@ -2,9 +2,9 @@
  * 浏览历史页面（入口在「我的」）。
  *
  * - 顶部 `SegmentedControl` 切**分类**（作品 / 人员 / 用户 / 厂商）
- * - **时间范围**从 Header 的时钟图标按钮进入面板选择（全部 / 今天 / 近 7 天 / 近 30 天）
+ * - **时间范围**从 Header 的日历图标按钮进入面板选择（全部 / 今天 / 近 7 天 / 近 30 天）
  * - 作品档支持**网格 / 列表**切换（复用 `ViewModeButton` + `VnCoverGrid`）
- * - Header 右侧常显**清空**图标按钮，二次确认走项目自己的对话框（非系统 Alert）
+ * - Header 右侧常显**清空**图标按钮，弹窗内可**勾选要删除的分类**（默认全选），二次确认走项目自己的对话框（非系统 Alert）
  *
  * 数据层见 `hooks.ts`（React Query + 本地 SQLite）。
  */
@@ -46,6 +46,8 @@ export default function HistoryScreen(): JSX.Element {
   const [dateFilter, setDateFilter] = useState<HistoryDateFilter>(EMPTY_DATE_FILTER);
   const [rangeOpen, setRangeOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
+  // 清空弹窗里勾选的分类，默认全选
+  const [clearTabs, setClearTabs] = useState<HistoryTab[]>([]);
 
   const query = useHistoryInfinite(tab, dateFilter);
   const clearHistory = useClearHistory();
@@ -57,8 +59,14 @@ export default function HistoryScreen(): JSX.Element {
   // 有日期筛选时给入口上强调色（与浏览页「已自定义」的用法一致）
   const customizedRange = !isDateFilterEmpty(dateFilter);
 
+  const openClear = (): void => {
+    setClearTabs(HISTORY_TAB_OPTIONS.map((option) => option.value));
+    setClearOpen(true);
+  };
+
   const confirmClear = (): void => {
-    clearHistory.mutate(tab, { onSuccess: () => setClearOpen(false) });
+    if (clearTabs.length === 0) return;
+    clearHistory.mutate(clearTabs, { onSuccess: () => setClearOpen(false) });
   };
 
   const remove = (entry: HistoryEntry): void => {
@@ -80,7 +88,7 @@ export default function HistoryScreen(): JSX.Element {
               accessibilityRole="button"
               accessibilityLabel={customizedRange ? "时间范围，已筛选" : "时间范围"}
             >
-              <Icon name="clock" size={18} color={customizedRange ? accent : muted} />
+              <Icon name="calendar" size={18} color={customizedRange ? accent : muted} />
             </Pressable>
 
             {tab === "vn" ? (
@@ -94,7 +102,7 @@ export default function HistoryScreen(): JSX.Element {
               isIconOnly
               size="sm"
               variant="ghost"
-              onPress={() => setClearOpen(true)}
+              onPress={openClear}
               accessibilityLabel="清空浏览历史"
             >
               <Icon name="trashBin" size={18} color={danger} />
@@ -128,6 +136,8 @@ export default function HistoryScreen(): JSX.Element {
       <ClearHistoryDialog
         isOpen={clearOpen}
         onClose={() => setClearOpen(false)}
+        selected={clearTabs}
+        onChange={setClearTabs}
         onConfirm={confirmClear}
       />
 

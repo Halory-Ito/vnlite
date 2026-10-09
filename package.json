@@ -1,8 +1,8 @@
 {
   "name": "vnlite",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -21,6 +21,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
     "@gorhom/bottom-sheet": "^5.2.14",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.2.0",
     "@shopify/flash-list": "2.0.2",
@@ -42,6 +43,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-android-overlay": "^0.1.1",
     "react-native-chart-kit": "^7.0.4",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.1",

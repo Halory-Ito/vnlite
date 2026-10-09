@@ -87,11 +87,11 @@ export function useHistoryInfinite(tab: HistoryTab, filter: HistoryDateFilter) {
   });
 }
 
-/** 清空某个档位的历史 */
+/** 清空若干档位的历史 */
 export function useClearHistory() {
   const invalidate = useInvalidateHistory();
   return useMutation({
-    mutationFn: (tab: HistoryTab) => clearHistory(HISTORY_TAB_TYPES[tab]),
+    mutationFn: (tabs: HistoryTab[]) => clearHistory(tabs.flatMap((tab) => HISTORY_TAB_TYPES[tab])),
     onSuccess: invalidate,
   });
 }

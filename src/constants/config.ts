@@ -72,7 +72,7 @@ export const WALKTHROUGH_SOURCES = [
 /** 客户端信息，用于 User-Agent（移动端 fetch 禁止自定义该头，仅存档） */
 export const CLIENT_INFO = {
   name: "vnlite",
-  version: "1.0.0",
+  version: "1.2.1",
 } as const;
 
 /** 语录「每日一条」的种子来源：用本地日期做确定性随机，同一天结果固定 */

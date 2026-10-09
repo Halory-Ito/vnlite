@@ -9,3 +9,4 @@ export { getDatabase, setDatabaseProvider, wipeDatabase, SCHEMA_VERSION } from "
 export type { SqlDatabase, SqlRunResult } from "./schema";
 export * as accountDao from "./dao/account";
 export * as historyDao from "./dao/history";
+export * as playSessionDao from "./dao/play-session";

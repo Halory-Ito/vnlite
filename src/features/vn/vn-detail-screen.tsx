@@ -42,6 +42,8 @@ import { UlistEditEntry } from "@/features/ulist/components/ulist-edit-entry";
 import { UlistToggleButton } from "@/features/ulist/components/ulist-toggle-button";
 import { useUlistItem } from "@/features/ulist/hooks";
 import { VnWalkthroughTab } from "@/features/walkthrough/components/walkthrough-tab";
+import { StartGameButton } from "@/features/game-timer/components/start-game-button";
+import { PlayRecordsTab } from "@/features/play-records/components/play-records-tab";
 import { useRecordHistory } from "@/features/history/hooks";
 import { useSession } from "@/hooks/use-session";
 import type { VnDetail } from "@/lib/api/types";
@@ -75,6 +77,7 @@ type TabKey =
   | "quotes"
   | "discussions"
   | "walkthrough"
+  | "records"
   | "extlinks";
 
 /**
@@ -102,6 +105,7 @@ const TABS: readonly { key: TabKey; label: string }[] = [
   { key: "quotes", label: "语录" },
   { key: "discussions", label: "讨论" },
   { key: "walkthrough", label: "攻略" },
+  { key: "records", label: "记录" },
   { key: "extlinks", label: "外链" },
 ] as const;
 
@@ -189,6 +193,15 @@ export default function VnDetailScreen(): JSX.Element {
         />
       </View>
 
+      {/* 开始游戏：拉起全局计时浮层 */}
+      <View className="px-4 pb-3">
+        <StartGameButton
+          vnId={vn.id}
+          vnTitle={vn.title}
+          coverUrl={vn.image?.thumbnail ?? vn.image?.url ?? null}
+        />
+      </View>
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1">
         <Tabs.List className="mx-3">
           {/* 10 个页签放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
@@ -214,6 +227,7 @@ export default function VnDetailScreen(): JSX.Element {
           {tab === "quotes" ? <VnQuotesTab vnId={vn.id} /> : null}
           {tab === "discussions" ? <VnDiscussionsTab vnId={vn.id} /> : null}
           {tab === "walkthrough" ? <VnWalkthroughTab vnId={vn.id} /> : null}
+          {tab === "records" ? <PlayRecordsTab vnId={vn.id} /> : null}
           {tab === "extlinks" ? <VnExtLinksTab vn={vn} /> : null}
         </View>
       </Tabs>
