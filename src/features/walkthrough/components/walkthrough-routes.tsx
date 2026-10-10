@@ -30,6 +30,7 @@ import { View } from "react-native";
 
 import { Icon } from "@/components/icon";
 import { Muted, Paragraph } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import type { Walkthrough, WalkthroughRoute } from "../types";
 import type { WalkthroughMarkApi } from "../use-marks";
@@ -78,6 +79,7 @@ function RouteItem({
   shield: boolean;
   marks: WalkthroughMarkApi;
 }): JSX.Element {
+  const { t } = useTranslation();
   // 图标只能吃具体色值，不能写 className，也不能写 `currentColor`。
   // 这里每条线路取一次 —— 是线路数（最多 12），不是步骤数，所以开销可忽略。
   const accent = useThemeColor("accent");
@@ -87,7 +89,7 @@ function RouteItem({
       <Accordion.Trigger
         // 默认 padding-block 是 spacing*4（16px），十几条线路排下来太松，压到 8px
         className="py-2"
-        accessibilityLabel={`${route.name}，点按展开该线路的结局`}
+        accessibilityLabel={t("walkthrough.expandRoute", { route: route.name })}
       >
         {/* Trigger 是 space-between：左边内容自己撑开，右边留给 Indicator */}
         <View className="flex-1 flex-row items-center gap-2">

@@ -16,6 +16,7 @@ import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Separator } from "@/components/separator";
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 
 import { VnListItem } from "./vn-list-item";
@@ -48,11 +49,12 @@ export function VnInfiniteList({
   onEndReached,
   onRetry,
   onPressItem,
-  emptyTitle = "没有找到作品",
+  emptyTitle,
   emptyDescription,
   header,
   listRef,
 }: VnInfiniteListProps): JSX.Element {
+  const { t } = useTranslation();
   // 封面查看器：null = 关着。挂在列表这一层，整页只用一个 Modal
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -70,15 +72,17 @@ export function VnInfiniteList({
         dims: vn.image?.dims,
         sexual: vn.image?.sexual,
         violence: vn.image?.violence,
-        label: `${vn.title} 封面`,
+        label: t("home.coverLabel", { title: vn.title }),
       });
     }
     return { covers: images, coverIndex: index };
-  }, [items]);
+  }, [items, t]);
 
-  if (isLoading) return <LoadingState label="加载中…" />;
+  if (isLoading) return <LoadingState label={t("common.loading")} />;
   if (isError) return <ErrorState error={error} onRetry={onRetry} />;
-  if (items.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />;
+  if (items.length === 0) {
+    return <EmptyState title={emptyTitle ?? t("vn.listEmpty")} description={emptyDescription} />;
+  }
 
   const renderItem = ({ item }: ListRenderItemInfo<VnSummary>): ReactElement => (
     <View>
@@ -112,7 +116,7 @@ export function VnInfiniteList({
             {isFetchingNextPage ? (
               <>
                 <ActivityIndicator size="small" />
-                <Muted type="body-xs">加载更多…</Muted>
+                <Muted type="body-xs">{t("common.loadingMore")}</Muted>
               </>
             ) : null}
           </View>

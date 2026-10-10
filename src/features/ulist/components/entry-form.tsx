@@ -15,6 +15,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { CoverImage } from "@/components/cover-image";
 import { Muted, Paragraph } from "@/components/typo";
 import { RatingBadge } from "@/components/ui";
+import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import type { UListItem, UListLabel } from "@/lib/api/types";
 import { formatReleased } from "@/utils/format";
@@ -32,6 +33,7 @@ export interface EntryFormProps {
 
 export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { updateEntry, removeEntry } = useUlistMutations(entry.id);
   const [draft, setDraft] = useState<UlistDraft>(() => draftFrom(entry));
@@ -45,22 +47,22 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
     if (!patch) return;
     updateEntry.mutate(patch, {
       onSuccess: () => {
-        toast.show("已保存到 VNDB");
+        toast.show(t("ulist.savedToVndb"));
         router.back();
       },
       onError: (error) =>
-        toast.show(error instanceof ApiError ? error.userMessage : "保存失败，请重试"),
+        toast.show(error instanceof ApiError ? error.userMessage : t("ulist.saveFailed")),
     });
   };
 
   const remove = (): void => {
     removeEntry.mutate(undefined, {
       onSuccess: () => {
-        toast.show("已移出清单");
+        toast.show(t("ulist.removed"));
         router.back();
       },
       onError: (error) =>
-        toast.show(error instanceof ApiError ? error.userMessage : "移出失败，请重试"),
+        toast.show(error instanceof ApiError ? error.userMessage : t("ulist.removeFailed")),
     });
   };
 
@@ -85,35 +87,35 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
           onChange={(next) => update({ labels: next })}
         />
         <DateField
-          label="开始日期"
+          label={t("ulist.startedDate")}
           value={draft.started}
           onChange={(started) => update({ started })}
-          error={errors.started}
+          error={errors.started ? t(errors.started) : null}
         />
         <DateField
-          label="完成日期"
+          label={t("ulist.finishedDate")}
           value={draft.finished}
           onChange={(finished) => update({ finished })}
-          error={errors.finished}
+          error={errors.finished ? t(errors.finished) : null}
         />
         <View className="gap-1.5">
           <Muted type="body-xs" className="font-medium">
-            备注（仅自己可见）
+            {t("ulist.notesLabel")}
           </Muted>
           <Input
             value={draft.notes}
             onChangeText={(notes) => update({ notes })}
-            placeholder="写点感想…"
+            placeholder={t("ulist.notesPlaceholder")}
             multiline
             style={{ minHeight: 96, textAlignVertical: "top" }}
-            accessibilityLabel="备注"
+            accessibilityLabel={t("ulist.notes")}
           />
         </View>
       </View>
 
       <View className="px-4">
         <Button size="sm" onPress={save} isDisabled={!patch || busy}>
-          <Button.Label>{busy ? "处理中…" : "保存更改"}</Button.Label>
+          <Button.Label>{busy ? t("ulist.processing") : t("ulist.saveChanges")}</Button.Label>
         </Button>
       </View>
 
@@ -121,18 +123,18 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
         {confirmRemove ? (
           <View className="flex-row gap-2">
             <Button size="sm" variant="danger-soft" onPress={remove} isDisabled={busy}>
-              <Button.Label>确认移出</Button.Label>
+              <Button.Label>{t("ulist.confirmRemove")}</Button.Label>
             </Button>
             <Button size="sm" variant="secondary" onPress={() => setConfirmRemove(false)}>
-              <Button.Label>取消</Button.Label>
+              <Button.Label>{t("common.cancel")}</Button.Label>
             </Button>
           </View>
         ) : (
           <Button size="sm" variant="danger-soft" onPress={() => setConfirmRemove(true)}>
-            <Button.Label>移出清单</Button.Label>
+            <Button.Label>{t("ulist.removeFromList")}</Button.Label>
           </Button>
         )}
-        <Muted type="body-xs">移出会同时删除该作品的全部发行版持有记录，且不可撤销</Muted>
+        <Muted type="body-xs">{t("ulist.removeHint")}</Muted>
       </View>
     </ScrollView>
   );
@@ -147,6 +149,7 @@ function EntryHeader({
   /** 点标题进作品详情页（编辑页本身是导航死胡同，出口就挂在标题上） */
   onPressTitle: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center gap-3 px-4">
       <CoverImage
@@ -156,14 +159,14 @@ function EntryHeader({
         roundedClassName="rounded-md"
         sexual={vn.image?.sexual}
         violence={vn.image?.violence}
-        accessibilityLabel={`${vn.title} 封面`}
+        accessibilityLabel={t("ulist.coverLabel", { title: vn.title })}
       />
       <View className="flex-1 gap-1">
         <Pressable
           onPress={onPressTitle}
           className="active:opacity-60"
           accessibilityRole="link"
-          accessibilityLabel={`查看 ${vn.title} 的详情`}
+          accessibilityLabel={t("ulist.openVnDetails", { title: vn.title })}
           hitSlop={4}
         >
           {/* 站内链接色：标题现在同时是「进详情页」的入口 */}

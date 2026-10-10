@@ -21,16 +21,18 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { SegmentedControl } from "@/components/segmented-control";
 import { ViewModeButton } from "@/components/view-mode-button";
 import { VnCollection } from "@/features/vn/components/vn-collection";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
+import type { TranslationKey } from "@/lib/i18n/translate";
 import type { VnViewMode } from "@/lib/storage/preferences";
 
 /** 三档页签；顺序即分段控件从左到右 */
 export type CatalogTab = "overview" | "works" | "extlinks";
 
-const TAB_OPTIONS: { value: CatalogTab; label: string }[] = [
-  { value: "overview", label: "概览" },
-  { value: "works", label: "作品" },
-  { value: "extlinks", label: "外链" },
+const TAB_OPTIONS: { value: CatalogTab; labelKey: TranslationKey }[] = [
+  { value: "overview", labelKey: "catalog.tabOverview" },
+  { value: "works", labelKey: "catalog.tabWorks" },
+  { value: "extlinks", labelKey: "catalog.tabExtLinks" },
 ];
 
 /** 作品列表那一档要用的查询状态（由调用方的 `useQuery` 提供） */
@@ -71,10 +73,16 @@ export function CatalogDetailTabs({
   viewMode,
   onChangeViewMode,
 }: CatalogDetailTabsProps): JSX.Element {
+  const { t } = useTranslation();
+  const options = TAB_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+  }));
+
   return (
     <View className="flex-1">
       <View className="px-4 pt-1">
-        <SegmentedControl options={TAB_OPTIONS} value={tab} onChange={onTabChange} />
+        <SegmentedControl options={options} value={tab} onChange={onTabChange} />
       </View>
 
       <View className="flex-1">
@@ -91,11 +99,11 @@ export function CatalogDetailTabs({
             </View>
 
             {works.isLoading ? (
-              <LoadingState label="拉取作品…" />
+              <LoadingState label={t("catalog.worksLoading")} />
             ) : works.isError ? (
               <ErrorState error={works.error} onRetry={works.onRetry} />
             ) : works.items.length === 0 ? (
-              <EmptyState title="没有收录作品" description={emptyWorksText} />
+              <EmptyState title={t("catalog.worksEmptyTitle")} description={emptyWorksText} />
             ) : (
               <VnCollection mode={viewMode} items={[...works.items]} onPressItem={onPressVn} />
             )}

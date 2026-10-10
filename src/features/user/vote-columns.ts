@@ -5,20 +5,31 @@
  * 各写一份迟早对不上（多一列少一列）。
  */
 
+import type { TranslationKey } from "@/lib/i18n/translate";
 import type { UListItem } from "@/lib/api/types";
 
 import type { VndbLengthVote } from "./scrape";
 
-/** 可控的列 */
+/** 可控的列（文案存翻译键：语言可切换） */
 export const VOTE_COLUMNS = [
-  { key: "title", label: "作品名称" },
-  { key: "score", label: "评分" },
-  { key: "playtime", label: "游玩时长" },
-  { key: "speed", label: "通关速度" },
-  { key: "votedAt", label: "投票时间" },
-  { key: "started", label: "开始" },
-  { key: "finished", label: "完成" },
-] as const;
+  { key: "title", labelKey: "user.columnTitle" },
+  { key: "score", labelKey: "user.columnScore" },
+  { key: "playtime", labelKey: "user.columnPlaytime" },
+  { key: "speed", labelKey: "user.columnSpeed" },
+  { key: "votedAt", labelKey: "user.columnVotedAt" },
+  { key: "started", labelKey: "user.columnStarted" },
+  { key: "finished", labelKey: "user.columnFinished" },
+] as const satisfies readonly { key: string; labelKey: TranslationKey }[];
+
+/** 行内短标签（`vote-row` 用；与面板上的完整列名不同） */
+export const VOTE_FIELD_LABEL_KEY: Record<Exclude<VoteColumn, "title">, TranslationKey> = {
+  score: "user.fieldScore",
+  playtime: "user.fieldPlaytime",
+  speed: "user.fieldSpeed",
+  votedAt: "user.fieldVotedAt",
+  started: "user.fieldStarted",
+  finished: "user.fieldFinished",
+};
 
 export type VoteColumn = (typeof VOTE_COLUMNS)[number]["key"];
 

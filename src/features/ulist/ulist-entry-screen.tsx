@@ -14,6 +14,7 @@ import { Pressable, View } from "react-native";
 import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { H5 } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { EntryForm } from "./components/entry-form";
 import { NotInList } from "./components/not-in-list";
@@ -21,6 +22,7 @@ import { isVnId } from "./entry-logic";
 import { useUlistItem, useUlistLabels } from "./hooks";
 
 export function UlistEntryScreen(): JSX.Element {
+  const { t } = useTranslation();
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   // 脏参数（如 `/ulist/undefined`）不发请求：VNDB 只会回 400，文案还看不懂
   const valid = isVnId(id);
@@ -33,11 +35,11 @@ export function UlistEntryScreen(): JSX.Element {
       <BackBar title={title} />
       {!valid ? (
         <EmptyState
-          title="无效的作品 ID"
-          description="清单条目的链接不合法，请回到清单列表重新进入"
+          title={t("ulist.invalidIdTitle")}
+          description={t("ulist.invalidIdDescription")}
         />
       ) : item.isLoading ? (
-        <LoadingState label="从 VNDB 拉取清单条目…" />
+        <LoadingState label={t("ulist.loadingEntry")} />
       ) : item.isError ? (
         <ErrorState error={item.error} onRetry={() => void item.refetch()} />
       ) : item.data ? (
@@ -51,6 +53,7 @@ export function UlistEntryScreen(): JSX.Element {
 
 function BackBar({ title }: { title: string }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const muted = useThemeColor("muted");
   return (
     <View className="flex-row items-center gap-2 px-4 py-2">
@@ -58,7 +61,7 @@ function BackBar({ title }: { title: string }): JSX.Element {
         onPress={() => router.back()}
         className="active:opacity-60"
         accessibilityRole="button"
-        accessibilityLabel="返回"
+        accessibilityLabel={t("common.back")}
         hitSlop={8}
       >
         <Icon name="chevronLeft" size={24} color={muted} />

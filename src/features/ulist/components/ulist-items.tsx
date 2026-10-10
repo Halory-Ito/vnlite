@@ -18,6 +18,7 @@ import { RefreshControl, View } from "react-native";
 import { Separator } from "@/components/separator";
 import { Muted } from "@/components/typo";
 import { VnCoverGrid } from "@/features/vn/components/vn-cover-grid";
+import { useTranslation } from "@/hooks/use-translation";
 import type { UListItem } from "@/lib/api/types";
 import type { VnViewMode } from "@/lib/storage/preferences";
 
@@ -46,12 +47,13 @@ export function UlistItems({
   onPressItem,
   footer,
 }: UlistItemsProps): JSX.Element {
+  const { t } = useTranslation();
   const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />;
   // 「加载更多…」与调用方的附加内容（筛选说明）互斥显示，避免两块提示叠在一起
   const bottom: ReactElement | null = isFetchingNextPage ? (
     <View className="py-4">
       <Muted type="body-xs" className="text-center">
-        加载更多…
+        {t("ulist.loadingMore")}
       </Muted>
     </View>
   ) : (

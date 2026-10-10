@@ -28,6 +28,11 @@ export interface SettingsItemProps {
   suffix?: ReactNode;
   /** 危险操作（清缓存之类）用红色图标提醒 */
   tone?: "default" | "danger";
+  /**
+   * 右侧的跳转图标，默认 `chevronRight`（应用内下一级）。
+   * 跳外链时传 `arrowUpRightFromSquare` —— 右箭头会让用户以为是 App 内页面。
+   */
+  trailingIcon?: IconName;
 }
 
 export function SettingsItem({
@@ -38,6 +43,7 @@ export function SettingsItem({
   onPress,
   suffix,
   tone = "default",
+  trailingIcon = "chevronRight",
 }: SettingsItemProps): JSX.Element {
   const accent = useThemeColor("accent");
   const danger = useThemeColor("danger");
@@ -62,7 +68,7 @@ export function SettingsItem({
         <ListGroup.ItemSuffix>
           <View className="flex-row items-center gap-1">
             {value ? <Muted type="body-sm">{value}</Muted> : null}
-            {onPress ? <Icon name="chevronRight" size={16} color={muted} /> : null}
+            {onPress ? <Icon name={trailingIcon} size={16} color={muted} /> : null}
           </View>
         </ListGroup.ItemSuffix>
       )}

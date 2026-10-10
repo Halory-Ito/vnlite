@@ -3,20 +3,25 @@
  *
  * VNDB 的原始字段很多是「部分日期」「枚举数字」「空值」，
  * 全部集中在这里转成能直接上屏的文案，避免每个页面各写一遍。
+ *
+ * ⚠️ 这里的文案走**全局 `t`**（`lib/i18n/translate`），不是组件 hook ——
+ * 这些函数也会被纯逻辑调用（冒烟测试直接跑）。语言切换时由 `initI18n`
+ * 同步全局 locale，订阅了语言偏好的页面会带着它们一起重渲染。
  */
 
+import { t, type TranslationKey } from "@/lib/i18n/translate";
 import {
+  CHARACTER_ROLE,
   DEV_STATUS,
+  LANGUAGE,
   LENGTH,
-  LANGUAGE_LABEL,
   LIST_STATUS,
-  PLATFORM_LABEL,
-  SEX_LABEL,
-  STAFF_ROLE_LABEL,
-  VOICED_LABEL,
-  type Language,
+  PLATFORM,
+  PRODUCER_TYPE,
+  SEX,
+  STAFF_ROLE,
+  VOICED,
   type Length,
-  type Platform,
   type StaffRole,
 } from "@/lib/api/enums";
 
@@ -37,8 +42,8 @@ const pad2 = (n: number): string => String(n).padStart(2, "0");
  * 不完整日期**不能**按字符串补零解析成年月日。
  */
 export function formatReleased(raw: string | null | undefined): string {
-  if (!raw) return "未知";
-  if (raw === TBA) return "预定";
+  if (!raw) return t("format.unknown");
+  if (raw === TBA) return t("format.tba");
   return raw;
 }
 
@@ -59,11 +64,11 @@ export function formatRelativeDays(raw: string | null | undefined): string | nul
 
   const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
   if (days < 0) return raw;
-  if (days === 0) return "今天";
-  if (days === 1) return "昨天";
-  if (days < 30) return `${days} 天前`;
-  if (days < 365) return `${Math.floor(days / 30)} 个月前`;
-  return `${Math.floor(days / 365)} 年前`;
+  if (days === 0) return t("format.today");
+  if (days === 1) return t("format.yesterday");
+  if (days < 30) return t("format.daysAgo", { days });
+  if (days < 365) return t("format.monthsAgo", { months: Math.floor(days / 30) });
+  return t("format.yearsAgo", { years: Math.floor(days / 365) });
 }
 
 /**
@@ -77,14 +82,14 @@ export function formatRelativeTime(timestamp: number | null | undefined): string
   if (diff < 0) return null;
 
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 1) return t("format.justNow");
+  if (minutes < 60) return t("format.minutesAgo", { minutes });
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
+  if (hours < 24) return t("format.hoursAgo", { hours });
 
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} 天前`;
+  if (days < 30) return t("format.daysAgo", { days });
 
   const d = new Date(timestamp);
   if (Number.isNaN(d.getTime())) return null;
@@ -105,11 +110,11 @@ export function todayIso(): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-/** `2024-01-05` → `1 月 5 日`（每日语录的日期标签） */
+/** `2024-01-05` → `1 月 5 日`（中文）/ `1/5`（英文） */
 export function formatMonthDay(iso: string): string {
   const [, month, day] = iso.split("-");
   if (!month || !day) return iso;
-  return `${Number(month)} 月 ${Number(day)} 日`;
+  return t("format.monthDay", { month: Number(month), day: Number(day) });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -142,10 +147,25 @@ export function ratingTone(rating: number | null | undefined): "high" | "mid" | 
 /* 枚举 → 文案                                                                  */
 /* -------------------------------------------------------------------------- */
 
+/** 把枚举值集合转成字符串集合，用于「是不是合法的枚举值」判断 */
+function enumSet(values: readonly (string | number)[]): Set<string> {
+  return new Set(values.map(String));
+}
+
+const PLATFORM_SET = enumSet(PLATFORM);
+const STAFF_ROLE_SET = enumSet(STAFF_ROLE);
+const LANGUAGE_SET = enumSet(LANGUAGE);
+const SEX_SET = enumSet(SEX);
+const VOICED_SET = enumSet(VOICED);
+const PRODUCER_TYPE_SET = enumSet(PRODUCER_TYPE);
+const CHARACTER_ROLE_SET = enumSet(CHARACTER_ROLE);
+/** `/vn` 的 relations.relation 固定 7 种（与 `RELATION_LABEL` 一致） */
+const RELATION_SET = new Set(["seq", "preq", "ser", "alt", "char", "parent", "side"]);
+
 /** 1–5 → 时长描述；0/undefined → 未知 */
 export function formatLength(length: Length | null | undefined): string {
-  if (!length) return "未知";
-  return LENGTH[length] ?? "未知";
+  if (!length) return t("format.unknown");
+  return LENGTH[length] ?? t("format.unknown");
 }
 
 /** 分钟数 → `约 12 小时` / `约 40 分钟` */
@@ -158,27 +178,43 @@ export function formatMinutes(minutes: number | null | undefined): string | null
 }
 
 export function languageLabel(lang: string | null | undefined): string {
-  if (!lang) return "未知";
-  return LANGUAGE_LABEL[lang as Language] ?? lang;
+  if (!lang) return t("format.unknown");
+  // 不在 VNDB 语言枚举里就原样返回，别让 i18n 输出 missing 占位
+  if (!LANGUAGE_SET.has(lang)) return lang;
+  return t(`format.language.${lang}` as TranslationKey);
 }
 
 export function platformLabel(platform: string): string {
-  return PLATFORM_LABEL[platform as Platform] ?? platform.toUpperCase();
+  if (!PLATFORM_SET.has(platform)) return platform.toUpperCase();
+  return t(`enums.platform.${platform}` as TranslationKey);
 }
 
 export function platformListLabel(platforms: readonly string[] | undefined): string {
-  if (!platforms || platforms.length === 0) return "未知";
+  if (!platforms || platforms.length === 0) return t("format.unknown");
   return platforms.map(platformLabel).join(" · ");
 }
 
 export function staffRoleLabel(role: StaffRole | string | undefined): string {
-  if (!role) return "其他";
-  return STAFF_ROLE_LABEL[role as StaffRole] ?? role;
+  if (!role) return t("common.none");
+  if (!STAFF_ROLE_SET.has(role)) return role;
+  return t(`enums.staffRole.${role}` as TranslationKey);
 }
 
 export function devStatusLabel(status: number | null | undefined): string {
-  if (status == null) return "未知";
-  return DEV_STATUS[status] ?? "未知";
+  if (status == null || status < 0 || status >= DEV_STATUS.length) return t("format.unknown");
+  return t(`enums.devStatus.${status}` as TranslationKey);
+}
+
+/** 制作者类型：公司 / 个人 / 业余团体 */
+export function producerTypeLabel(type: string | null | undefined): string {
+  if (!type || !PRODUCER_TYPE_SET.has(type)) return type ?? "";
+  return t(`enums.producerType.${type}` as TranslationKey);
+}
+
+/** 角色在本作中的定位：主角 / 主要角色 / 次要角色 / 登场 */
+export function characterRoleLabel(role: string | null | undefined): string {
+  if (!role || !CHARACTER_ROLE_SET.has(role)) return role ?? "";
+  return t(`enums.characterRole.${role}` as TranslationKey);
 }
 
 /** 发行版持有状态（0–4）→ 英文（与 VNDB 一致，见 `LIST_STATUS`） */
@@ -188,37 +224,30 @@ export function listStatusLabel(status: number | null | undefined): string {
 }
 
 export function voicedLabel(voiced: number | null | undefined): string {
-  if (voiced == null) return "未知";
-  return VOICED_LABEL[voiced as keyof typeof VOICED_LABEL] ?? "未知";
+  if (voiced == null || !VOICED_SET.has(String(voiced))) return t("format.unknown");
+  return t(`enums.voiced.${voiced}` as TranslationKey);
 }
 
 /** `sex` / `gender` 字段是 `[表观, 真实]` 二元组，null 表示未知 */
 export function sexLabel(pair: readonly (string | null)[] | null | undefined): string {
-  if (!pair || pair.length === 0) return "未知";
+  if (!pair || pair.length === 0) return t("format.unknown");
   const [apparent, real] = pair;
-  if (!apparent) return "未知";
-  const apparentLabel = SEX_LABEL[apparent as keyof typeof SEX_LABEL] ?? apparent;
+  if (!apparent) return t("format.unknown");
+  const apparentLabel = SEX_SET.has(apparent)
+    ? t(`enums.sex.${apparent}` as TranslationKey)
+    : apparent;
   if (!real || real === apparent) return apparentLabel;
-  return `${apparentLabel}（实际：${SEX_LABEL[real as keyof typeof SEX_LABEL] ?? real}）`;
+  const realLabel = SEX_SET.has(real) ? t(`enums.sex.${real}` as TranslationKey) : real;
+  return t("format.sexWithReal", { apparent: apparentLabel, real: realLabel });
 }
 
 /* -------------------------------------------------------------------------- */
 /* VNDB 关系类型                                                                */
 /* -------------------------------------------------------------------------- */
 
-const RELATION_LABEL: Record<string, string> = {
-  seq: "续作",
-  preq: "前传",
-  ser: "系列",
-  alt: "替代版本",
-  char: "登场角色",
-  parent: "母作",
-  side: "番外",
-};
-
 export function relationLabel(relation: string | undefined): string {
-  if (!relation) return "关联";
-  return RELATION_LABEL[relation] ?? relation;
+  if (!relation || !RELATION_SET.has(relation)) return t("enums.relationDefault");
+  return t(`enums.relation.${relation}` as TranslationKey);
 }
 
 /* -------------------------------------------------------------------------- */

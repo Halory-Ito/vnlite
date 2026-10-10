@@ -14,13 +14,9 @@ import {
   type FilterChipOption,
 } from "@/features/browse/components/filter-group";
 import { FullScreenPanel } from "@/features/browse/components/panel";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { VOTE_COLUMNS, toggleVoteColumn, type VoteColumn } from "../vote-columns";
-
-const OPTIONS: FilterChipOption[] = VOTE_COLUMNS.map((column) => ({
-  value: column.key,
-  label: column.label,
-}));
 
 export function VoteColumnsPanel({
   visible,
@@ -31,10 +27,20 @@ export function VoteColumnsPanel({
   onChange: (next: VoteColumn[]) => void;
   onClose: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
+  const options: FilterChipOption[] = VOTE_COLUMNS.map((column) => ({
+    value: column.key,
+    label: t(column.labelKey),
+  }));
+
   return (
-    <FullScreenPanel title="显示哪些列" accessibilityLabel="显示哪些列" onClose={onClose}>
-      <FilterGroup label="列表里显示的信息" activeCount={visible.length}>
-        {OPTIONS.map((option) => (
+    <FullScreenPanel
+      title={t("user.columnsPanelTitle")}
+      accessibilityLabel={t("user.columnsPanelTitle")}
+      onClose={onClose}
+    >
+      <FilterGroup label={t("user.columnsGroup")} activeCount={visible.length}>
+        {options.map((option) => (
           <FilterChip
             key={option.value}
             option={option}

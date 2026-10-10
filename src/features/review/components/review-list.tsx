@@ -17,6 +17,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { EmptyState, ErrorState } from "@/components/screen-state";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { useLatestReviews } from "../hooks";
 
@@ -29,6 +30,7 @@ export interface ReviewListProps {
 }
 
 export function ReviewList({ limit }: ReviewListProps): JSX.Element {
+  const { t } = useTranslation();
   const query = useLatestReviews(limit);
   // null = 对话框关着；存 id 而不是布尔值，省掉一层「记住是哪一条」
   const [openId, setOpenId] = useState<string | null>(null);
@@ -40,7 +42,11 @@ export function ReviewList({ limit }: ReviewListProps): JSX.Element {
       {query.isLoading ? <ReviewListSkeleton rows={4} /> : null}
       {failed ? <ErrorState error={query.error} onRetry={() => void query.refetch()} /> : null}
       {!query.isLoading && !failed && reviews.length === 0 ? (
-        <EmptyState title="没有评价" description="VNDB 可能改版导致解析失败" className="py-10" />
+        <EmptyState
+          title={t("review.emptyTitle")}
+          description={t("review.emptyDescription")}
+          className="py-10"
+        />
       ) : null}
 
       {reviews.length > 0 ? (

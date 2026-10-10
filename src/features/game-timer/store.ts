@@ -24,8 +24,6 @@ export interface GameTimerState {
   /** 正在 / 最近计时的作品 id；idle 时为 null */
   vnId: string | null;
   vnTitle: string | null;
-  /** 作品封面（通知栏大图用）；可能为 null */
-  coverUrl: string | null;
   /** 本次会话开始的墙钟时间（unix 毫秒）；idle 时为 null */
   sessionStartedAt: number | null;
   /** 当前运行段起点（unix 毫秒）；仅 running 有值 */
@@ -51,7 +49,6 @@ export const IDLE_GAME_TIMER: GameTimerState = {
   status: "idle",
   vnId: null,
   vnTitle: null,
-  coverUrl: null,
   sessionStartedAt: null,
   segmentStartedAt: null,
   accumulatedMs: 0,
@@ -83,13 +80,12 @@ export function elapsedMs(state: GameTimerState, now: number): number {
 }
 
 /** 开始计一个作品的游戏时间（会替换正在跑的那个） */
-export function startGameTimer(vnId: string, vnTitle: string, coverUrl?: string | null): void {
+export function startGameTimer(vnId: string, vnTitle: string): void {
   const now = Date.now();
   snapshot = {
     status: "running",
     vnId,
     vnTitle,
-    coverUrl: coverUrl ?? null,
     sessionStartedAt: now,
     segmentStartedAt: now,
     accumulatedMs: 0,
@@ -153,7 +149,7 @@ export function sanitizeGameTimer(state: GameTimerState | null): GameTimerState 
   if (!state || (state.status !== "running" && state.status !== "paused")) {
     return IDLE_GAME_TIMER;
   }
-  const { vnId, vnTitle, coverUrl, sessionStartedAt, segmentStartedAt, accumulatedMs } = state;
+  const { vnId, vnTitle, sessionStartedAt, segmentStartedAt, accumulatedMs } = state;
   const hasSegment = typeof segmentStartedAt === "number" && Number.isFinite(segmentStartedAt);
   if (
     typeof vnId !== "string" ||
@@ -171,7 +167,6 @@ export function sanitizeGameTimer(state: GameTimerState | null): GameTimerState 
     status,
     vnId,
     vnTitle: typeof vnTitle === "string" ? vnTitle : "",
-    coverUrl: typeof coverUrl === "string" ? coverUrl : null,
     sessionStartedAt,
     segmentStartedAt: status === "running" ? segmentStartedAt : null,
     accumulatedMs: Math.max(0, accumulatedMs),

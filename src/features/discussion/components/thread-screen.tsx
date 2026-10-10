@@ -17,6 +17,7 @@ import { Pressable, View } from "react-native";
 import { BackBar } from "@/components/back-bar";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { usePostList } from "../hooks";
 import type { VndbPost } from "../scrape";
@@ -24,19 +25,23 @@ import { PostContent } from "./post-content";
 
 export function ThreadScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const { query, posts } = usePostList(id);
   const title = query.data?.pages[0]?.title ?? null;
 
   return (
     <View className="flex-1">
-      <BackBar title={title ?? "讨论帖"} />
+      <BackBar title={title ?? t("discussion.thread.title")} />
 
       {query.isLoading ? (
-        <LoadingState label="抓取帖子…" />
+        <LoadingState label={t("discussion.thread.loading")} />
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : posts.length === 0 ? (
-        <EmptyState title="这个帖子没有内容" description="VNDB 可能改版导致解析失败" />
+        <EmptyState
+          title={t("discussion.thread.emptyTitle")}
+          description={t("discussion.thread.emptyDescription")}
+        />
       ) : (
         <FlashList<VndbPost>
           style={{ flex: 1 }}
@@ -53,7 +58,7 @@ export function ThreadScreen(): JSX.Element {
               </View>
             ) : query.hasNextPage ? null : (
               <Muted type="body-xs" className="py-6 text-center">
-                共 {posts.length} 楼
+                {t("discussion.thread.postCount", { count: posts.length })}
               </Muted>
             )
           }
@@ -66,6 +71,7 @@ export function ThreadScreen(): JSX.Element {
 /** 一楼：作者 + 楼层号 / 正文 / 时间（编辑过的补一行「编辑于」） */
 function PostCard({ post }: { post: VndbPost }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View className="mx-4 mt-2 gap-2 rounded-lg bg-default-soft p-3">
@@ -78,7 +84,9 @@ function PostCard({ post }: { post: VndbPost }): JSX.Element {
             }
             className="shrink active:opacity-60"
             accessibilityRole="button"
-            accessibilityLabel={`打开用户页：${post.author ?? post.authorId}`}
+            accessibilityLabel={t("discussion.openUser", {
+              name: post.author ?? post.authorId,
+            })}
           >
             <Muted type="body-sm" className="font-medium text-link" numberOfLines={1}>
               {post.author ?? post.authorId}
@@ -86,7 +94,7 @@ function PostCard({ post }: { post: VndbPost }): JSX.Element {
           </Pressable>
         ) : (
           <Muted type="body-sm" className="font-medium" numberOfLines={1}>
-            {post.author ?? "已注销用户"}
+            {post.author ?? t("discussion.thread.anonymous")}
           </Muted>
         )}
         <Muted type="body-xs" className="opacity-70">
@@ -105,7 +113,7 @@ function PostCard({ post }: { post: VndbPost }): JSX.Element {
         ) : null}
         {post.lastmod ? (
           <Muted type="body-xs" className="opacity-70">
-            编辑于 {shorten(post.lastmod)}
+            {t("discussion.thread.edited", { date: shorten(post.lastmod) })}
           </Muted>
         ) : null}
       </View>

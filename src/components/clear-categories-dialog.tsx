@@ -1,5 +1,5 @@
 /**
- * 清空历史的二次确认。
+ * 「清空某类本地数据」的二次确认对话框（浏览历史 / 收藏共用）。
  *
  * 走项目自己的 `AppDialog`（RN 原生 Modal 外壳），**不用系统 `Alert`** ——
  * 一是与全应用对话框外观统一，二是 Alert 在各平台样式不可控。
@@ -12,38 +12,52 @@ import { Button, Checkbox } from "heroui-native";
 import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
-import { AppDialog } from "@/components/dialog";
-import { Body, Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
-import { HISTORY_TAB_OPTIONS, type HistoryTab } from "../history-constants";
+import { AppDialog } from "./dialog";
+import { Body, Muted } from "./typo";
 
-export interface ClearHistoryDialogProps {
+export interface ClearCategoryOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+export interface ClearCategoriesDialogProps<T extends string> {
   isOpen: boolean;
   onClose: () => void;
+  title: string;
+  /** 说明文案（会删除什么、是否可撤销） */
+  description: string;
+  /** 可勾选的分类（顺序即展示顺序） */
+  options: ClearCategoryOption<T>[];
   /** 当前勾选的分类 */
-  selected: HistoryTab[];
-  onChange: (next: HistoryTab[]) => void;
+  selected: T[];
+  onChange: (next: T[]) => void;
   onConfirm: () => void;
 }
 
-export function ClearHistoryDialog({
+export function ClearCategoriesDialog<T extends string>({
   isOpen,
   onClose,
+  title,
+  description,
+  options,
   selected,
   onChange,
   onConfirm,
-}: ClearHistoryDialogProps): JSX.Element {
-  const toggle = (tab: HistoryTab): void => {
-    onChange(selected.includes(tab) ? selected.filter((t) => t !== tab) : [...selected, tab]);
+}: ClearCategoriesDialogProps<T>): JSX.Element {
+  const { t } = useTranslation();
+  const toggle = (value: T): void => {
+    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
   };
 
   return (
-    <AppDialog isOpen={isOpen} onClose={onClose} title="清空浏览历史">
+    <AppDialog isOpen={isOpen} onClose={onClose} title={title}>
       <View className="gap-4">
-        <Muted type="body-sm">会删除勾选分类的全部记录，且不可撤销。</Muted>
+        <Muted type="body-sm">{description}</Muted>
 
         <View className="-my-1">
-          {HISTORY_TAB_OPTIONS.map((option) => {
+          {options.map((option) => {
             const checked = selected.includes(option.value);
             return (
               <View key={option.value} className="flex-row items-center gap-2.5 py-1.5">
@@ -69,10 +83,10 @@ export function ClearHistoryDialog({
 
         <View className="flex-row justify-end gap-2">
           <Button size="sm" variant="ghost" onPress={onClose}>
-            <Button.Label>取消</Button.Label>
+            <Button.Label>{t("common.cancel")}</Button.Label>
           </Button>
           <Button size="sm" variant="danger" onPress={onConfirm} isDisabled={selected.length === 0}>
-            <Button.Label>清空</Button.Label>
+            <Button.Label>{t("common.clear")}</Button.Label>
           </Button>
         </View>
       </View>

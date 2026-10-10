@@ -19,6 +19,7 @@ import { View } from "react-native";
 
 import { Icon } from "@/components/icon";
 import { Muted, Paragraph } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import type { MarkProgress } from "../select";
 import type { Walkthrough } from "../types";
@@ -29,6 +30,7 @@ export interface WalkthroughMetaProps {
 }
 
 export function WalkthroughMeta({ walkthrough, progress }: WalkthroughMetaProps): JSX.Element {
+  const { t } = useTranslation();
   // 图标只能吃具体色值，不能写 className，也不能写 `currentColor`
   const warning = useThemeColor("warning");
 
@@ -38,7 +40,7 @@ export function WalkthroughMeta({ walkthrough, progress }: WalkthroughMetaProps)
       {progress.starredSteps > 0 ? (
         <View className="flex-row flex-wrap items-baseline gap-x-3 gap-y-0.5">
           <Muted type="body-xs" className="opacity-60">
-            重点 {progress.starredSteps}
+            {t("walkthrough.starred", { count: progress.starredSteps })}
           </Muted>
         </View>
       ) : null}

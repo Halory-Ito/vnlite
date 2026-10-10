@@ -14,6 +14,7 @@ import { ActivityIndicator, View } from "react-native";
 import { Separator } from "@/components/separator";
 import { Muted } from "@/components/typo";
 import { VnCoverGrid } from "@/features/vn/components/vn-cover-grid";
+import { useTranslation } from "@/hooks/use-translation";
 import type { HistoryEntry } from "@/lib/db/dao/history";
 
 import { HistoryItem } from "./history-item";
@@ -35,13 +36,14 @@ export function HistoryList({
   onRemove,
 }: HistoryListProps): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const footer = (
     <View className="items-center gap-1 py-6">
       {isFetchingNextPage ? (
         <>
           <ActivityIndicator size="small" />
-          <Muted type="body-xs">加载更多…</Muted>
+          <Muted type="body-xs">{t("history.loadingMore")}</Muted>
         </>
       ) : null}
     </View>

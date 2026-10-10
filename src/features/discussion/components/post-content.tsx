@@ -13,6 +13,8 @@ import type { JSX } from "react";
 import { useState } from "react";
 import { Text, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 import type { PostNode } from "../scrape";
 
 /** 顶层节点切成「行内段 / 引用块」；key 取该段第一个节点的 id */
@@ -118,6 +120,7 @@ function InlineNodes({ nodes }: { nodes: readonly PostNode[] }): JSX.Element {
 
 /** 剧透：默认遮住，点一下展开（再点收起） */
 function Spoiler({ nodes }: { nodes: readonly PostNode[] }): JSX.Element {
+  const { t } = useTranslation();
   const [shown, setShown] = useState(false);
 
   return (
@@ -126,7 +129,7 @@ function Spoiler({ nodes }: { nodes: readonly PostNode[] }): JSX.Element {
       suppressHighlighting
       onPress={() => setShown((value) => !value)}
     >
-      {shown ? <InlineNodes nodes={nodes} /> : "（剧透内容，点按显示）"}
+      {shown ? <InlineNodes nodes={nodes} /> : t("review.spoilerHidden")}
     </Text>
   );
 }

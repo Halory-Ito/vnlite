@@ -12,6 +12,7 @@ import type { JSX } from "react";
 import { View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import { BUILTIN_LABEL_NAME, EXCLUSIVE_STATUS_LABELS } from "@/lib/api/enums";
 import { toggleLabel } from "@/lib/api/endpoints/ulist";
 import type { UListLabel } from "@/lib/api/types";
@@ -26,6 +27,7 @@ export interface LabelFieldProps {
 }
 
 export function LabelField({ labelIds, labels, onChange }: LabelFieldProps): JSX.Element {
+  const { t } = useTranslation();
   const custom = labels.filter((label) => label.id >= 10);
   const nameOf = (id: number): string =>
     labels.find((label) => label.id === id)?.label ?? BUILTIN_LABEL_NAME[id] ?? `Label ${id}`;
@@ -34,7 +36,7 @@ export function LabelField({ labelIds, labels, onChange }: LabelFieldProps): JSX
     <View className="gap-3">
       <View className="gap-2">
         <Muted type="body-xs" className="font-medium">
-          状态（点已选中的可取消）
+          {t("ulist.statusLabel")}
         </Muted>
         <View className="flex-row flex-wrap gap-1.5">
           {EXCLUSIVE_STATUS_LABELS.map((id) => (
@@ -51,7 +53,7 @@ export function LabelField({ labelIds, labels, onChange }: LabelFieldProps): JSX
       {custom.length > 0 ? (
         <View className="gap-2">
           <Muted type="body-xs" className="font-medium">
-            自建标签
+            {t("ulist.customLabels")}
           </Muted>
           <View className="flex-row flex-wrap gap-1.5">
             {custom.map((label) => (

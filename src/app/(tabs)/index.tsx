@@ -30,6 +30,8 @@ import { Muted, Paragraph } from "@/components/typo";
 import { HomeFeed } from "@/features/home/components/home-feed";
 import { useCopyProps } from "@/hooks/use-copy";
 import { useShake } from "@/hooks/use-shake";
+import { useTranslation } from "@/hooks/use-translation";
+import { ApiError } from "@/lib/api/errors";
 import { queryRandomQuote, queryRandomVn } from "@/lib/api/endpoints/vn";
 import type { VnSummary } from "@/lib/api/types";
 import { readDailyQuote, writeDailyQuote } from "@/lib/storage/daily-quote";
@@ -54,6 +56,7 @@ export default function HomeTab(): JSX.Element {
 
 function QuoteCard(): JSX.Element | null {
   const router = useRouter();
+  const { t } = useTranslation();
   const dateKey = todayIso();
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.quote.ofTheDay(dateKey),
@@ -107,7 +110,7 @@ function QuoteCard(): JSX.Element | null {
             onLongPress={copyVn.onLongPress}
             delayLongPress={copyVn.delayLongPress}
             className="mt-2 self-start active:opacity-60"
-            accessibilityHint="长按可复制作品名与官网链接"
+            accessibilityHint={t("home.quoteCopyHint")}
           >
             <Muted type="body-sm" className="text-link">
               — {data.vn.title}
@@ -125,6 +128,7 @@ function QuoteCard(): JSX.Element | null {
 
 function RandomVnCard(): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   // round 进 queryKey：点一次「换一部」= 一次新查询，随机逻辑放在 queryFn 里
   const [round, setRound] = useState(0);
 
@@ -152,7 +156,14 @@ function RandomVnCard(): JSX.Element {
         ) : null}
         {pick.isError ? (
           <Muted type="body-sm">
-            随机失败：{pick.error instanceof Error ? pick.error.message : "未知错误"}
+            {t("home.randomFailed", {
+              message:
+                pick.error instanceof ApiError
+                  ? pick.error.userMessage
+                  : pick.error instanceof Error
+                    ? pick.error.message
+                    : t("common.unknownError"),
+            })}
           </Muted>
         ) : null}
         {pick.isLoading ? (
@@ -178,10 +189,12 @@ function RandomVnCard(): JSX.Element {
 }
 
 function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): JSX.Element {
+  const { t } = useTranslation();
   // 封面查看器：null = 关着（这张卡只有一张图）
   const [coverOpen, setCoverOpen] = useState(false);
   // 长按整行复制「作品名 + 官网链接」；长按不会连带触发 onPress（进详情页）
   const copyable = useCopyProps(vnCopyText(vn), { preview: vn.title });
+  const coverLabel = t("home.coverLabel", { title: vn.title });
   const cover = vn.image?.url
     ? [
         {
@@ -190,7 +203,7 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
           dims: vn.image.dims,
           sexual: vn.image.sexual,
           violence: vn.image.violence,
-          label: `${vn.title} 封面`,
+          label: coverLabel,
         },
       ]
     : [];
@@ -212,7 +225,7 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
             height={[70, 93]}
             sexual={vn.image?.sexual}
             violence={vn.image?.violence}
-            accessibilityLabel={`${vn.title} 封面`}
+            accessibilityLabel={coverLabel}
             onPress={() => setCoverOpen(true)}
           />
           <View className="flex-1 justify-center">

@@ -11,29 +11,31 @@ import type { JSX } from "react";
 import { SegmentedControl } from "@/components/segmented-control";
 import { BackgroundSettings } from "@/features/settings/components/background-settings";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
-import { SCHEME_OPTIONS } from "@/features/settings/options";
+import { SCHEME_OPTIONS, translateOptions } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import { setPreference } from "@/lib/storage/preferences";
 import { resolveMode, THEMES } from "@/theme/themes";
 import { ThemeTile } from "@/theme/theme-tile";
 
 export default function AppearanceScreen(): JSX.Element {
   const preferences = usePreferences();
+  const { t } = useTranslation();
   const systemScheme = useColorScheme();
   // 主题 tile 的色块按**当前生效的模式**取色，而不是主题自带的明暗
   const mode = resolveMode(preferences.colorScheme, systemScheme);
 
   return (
-    <SettingsShell title="外观">
-      <SettingsSection title="明暗模式">
+    <SettingsShell title={t("settings.appearanceTitle")}>
+      <SettingsSection title={t("settings.scheme")}>
         <SegmentedControl
-          options={SCHEME_OPTIONS}
+          options={translateOptions(SCHEME_OPTIONS, t)}
           value={preferences.colorScheme}
-          onChange={(value) => setPreference("colorScheme", value)}
+          onChange={(value) => void setPreference("colorScheme", value)}
         />
       </SettingsSection>
 
-      <SettingsSection title="主题">
+      <SettingsSection title={t("settings.theme")}>
         <View className="flex-row flex-wrap gap-2">
           {THEMES.map((theme) => (
             <ThemeTile
@@ -41,13 +43,13 @@ export default function AppearanceScreen(): JSX.Element {
               theme={theme}
               mode={mode}
               active={preferences.themeId === theme.id}
-              onPress={() => setPreference("themeId", theme.id)}
+              onPress={() => void setPreference("themeId", theme.id)}
             />
           ))}
         </View>
       </SettingsSection>
 
-      <SettingsSection title="背景图">
+      <SettingsSection title={t("settings.background")}>
         <BackgroundSettings />
       </SettingsSection>
     </SettingsShell>

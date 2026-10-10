@@ -10,6 +10,8 @@ import { Pressable, View } from "react-native";
 
 import { Separator } from "@/components/separator";
 import { Muted, Paragraph } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
+import type { TranslationKey, TranslationParams } from "@/lib/i18n/translate";
 
 import { formatRelativeDays } from "@/utils/format";
 
@@ -21,6 +23,7 @@ export interface ReviewRowProps {
 }
 
 export function ReviewRow({ review, onPress }: ReviewRowProps): JSX.Element {
+  const { t } = useTranslation();
   const when = formatRelativeDays(review.date) ?? review.date;
 
   return (
@@ -29,7 +32,7 @@ export function ReviewRow({ review, onPress }: ReviewRowProps): JSX.Element {
         onPress={() => onPress(review.id)}
         className="flex-row items-center gap-3 px-4 py-2.5 active:opacity-60"
         accessibilityRole="button"
-        accessibilityLabel={`评价：${review.title}`}
+        accessibilityLabel={t("review.rowLabel", { title: review.title })}
       >
         <ScoreBadge score={review.score} />
 
@@ -43,7 +46,7 @@ export function ReviewRow({ review, onPress }: ReviewRowProps): JSX.Element {
             ) : null}
             {review.length ? (
               <Muted type="body-xs" className="text-[10px] opacity-70">
-                {lengthLabel(review.length)}
+                {lengthLabel(review.length, t)}
               </Muted>
             ) : null}
           </View>
@@ -81,22 +84,22 @@ function ScoreBadge({ score }: { score: number | null }): JSX.Element {
 }
 
 /**
- * 通关状态 / 游玩时长的中文名。
+ * 通关状态 / 游玩时长的文案。
  *
  * 官网给的是英文（`Short` / `Medium` / `Long` / `Unfinished`），
  * 这里只做展示层翻译，不改数据。
  */
-function lengthLabel(raw: string): string {
-  switch (raw) {
-    case "Short":
-      return "短篇";
-    case "Medium":
-      return "中篇";
-    case "Long":
-      return "长篇";
-    case "Unfinished":
-      return "未通关";
-    default:
-      return raw;
-  }
+const LENGTH_LABEL_KEY: Record<string, TranslationKey> = {
+  Short: "review.lengthShort",
+  Medium: "review.lengthMedium",
+  Long: "review.lengthLong",
+  Unfinished: "review.lengthUnfinished",
+};
+
+function lengthLabel(
+  raw: string,
+  t: (key: TranslationKey, params?: TranslationParams) => string
+): string {
+  const key = LENGTH_LABEL_KEY[raw];
+  return key ? t(key) : raw;
 }

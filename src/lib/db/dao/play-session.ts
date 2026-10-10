@@ -65,6 +65,34 @@ export async function getPlaySessions(vnId: string): Promise<PlaySession[]> {
   return rows.map(parseRow);
 }
 
+/**
+ * 全部游玩记录（开始时间倒序）。
+ *
+ * 记录统计页要把所有会话按作品 / 类型 / 月份 / 周次聚合，直接全量取回本地算。
+ */
+export async function getAllPlaySessions(): Promise<PlaySession[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<PlaySessionRow>(
+    `SELECT * FROM play_session ORDER BY started_at DESC;`
+  );
+  return rows.map(parseRow);
+}
+
+/** 可更新的时间字段（不含归属作品） */
+export type PlaySessionTiming = Pick<PlaySession, "startedAt" | "endedAt" | "durationMs">;
+
+/** 更新一条记录的起止与时长（「记录」列表左滑 → 设置） */
+export async function updatePlaySession(id: number, timing: PlaySessionTiming): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE play_session SET started_at = ?, ended_at = ?, duration_ms = ? WHERE id = ?;`,
+    timing.startedAt,
+    timing.endedAt,
+    timing.durationMs,
+    id
+  );
+}
+
 /** 删除单条记录 */
 export async function deletePlaySession(id: number): Promise<void> {
   const db = await getDatabase();

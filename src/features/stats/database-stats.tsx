@@ -24,7 +24,9 @@ import { useWindowDimensions, View } from "react-native";
 import { PieChart } from "react-native-chart-kit/v2";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import { getStats } from "@/lib/api/endpoints/ulist";
+import type { TranslationKey } from "@/lib/i18n/translate";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import { formatCount } from "@/utils/format";
@@ -34,14 +36,14 @@ type StatsResponse = Awaited<ReturnType<typeof getStats>>;
 
 /** 类别展示顺序：按 vndb.org 的习惯排（不按数量），刷新时扇区顺序不会跳动 */
 const CATEGORIES = [
-  { key: "vn", label: "视觉小说" },
-  { key: "releases", label: "发行版" },
-  { key: "chars", label: "角色" },
-  { key: "staff", label: "制作人员" },
-  { key: "producers", label: "制作者" },
-  { key: "tags", label: "标签" },
-  { key: "traits", label: "特性" },
-] as const satisfies readonly { key: keyof StatsResponse; label: string }[];
+  { key: "vn", labelKey: "stats.dbVn" },
+  { key: "releases", labelKey: "stats.dbReleases" },
+  { key: "chars", labelKey: "stats.dbCharacters" },
+  { key: "staff", labelKey: "stats.dbStaff" },
+  { key: "producers", labelKey: "stats.dbProducers" },
+  { key: "tags", labelKey: "stats.dbTags" },
+  { key: "traits", labelKey: "stats.dbTraits" },
+] as const satisfies readonly { key: keyof StatsResponse; labelKey: TranslationKey }[];
 
 /** 扇形色板：第一块用主题 accent，其余固定（语义色不随主题乱变） */
 const SLICE_PALETTE = ["#2d9cdb", "#27ae60", "#f2994a", "#9b51e0", "#eb5757", "#56ccf2"];
@@ -54,6 +56,7 @@ const CHART_HEIGHT = 320;
 const LEGEND_HEIGHT = 120;
 
 export function DatabaseStats(): JSX.Element {
+  const { t } = useTranslation();
   const stats = useQuery({
     queryKey: queryKeys.database.stats(),
     queryFn: ({ signal }) => getStats(signal),
@@ -67,7 +70,7 @@ export function DatabaseStats(): JSX.Element {
       {stats.isError ? (
         <View className="py-10">
           <Muted type="body-sm" className="text-center">
-            统计加载失败，稍后再试
+            {t("stats.dbFailed")}
           </Muted>
         </View>
       ) : null}
@@ -78,6 +81,7 @@ export function DatabaseStats(): JSX.Element {
 
 /** 扇形图 + 点选读数 */
 function StatsPie({ data }: { data: StatsResponse }): JSX.Element {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const accent = useThemeColor("accent");
   const foreground = useThemeColor("foreground");
@@ -86,7 +90,7 @@ function StatsPie({ data }: { data: StatsResponse }): JSX.Element {
   const [selected, setSelected] = useState<number | undefined>(undefined);
 
   const rows = CATEGORIES.map((category) => ({
-    name: category.label,
+    name: t(category.labelKey),
     value: data[category.key],
   }));
   const series = [accent, ...SLICE_PALETTE];
@@ -132,7 +136,7 @@ function StatsPie({ data }: { data: StatsResponse }): JSX.Element {
             />
             <Muted type="body-xs">{active.name}</Muted>
             <Muted type="body-xs" className="font-semibold">
-              {formatCount(active.value)} 条
+              {t("stats.dbCount", { count: formatCount(active.value) })}
             </Muted>
             <Muted type="body-xs" className="opacity-60">
               {total > 0 ? `${Math.round((active.value / total) * 100)}%` : "—"}

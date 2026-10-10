@@ -20,17 +20,19 @@ import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted, Paragraph } from "@/components/typo";
 import { useCopyProps } from "@/hooks/use-copy";
+import { useTranslation } from "@/hooks/use-translation";
 import type { Quote } from "@/lib/api/types";
 import { entryCopyText } from "@/utils/copy-text";
 
 import { useVnQuotes } from "../hooks";
 
 export function VnQuotesTab({ vnId }: { vnId: string }): JSX.Element {
+  const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useVnQuotes(vnId);
 
-  if (isLoading) return <LoadingState label="加载语录…" className="py-12" />;
+  if (isLoading) return <LoadingState label={t("vn.quotesLoading")} className="py-12" />;
   if (isError) return <ErrorState error={error} onRetry={() => void refetch()} />;
-  if (!data || data.length === 0) return <EmptyState title="该作品没有登记语录" />;
+  if (!data || data.length === 0) return <EmptyState title={t("vn.quotesEmpty")} />;
 
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>

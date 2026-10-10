@@ -14,6 +14,7 @@ import { View } from "react-native";
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { Separator } from "@/components/separator";
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import type { VnViewMode } from "@/lib/storage/preferences";
 
@@ -29,6 +30,7 @@ export interface VnCollectionProps {
 }
 
 export function VnCollection({ mode, items, onPressItem, footer }: VnCollectionProps): JSX.Element {
+  const { t } = useTranslation();
   // 封面查看器：null = 关着（整段列表共用一个 Modal）
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -46,11 +48,11 @@ export function VnCollection({ mode, items, onPressItem, footer }: VnCollectionP
         dims: vn.image?.dims,
         sexual: vn.image?.sexual,
         violence: vn.image?.violence,
-        label: `${vn.title} 封面`,
+        label: t("home.coverLabel", { title: vn.title }),
       });
     }
     return { covers: images, coverIndex: index };
-  }, [items]);
+  }, [items, t]);
 
   if (mode === "grid") {
     return (
@@ -81,7 +83,7 @@ export function VnCollection({ mode, items, onPressItem, footer }: VnCollectionP
         ListFooterComponent={
           footer ?? (
             <View className="items-center py-6">
-              <Muted type="body-xs">共 {items.length} 部</Muted>
+              <Muted type="body-xs">{t("vn.totalCount", { count: items.length })}</Muted>
             </View>
           )
         }

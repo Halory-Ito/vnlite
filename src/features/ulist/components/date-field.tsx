@@ -10,6 +10,7 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import { todayIso } from "@/utils/format";
 
 export interface DateFieldProps {
@@ -21,6 +22,7 @@ export interface DateFieldProps {
 }
 
 export function DateField({ label, value, onChange, error = null }: DateFieldProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
       <View className="flex-row items-center justify-between">
@@ -32,10 +34,10 @@ export function DateField({ label, value, onChange, error = null }: DateFieldPro
             onPress={() => onChange(todayIso())}
             className="active:opacity-60"
             accessibilityRole="button"
-            accessibilityLabel={`${label}设为今天`}
+            accessibilityLabel={t("ulist.setToday", { label })}
           >
             <Typography type="body-xs" className="text-accent">
-              今天
+              {t("ulist.today")}
             </Typography>
           </Pressable>
           {value !== "" ? (
@@ -43,10 +45,10 @@ export function DateField({ label, value, onChange, error = null }: DateFieldPro
               onPress={() => onChange("")}
               className="active:opacity-60"
               accessibilityRole="button"
-              accessibilityLabel={`清除${label}`}
+              accessibilityLabel={t("ulist.clearField", { label })}
             >
               <Typography type="body-xs" className="text-muted">
-                清除
+                {t("common.clear")}
               </Typography>
             </Pressable>
           ) : null}

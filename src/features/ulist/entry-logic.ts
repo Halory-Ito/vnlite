@@ -7,6 +7,7 @@
 
 import type { UListPatch } from "@/lib/api/endpoints/ulist";
 import type { UListItem } from "@/lib/api/types";
+import type { TranslationKey } from "@/lib/i18n/translate";
 
 export interface UlistDraft {
   vote: number | null;
@@ -74,17 +75,17 @@ export function isValidDate(value: string): boolean {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
-/** 两个日期的校验错误（字段 → 文案）；合法时为 null */
+/** 两个日期的校验错误（字段 → 翻译键；合法时为 null，由调用方翻成文案） */
 export function dateErrors(
   started: string,
   finished: string
-): { started: string | null; finished: string | null } {
-  const startedError = started !== "" && !isValidDate(started) ? "格式应为 YYYY-MM-DD" : null;
+): { started: TranslationKey | null; finished: TranslationKey | null } {
+  const startedError = started !== "" && !isValidDate(started) ? "ulist.dateFormatError" : null;
   const finishedError =
     finished !== "" && !isValidDate(finished)
-      ? "格式应为 YYYY-MM-DD"
+      ? "ulist.dateFormatError"
       : started !== "" && finished !== "" && isValidDate(started) && finished < started
-        ? "完成日期早于开始日期"
+        ? "ulist.dateRangeError"
         : null;
   return { started: startedError, finished: finishedError };
 }

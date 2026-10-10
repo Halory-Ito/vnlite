@@ -12,8 +12,14 @@ import { ActivityIndicator, View } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
-import { resultHeadline, type SearchEntry } from "../search-logic";
+import {
+  emptyDescription,
+  resultHeadline,
+  type SearchEntry,
+  type SearchScope,
+} from "../search-logic";
 
 import { SearchResultRow } from "./search-result-row";
 
@@ -26,8 +32,8 @@ export interface CatalogResultListProps {
   onEndReached: () => void;
   onRetry: () => void;
   onPressItem: (id: string) => void;
-  /** 完整集合名（`SCOPE_NOUN` 的值），只用在空态文案里：「没有与 x 匹配的制作者」 */
-  noun: string;
+  /** 当前搜索范围，只用在空态文案里：「没有与 x 匹配的制作者」 */
+  scope: SearchScope;
   keyword: string;
 }
 
@@ -40,13 +46,17 @@ export function CatalogResultList({
   onEndReached,
   onRetry,
   onPressItem,
-  noun,
+  scope,
   keyword,
 }: CatalogResultListProps): JSX.Element {
-  if (isLoading) return <LoadingState label="搜索中…" />;
+  const { t } = useTranslation();
+
+  if (isLoading) return <LoadingState label={t("search.loading")} />;
   if (isError) return <ErrorState error={error} onRetry={onRetry} />;
   if (entries.length === 0) {
-    return <EmptyState title="没有找到" description={`没有与「${keyword}」匹配的${noun}`} />;
+    return (
+      <EmptyState title={t("search.emptyTitle")} description={emptyDescription(keyword, scope)} />
+    );
   }
 
   const renderItem = ({ item }: ListRenderItemInfo<SearchEntry>): JSX.Element => (
@@ -73,7 +83,7 @@ export function CatalogResultList({
           {isFetchingNextPage ? (
             <>
               <ActivityIndicator size="small" />
-              <Muted type="body-xs">加载更多…</Muted>
+              <Muted type="body-xs">{t("search.loadingMore")}</Muted>
             </>
           ) : null}
         </View>

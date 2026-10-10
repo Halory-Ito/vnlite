@@ -17,6 +17,12 @@
         "buildType": "apk"
       }
     },
+    "preview-arm64": {
+      "extends": "preview",
+      "env": {
+        "VNLITE_ANDROID_ABIS": "arm64-v8a"
+      }
+    },
     "preview-simulator": {
       "extends": "preview",
       "ios": {

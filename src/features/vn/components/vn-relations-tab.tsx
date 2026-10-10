@@ -17,15 +17,22 @@ import { EmptyState } from "@/components/screen-state";
 import { Divider } from "@/components/separator";
 import { Muted, Paragraph } from "@/components/typo";
 import { SectionHeader } from "@/components/ui";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail } from "@/lib/api/types";
 import { formatReleased, relationLabel } from "@/utils/format";
 
 type Relation = NonNullable<VnDetail["relations"]>[number];
 
 export function VnRelationsTab({ vn }: { vn: VnDetail }): JSX.Element {
+  const { t } = useTranslation();
   const relations = vn.relations ?? [];
   if (relations.length === 0) {
-    return <EmptyState title="没有关联作品" description="VNDB 上没有登记关联条目" />;
+    return (
+      <EmptyState
+        title={t("vn.relationsEmptyTitle")}
+        description={t("vn.relationsEmptyDescription")}
+      />
+    );
   }
 
   /*
@@ -58,6 +65,7 @@ export function VnRelationsTab({ vn }: { vn: VnDetail }): JSX.Element {
 }
 
 function RelationRow({ rel }: { rel: Relation }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <Link href={`/vn/${rel.id}`} asChild>
       <Pressable className="flex-row items-center gap-3 px-4 py-2 active:opacity-60">
@@ -77,7 +85,7 @@ function RelationRow({ rel }: { rel: Relation }): JSX.Element {
             <Muted type="body-xs">{rel.id}</Muted>
             {rel.released ? <Muted type="body-xs">{formatReleased(rel.released)}</Muted> : null}
             <Muted type="body-xs" className={rel.relation_official ? "text-accent" : undefined}>
-              {rel.relation_official ? "官方" : "非官方"}
+              {rel.relation_official ? t("vn.official") : t("vn.unofficial")}
             </Muted>
           </View>
         </View>

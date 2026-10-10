@@ -17,6 +17,8 @@ import type { JSX, ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 export interface FullScreenPanelProps {
   /** 标题栏文案 */
   title: string;
@@ -39,6 +41,7 @@ export function FullScreenPanel({
   children,
   footer,
 }: FullScreenPanelProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <View
       className="absolute inset-0 bg-background"
@@ -55,11 +58,11 @@ export function FullScreenPanel({
             onPress={onClose}
             className="rounded-full px-3 py-1 active:opacity-60"
             accessibilityRole="button"
-            accessibilityLabel="完成"
+            accessibilityLabel={t("common.finish")}
             hitSlop={8}
           >
             <Typography type="body-sm" className="font-semibold text-accent">
-              完成
+              {t("common.finish")}
             </Typography>
           </Pressable>
         </View>

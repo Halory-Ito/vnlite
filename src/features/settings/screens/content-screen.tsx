@@ -8,28 +8,27 @@ import type { JSX } from "react";
 import { Icon } from "@/components/icon";
 import { SegmentedControl } from "@/components/segmented-control";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
-import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS } from "@/features/settings/options";
+import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS, translateOptions } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import { setPreference } from "@/lib/storage/preferences";
 
 export default function ContentScreen(): JSX.Element {
   const preferences = usePreferences();
+  const { t } = useTranslation();
   const accent = useThemeColor("accent");
 
   return (
-    <SettingsShell title="内容显示">
-      <SettingsSection title="成人内容">
+    <SettingsShell title={t("settings.contentTitle")}>
+      <SettingsSection title={t("settings.nsfw")}>
         <SegmentedControl
-          options={NSFW_OPTIONS}
+          options={translateOptions(NSFW_OPTIONS, t)}
           value={preferences.nsfwMode}
-          onChange={(value) => setPreference("nsfwMode", value)}
+          onChange={(value) => void setPreference("nsfwMode", value)}
         />
       </SettingsSection>
 
-      <SettingsSection
-        title="剧透保护"
-        hint="开启后攻略页签的结局名、达成条件与步骤内容默认打码，点一下才显示"
-      >
+      <SettingsSection title={t("settings.spoiler")} hint={t("settings.spoilerHint")}>
         {/*
          * 这里手写 ListGroup.Item 而不是复用 `SettingsItem`：那个组件的右槽位
          * 画的是「读数 + 箭头」，给 Switch 就得整体换掉 `suffix`，
@@ -41,7 +40,7 @@ export default function ContentScreen(): JSX.Element {
               <Icon name="eye" size={20} color={accent} />
             </ListGroup.ItemPrefix>
             <ListGroup.ItemContent>
-              <ListGroup.ItemTitle>隐藏攻略内容</ListGroup.ItemTitle>
+              <ListGroup.ItemTitle>{t("settings.spoilerHide")}</ListGroup.ItemTitle>
             </ListGroup.ItemContent>
             <ListGroup.ItemSuffix>
               <Switch
@@ -53,11 +52,11 @@ export default function ContentScreen(): JSX.Element {
         </ListGroup>
       </SettingsSection>
 
-      <SettingsSection title="每页条数">
+      <SettingsSection title={t("settings.pageSize")}>
         <SegmentedControl
           options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: size }))}
           value={String(preferences.pageSize)}
-          onChange={(value) => setPreference("pageSize", Number(value))}
+          onChange={(value) => void setPreference("pageSize", Number(value))}
         />
       </SettingsSection>
     </SettingsShell>

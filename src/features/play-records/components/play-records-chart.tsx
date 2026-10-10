@@ -18,6 +18,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { Icon } from "@/components/icon";
 import { Body, H5, Muted } from "@/components/typo";
 import { StatBlock } from "@/components/ui";
+import { useTranslation } from "@/hooks/use-translation";
 import type { PlaySession } from "@/lib/db/dao/play-session";
 import { withAlpha } from "@/theme/color";
 
@@ -39,6 +40,7 @@ const BAR_WIDTH = 24;
 export function PlayRecordsChart({ sessions }: { sessions: PlaySession[] }): JSX.Element {
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
+  const { t } = useTranslation();
   // 懒初始化当前年月；切换时前后各一个月
   const [ym, setYm] = useState(currentYearMonth);
 
@@ -59,23 +61,44 @@ export function PlayRecordsChart({ sessions }: { sessions: PlaySession[] }): JSX
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       <View className="flex-row gap-2 px-4 py-4">
-        <StatBlock value={formatPlayDurationShort(stats.totalMs)} label="总时长" tone="accent" />
-        <StatBlock value={String(stats.count)} label="游玩次数" />
-        <StatBlock value={formatPlayDurationShort(stats.averageMs)} label="平均每次" />
-        <StatBlock value={formatPlayDurationShort(stats.longestMs)} label="最长一次" />
+        <StatBlock
+          value={formatPlayDurationShort(stats.totalMs)}
+          label={t("records.chart.total")}
+          tone="accent"
+        />
+        <StatBlock value={String(stats.count)} label={t("records.chart.sessions")} />
+        <StatBlock
+          value={formatPlayDurationShort(stats.averageMs)}
+          label={t("records.chart.average")}
+        />
+        <StatBlock
+          value={formatPlayDurationShort(stats.longestMs)}
+          label={t("records.chart.longest")}
+        />
       </View>
 
       <View className="mx-4 gap-4 rounded-xl bg-default-soft p-4">
         <View className="flex-row items-center justify-between">
-          <MonthButton label="上个月" icon="chevronLeft" onPress={() => shiftMonth(-1)} />
+          <MonthButton
+            label={t("records.chart.previousMonth")}
+            icon="chevronLeft"
+            onPress={() => shiftMonth(-1)}
+          />
           <H5>{formatYearMonth(ym.year, ym.month)}</H5>
-          <MonthButton label="下个月" icon="chevronRight" onPress={() => shiftMonth(1)} />
+          <MonthButton
+            label={t("records.chart.nextMonth")}
+            icon="chevronRight"
+            onPress={() => shiftMonth(1)}
+          />
         </View>
 
         <Muted type="body-xs">
           {monthCount > 0
-            ? `本月 ${formatPlayDuration(monthTotal)} · 共 ${monthCount} 次`
-            : "这个月还没有游玩记录"}
+            ? t("records.chart.monthSummary", {
+                duration: formatPlayDuration(monthTotal),
+                count: monthCount,
+              })
+            : t("records.chart.monthEmpty")}
         </Muted>
 
         <View className="flex-row items-end gap-2">

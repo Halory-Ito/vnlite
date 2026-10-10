@@ -19,8 +19,10 @@ import { CoverImage } from "@/components/cover-image";
 import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted, Paragraph } from "@/components/typo";
-import { CHARACTER_ROLE_LABEL, type CharacterRole } from "@/lib/api/enums";
+import { useTranslation } from "@/hooks/use-translation";
+import type { CharacterRole } from "@/lib/api/enums";
 import type { Character } from "@/lib/api/types";
+import { characterRoleLabel } from "@/utils/format";
 
 import { useVnCharacters } from "../hooks";
 
@@ -33,14 +35,15 @@ const FALLBACK_ROLE: CharacterRole = "primary";
 export function VnCharactersTab({ vnId }: { vnId: string }): JSX.Element {
   // 跳转箭头取主题 muted（不能写死 iOS 系统灰 #8E8E93，换主题后对不上）
   const muted = useThemeColor("muted");
+  const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useVnCharacters(vnId);
   const [picked, setPicked] = useState<CharacterRole | null>(null);
 
   const groups = useMemo(() => groupByRole(data ?? [], vnId), [data, vnId]);
 
-  if (isLoading) return <LoadingState label="加载角色…" className="py-12" />;
+  if (isLoading) return <LoadingState label={t("vn.charactersLoading")} className="py-12" />;
   if (isError) return <ErrorState error={error} onRetry={() => void refetch()} />;
-  if (!data || data.length === 0) return <EmptyState title="该作品没有登记角色" />;
+  if (!data || data.length === 0) return <EmptyState title={t("vn.charactersEmpty")} />;
 
   const available = ROLE_ORDER.filter((role) => groups[role].length > 0);
   // 默认落在最重的一档（通常是「主要角色」）；用户点过之后听用户的
@@ -57,7 +60,7 @@ export function VnCharactersTab({ vnId }: { vnId: string }): JSX.Element {
             {available.map((role) => (
               <Tabs.Trigger key={role} value={role}>
                 <Tabs.Label>
-                  {CHARACTER_ROLE_LABEL[role]} {groups[role].length}
+                  {characterRoleLabel(role)} {groups[role].length}
                 </Tabs.Label>
               </Tabs.Trigger>
             ))}

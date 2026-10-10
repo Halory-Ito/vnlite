@@ -8,9 +8,11 @@
  */
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { ULIST_STATS_FIELDS, ULIST_TAG_FIELDS } from "@/lib/api/fields";
 import { queryList } from "@/lib/api/endpoints/ulist";
+import { queryVnsPlayInfo } from "@/lib/api/endpoints/vn";
 import type { UListItem } from "@/lib/api/types";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
@@ -69,6 +71,40 @@ export function useGameTypeBuckets(enabled: boolean): UseQueryResult<TypeBucket[
         if (!response.more) break;
       }
       return byGameType(items);
+    },
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* 记录统计 · 游玩作品信息                                                      */
+/* -------------------------------------------------------------------------- */
+
+/** 记录统计里某作品的信息：作品名 + 类型标签 id */
+export interface PlayedVnInfo {
+  id: string;
+  title: string;
+  typeIds: string[];
+}
+
+/**
+ * 按 vnId 批量取「作品名 + 类型标签」（记录统计的时长排名 / 类型分布用）。
+ *
+ * `vnIds` 来自本地游玩记录的去重结果；数量多时 `queryVnsPlayInfo` 会自行分块。
+ * 缓存 key 用排序去重后拼接的 id 串，避免顺序抖动导致重复请求。
+ */
+export function usePlayedVnInfo(vnIds: readonly string[]): UseQueryResult<PlayedVnInfo[]> {
+  const idsKey = useMemo(() => [...new Set(vnIds)].sort().join(","), [vnIds]);
+  return useQuery({
+    queryKey: queryKeys.stats.playedVns(idsKey),
+    enabled: idsKey.length > 0,
+    staleTime: STALE_TIME.catalog,
+    queryFn: async ({ signal }) => {
+      const response = await queryVnsPlayInfo(idsKey.split(","), signal);
+      return response.results.map((vn) => ({
+        id: vn.id,
+        title: vn.title,
+        typeIds: (vn.tags ?? []).map((tag) => tag.id),
+      }));
     },
   });
 }

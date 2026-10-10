@@ -54,44 +54,6 @@ export const LANGUAGE = [
 ] as const;
 export type Language = (typeof LANGUAGE)[number];
 
-export const LANGUAGE_LABEL: Record<Language, string> = {
-  ar: "阿拉伯语",
-  bg: "保加利亚语",
-  cs: "捷克语",
-  da: "丹麦语",
-  de: "德语",
-  el: "希腊语",
-  en: "英语",
-  es: "西班牙语",
-  fa: "波斯语",
-  fi: "芬兰语",
-  fr: "法语",
-  he: "希伯来语",
-  hi: "印地语",
-  hu: "匈牙利语",
-  id: "印尼语",
-  it: "意大利语",
-  ja: "日语",
-  ko: "韩语",
-  ms: "马来语",
-  nl: "荷兰语",
-  no: "挪威语",
-  pl: "波兰语",
-  "pt-br": "巴西葡语",
-  "pt-pt": "葡萄牙语",
-  ro: "罗马尼亚语",
-  ru: "俄语",
-  sv: "瑞典语",
-  ta: "泰米尔语",
-  th: "泰语",
-  tr: "土耳其语",
-  uk: "乌克兰语",
-  vi: "越南语",
-  zh: "中文",
-  "zh-Hans": "中文（简体）",
-  "zh-Hant": "中文（繁体）",
-};
-
 /** 平台 */
 export const PLATFORM = [
   "win",
@@ -145,57 +107,6 @@ export const PLATFORM = [
 ] as const;
 export type Platform = (typeof PLATFORM)[number];
 
-export const PLATFORM_LABEL: Record<Platform, string> = {
-  win: "Windows",
-  lin: "Linux",
-  mac: "macOS",
-  web: "Web",
-  ios: "iOS",
-  and: "Android",
-  swi: "Switch",
-  sw2: "Switch 2",
-  ps1: "PlayStation",
-  ps2: "PlayStation 2",
-  ps3: "PlayStation 3",
-  ps4: "PlayStation 4",
-  ps5: "PlayStation 5",
-  psp: "PlayStation Portable",
-  psv: "PlayStation Vita",
-  xbo: "Xbox",
-  xxs: "Xbox Series",
-  xb1: "Xbox 360",
-  xb3: "Xbox One",
-  nds: "Nintendo DS",
-  n3d: "Nintendo 3DS",
-  wii: "Wii",
-  wiu: "Wii U",
-  gba: "Game Boy Advance",
-  gbc: "Game Boy Color",
-  drc: "Dreamcast",
-  sat: "Saturn",
-  smd: "Mega Drive",
-  scd: "Mega-CD",
-  pce: "PC Engine",
-  pcf: "PC-FX",
-  nes: "NES",
-  sfc: "Super Famicom",
-  dos: "MS-DOS",
-  msx: "MSX",
-  p88: "PC-88",
-  p98: "PC-98",
-  x68: "X68000",
-  x1s: "X1",
-  fmt: "FM Towns",
-  fm7: "FM-7",
-  fm8: "FM-8",
-  tdo: "T-DOS",
-  bdp: "Bandai Pippin",
-  dvd: "DVD",
-  vnd: "Vnd",
-  mob: "移动端",
-  oth: "其他",
-};
-
 /** 发行版介质 */
 export const MEDIUM = [
   "blr",
@@ -229,62 +140,21 @@ export const STAFF_ROLE = [
 ] as const;
 export type StaffRole = (typeof STAFF_ROLE)[number];
 
-export const STAFF_ROLE_LABEL: Record<StaffRole, string> = {
-  scenario: "剧本",
-  director: "导演",
-  chardesign: "角色设计",
-  art: "美术",
-  music: "音乐",
-  songs: "歌曲",
-  translator: "翻译",
-  editor: "编辑",
-  qa: "测试",
-  staff: "其他",
-};
-
 /** 制作者类型 */
 export const PRODUCER_TYPE = ["co", "in", "ng"] as const;
 export type ProducerType = (typeof PRODUCER_TYPE)[number];
-
-export const PRODUCER_TYPE_LABEL: Record<ProducerType, string> = {
-  co: "公司",
-  in: "个人",
-  ng: "业余团体",
-};
 
 /** 角色在 VN 中的定位（Kana 的枚举值，没有 `background` 这一档） */
 export const CHARACTER_ROLE = ["main", "primary", "side", "appears"] as const;
 export type CharacterRole = (typeof CHARACTER_ROLE)[number];
 
-export const CHARACTER_ROLE_LABEL: Record<CharacterRole, string> = {
-  main: "主角",
-  primary: "主要角色",
-  side: "次要角色",
-  appears: "登场",
-};
-
 /** 角色性别 */
 export const SEX = ["m", "f", "b", "n"] as const;
 export type Sex = (typeof SEX)[number];
 
-export const SEX_LABEL: Record<Sex, string> = {
-  m: "男",
-  f: "女",
-  b: "双性",
-  n: "无性",
-};
-
 /** 发行版配音程度 */
 export const VOICED = [0, 1, 2, 3, 4] as const;
 export type Voiced = (typeof VOICED)[number];
-
-export const VOICED_LABEL: Record<Voiced, string> = {
-  0: "未知",
-  1: "无配音",
-  2: "仅成人场景",
-  3: "部分配音",
-  4: "全配音",
-};
 
 /** 发行版在用户清单里的持有状态（英文与 VNDB 一致，不做翻译） */
 export const LIST_STATUS = ["Unknown", "Pending", "Obtained", "On loan", "Deleted"] as const;
@@ -339,16 +209,3 @@ export const UNSETTABLE_LABELS: readonly number[] = [BUILTIN_LABEL.NO_LABEL, BUI
  * 0 安全 / 1 暗示 / 2 露骨。NSFW 模糊逻辑直接比数字。
  */
 export type ContentLevel = 0 | 1 | 2;
-
-export const CONTENT_LEVEL_LABEL: Record<ContentLevel, string> = {
-  0: "安全",
-  1: "暗示",
-  2: "露骨",
-};
-
-/** 容错版：处理 undefined（缺字段时按最保守的「露骨」处理，交给用户偏好决定是否显示） */
-export function contentLevelLabel(level: number | undefined): string {
-  if (level === 0) return "安全";
-  if (level === 1) return "暗示";
-  return "露骨";
-}

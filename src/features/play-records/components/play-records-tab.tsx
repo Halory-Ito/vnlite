@@ -9,11 +9,12 @@
  */
 
 import type { JSX } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { SegmentedControl, type SegmentedOption } from "@/components/segmented-control";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { usePlaySessions } from "../hooks";
 import { PlayRecordsChart } from "./play-records-chart";
@@ -21,16 +22,21 @@ import { PlayRecordsList } from "./play-records-list";
 
 type PlayRecordsView = "chart" | "list";
 
-const VIEW_OPTIONS: SegmentedOption<PlayRecordsView>[] = [
-  { value: "chart", label: "图表" },
-  { value: "list", label: "列表" },
-];
-
 export function PlayRecordsTab({ vnId }: { vnId: string }): JSX.Element {
   const [view, setView] = useState<PlayRecordsView>("chart");
+  const { t } = useTranslation();
   const query = usePlaySessions(vnId);
 
-  if (query.isLoading) return <LoadingState label="加载游玩记录…" className="py-12" />;
+  // 视图切换的文案要随语言变化 —— 选项在渲染期生成，不在模块级常量里存文案
+  const options = useMemo<SegmentedOption<PlayRecordsView>[]>(
+    () => [
+      { value: "chart", label: t("records.view.chart") },
+      { value: "list", label: t("records.view.list") },
+    ],
+    [t]
+  );
+
+  if (query.isLoading) return <LoadingState label={t("records.loading")} className="py-12" />;
   if (query.isError) {
     return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   }
@@ -38,17 +44,14 @@ export function PlayRecordsTab({ vnId }: { vnId: string }): JSX.Element {
   const sessions = query.data ?? [];
   if (sessions.length === 0) {
     return (
-      <EmptyState
-        title="暂无游玩记录"
-        description="在作品详情页点「开始游戏」，结束后会记录在这里"
-      />
+      <EmptyState title={t("records.emptyTitle")} description={t("records.emptyDescription")} />
     );
   }
 
   return (
     <View className="flex-1">
       <View className="px-4 py-2">
-        <SegmentedControl options={VIEW_OPTIONS} value={view} onChange={setView} />
+        <SegmentedControl options={options} value={view} onChange={setView} />
       </View>
       {view === "chart" ? (
         <PlayRecordsChart sessions={sessions} />

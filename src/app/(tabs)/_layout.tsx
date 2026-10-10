@@ -5,6 +5,7 @@ import type { ColorValue } from "react-native";
 
 import { Icon, type IconName } from "@/components/icon";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import { withAlpha } from "@/theme/color";
 
 /**
@@ -44,6 +45,7 @@ export default function TabsLayout(): JSX.Element {
   const segment = useThemeColor("segment");
   const segmentForeground = useThemeColor("segment-foreground");
   const maskOpacity = usePreferences().backgroundOpacity;
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -81,35 +83,35 @@ export default function TabsLayout(): JSX.Element {
       <Tabs.Screen
         name="index"
         options={{
-          title: "首页",
+          title: t("tabs.home"),
           tabBarIcon: ({ color }) => <TabIcon name="house" color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: "浏览",
+          title: t("tabs.explore"),
           tabBarIcon: ({ color }) => <TabIcon name="compass" color={color} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: "搜索",
+          title: t("tabs.search"),
           tabBarIcon: ({ color }) => <TabIcon name="magnifier" color={color} />,
         }}
       />
       <Tabs.Screen
         name="list"
         options={{
-          title: "清单",
+          title: t("tabs.list"),
           tabBarIcon: ({ color }) => <TabIcon name="bookmark" color={color} />,
         }}
       />
       <Tabs.Screen
         name="me"
         options={{
-          title: "我的",
+          title: t("tabs.me"),
           tabBarIcon: ({ color }) => <TabIcon name="person" color={color} />,
         }}
       />

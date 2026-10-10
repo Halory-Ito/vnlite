@@ -1,19 +1,23 @@
 /**
  * 游玩记录的展示格式（纯函数）。
+ *
+ * 文案取当前语言（全局 `t`）；紧凑格式 `12.5 h` / `40 m` 与语言无关，不走目录。
  */
+
+import { t } from "@/lib/i18n/translate";
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /** 毫秒 → 详细时长：`1 小时 23 分` / `45 分钟` / `30 秒` */
 export function formatPlayDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  if (totalSeconds < 60) return `${totalSeconds} 秒`;
+  if (totalSeconds < 60) return t("records.duration.seconds", { seconds: totalSeconds });
   const totalMinutes = Math.floor(totalSeconds / 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes} 分钟`;
-  if (minutes === 0) return `${hours} 小时`;
-  return `${hours} 小时 ${minutes} 分`;
+  if (hours === 0) return t("records.duration.minutes", { minutes });
+  if (minutes === 0) return t("records.duration.hours", { hours });
+  return t("records.duration.hoursMinutes", { hours, minutes });
 }
 
 /** 毫秒 → 紧凑时长（统计块用）：`12.5 h` / `40 m` */
@@ -41,5 +45,5 @@ export function formatClock(ts: number): string {
 
 /** 年 + 月（0–11）→ `2026 年 10 月` */
 export function formatYearMonth(year: number, monthIndex: number): string {
-  return `${year} 年 ${monthIndex + 1} 月`;
+  return t("records.yearMonth", { year, month: monthIndex + 1 });
 }

@@ -72,7 +72,20 @@ export const WALKTHROUGH_SOURCES = [
 /** 客户端信息，用于 User-Agent（移动端 fetch 禁止自定义该头，仅存档） */
 export const CLIENT_INFO = {
   name: "vnlite",
-  version: "1.2.1",
+  version: "1.3.0",
+} as const;
+
+/**
+ * 开发者与仓库信息（「关于」页用）。
+ *
+ * `repo` 同时是「检查更新」查询 GitHub 的标识，别只改一个。
+ */
+export const DEVELOPER_INFO = {
+  name: "Halory",
+  github: "https://github.com/Halory-Ito",
+  repo: "Halory-Ito/vnlite",
+  issues: "https://github.com/Halory-Ito/vnlite/issues",
+  walkthroughRepo: "https://github.com/Halory-Ito/vnlite-walkthrough-and-guide",
 } as const;
 
 /** 语录「每日一条」的种子来源：用本地日期做确定性随机，同一天结果固定 */

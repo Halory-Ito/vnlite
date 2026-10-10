@@ -16,6 +16,7 @@ import { View } from "react-native";
 
 import { FilterChip, FilterGroup } from "@/features/browse/components/filter-group";
 import { FullScreenPanel } from "@/features/browse/components/panel";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { DateOtpField } from "./date-otp-field";
 import {
@@ -23,7 +24,7 @@ import {
   digitsToIso,
   isoToDigits,
   presetDateFilter,
-  HISTORY_PRESET_OPTIONS,
+  historyPresetOptions,
   type HistoryDateFilter,
 } from "../history-constants";
 
@@ -40,6 +41,7 @@ interface DateDraft {
 }
 
 export function TimeRangePanel({ value, onChange, onClose }: TimeRangePanelProps): JSX.Element {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<DateDraft>(() => ({
     start: isoToDigits(value.start),
     end: isoToDigits(value.end),
@@ -55,22 +57,22 @@ export function TimeRangePanel({ value, onChange, onClose }: TimeRangePanelProps
 
   return (
     <FullScreenPanel
-      title="时间范围"
-      accessibilityLabel="时间范围"
+      title={t("history.timeRange")}
+      accessibilityLabel={t("history.timeRange")}
       onClose={onClose}
       footer={
         <View className="flex-row items-center justify-between gap-3 border-t border-separator px-4 py-3">
           <Button size="sm" variant="ghost" onPress={() => setDraft({ start: "", end: "" })}>
-            <Button.Label>重置</Button.Label>
+            <Button.Label>{t("common.reset")}</Button.Label>
           </Button>
           <Button size="sm" onPress={apply} isDisabled={!valid}>
-            <Button.Label>应用</Button.Label>
+            <Button.Label>{t("common.apply")}</Button.Label>
           </Button>
         </View>
       }
     >
-      <FilterGroup label="快捷选择">
-        {HISTORY_PRESET_OPTIONS.map((option) => {
+      <FilterGroup label={t("history.quickSelect")}>
+        {historyPresetOptions(t).map((option) => {
           const preset = presetDateFilter(option.value);
           const active =
             draft.start === isoToDigits(preset.start) && draft.end === isoToDigits(preset.end);
@@ -92,16 +94,16 @@ export function TimeRangePanel({ value, onChange, onClose }: TimeRangePanelProps
 
       <View className="gap-4">
         <DateOtpField
-          label="开始日期"
+          label={t("history.startDate")}
           value={draft.start}
           onChange={(start) => setDraft((prev) => ({ ...prev, start }))}
-          error={errors.start}
+          error={errors.start ? t(errors.start) : null}
         />
         <DateOtpField
-          label="结束日期"
+          label={t("history.endDate")}
           value={draft.end}
           onChange={(end) => setDraft((prev) => ({ ...prev, end }))}
-          error={errors.end}
+          error={errors.end ? t(errors.end) : null}
         />
       </View>
     </FullScreenPanel>

@@ -471,32 +471,34 @@ async function main(): Promise<void> {
     const {
       looksLikeUserId,
       resultHeadline,
-      SCOPE_LABEL,
-      SCOPE_NOUN,
+      SCOPE_LABEL_KEY,
+      SCOPE_NOUN_KEY,
       SCOPE_OPTIONS,
-      SEARCH_PLACEHOLDER,
+      SEARCH_PLACEHOLDER_KEY,
       toProducerEntries,
       toStaffEntries,
       userMissDescription,
     } = await import("@/features/search/search-logic");
+    const { t } = await import("@/lib/i18n/translate");
 
     // 分段控件顺序：作品（默认）在最左
     assert(SCOPE_OPTIONS[0]?.value === "vn", "默认应是作品");
     assert(SCOPE_OPTIONS.length === 4, "应有 4 档：作品 / 人员 / 用户 / 厂商");
     for (const option of SCOPE_OPTIONS) {
-      assert(option.label.length > 0, `${option.value} 缺档位名`);
+      assert(option.labelKey.length > 0, `${option.value} 缺档位名的翻译键`);
     }
     // ⚠️ 只有一句通用 placeholder：Master 要求移除每个搜索条目的 hint，
     // 所以这里不能出现「按档位给提示」的表（曾经有过 SCOPE_PLACEHOLDER / SCOPE_IDLE）
-    assert(SEARCH_PLACEHOLDER.length > 0, "输入框应有 placeholder");
+    assert(SEARCH_PLACEHOLDER_KEY.length > 0, "输入框应有 placeholder");
+    assert(t(SEARCH_PLACEHOLDER_KEY).length > 0, "placeholder 应能翻译");
     // 控件上用短名（人员 / 厂商），完整说法在 SCOPE_NOUN 里 —— 两处不能写成一样：
     // 「制作人员」与「制作者」只差一个字，用户分不清哪个是 staff 哪个是 producer
     assert(
-      SCOPE_LABEL.staff === "人员" && SCOPE_NOUN.staff === "制作人员",
+      t(SCOPE_LABEL_KEY.staff) === "人员" && t(SCOPE_NOUN_KEY.staff) === "制作人员",
       "staff 档位名 / 集合名"
     );
     assert(
-      SCOPE_LABEL.producer === "厂商" && SCOPE_NOUN.producer === "制作者",
+      t(SCOPE_LABEL_KEY.producer) === "厂商" && t(SCOPE_NOUN_KEY.producer) === "制作者",
       "producer 档位名 / 集合名"
     );
     // hint 移走后，「用户只能精确匹配」这条限制只能在**搜不到时**的文案里说清楚
@@ -628,11 +630,12 @@ async function main(): Promise<void> {
   });
 
   await check("首页信息流条数与官网首页一致（各 10 条）", async () => {
-    const { FEED_COUNT, FEED_TABS, FEED_TAB_LABEL } = await import("@/features/home/feed-config");
+    const { FEED_COUNT, FEED_TAB_LABEL_KEY, FEED_TABS } =
+      await import("@/features/home/feed-config");
     assert(FEED_COUNT === 10, "官网首页三栏都是 10 条");
     assert(FEED_TABS.length === 3, "应有 3 档");
     for (const tab of FEED_TABS) {
-      assert(FEED_TAB_LABEL[tab].length > 0, `${tab} 缺中文名`);
+      assert(FEED_TAB_LABEL_KEY[tab].length > 0, `${tab} 缺翻译键`);
     }
   });
 

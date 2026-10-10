@@ -14,11 +14,13 @@ import { Pressable } from "react-native";
 import { Icon } from "@/components/icon";
 import { Muted } from "@/components/typo";
 import { usePermission } from "@/hooks/use-session";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { useUlistItem } from "../hooks";
 
 export function UlistEditEntry({ vnId }: { vnId: string }): JSX.Element | null {
   const router = useRouter();
+  const { t } = useTranslation();
   const canWrite = usePermission("listwrite");
   const item = useUlistItem(vnId, canWrite);
   const accent = useThemeColor("accent");
@@ -31,12 +33,12 @@ export function UlistEditEntry({ vnId }: { vnId: string }): JSX.Element | null {
       className="flex-row items-center gap-1 rounded-full border border-accent bg-accent-soft px-2.5 py-1 active:opacity-70"
       hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel="编辑清单条目（状态 / 打分 / 标签）"
+      accessibilityLabel={t("ulist.editEntryLabel")}
     >
       {/* 图标只能吃具体色值（不吃 className），所以走主题 accent */}
       <Icon name="pencil" size={14} color={accent} />
       <Muted type="body-xs" className="font-semibold text-accent-soft-foreground">
-        编辑
+        {t("common.edit")}
       </Muted>
     </Pressable>
   );

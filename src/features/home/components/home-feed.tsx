@@ -18,22 +18,22 @@ import { View } from "react-native";
 
 import { SegmentedControl } from "@/components/segmented-control";
 import { ReviewList } from "@/features/review/components/review-list";
+import { useTranslation } from "@/hooks/use-translation";
 
-import { FEED_COUNT, FEED_TAB_LABEL, FEED_TABS, type FeedTab } from "../feed-config";
+import { FEED_COUNT, FEED_TAB_LABEL_KEY, FEED_TABS, type FeedTab } from "../feed-config";
 
 import { JustReleasedCarousel, UpcomingCarousel } from "./releases-feed";
 
-/** 分段控件的选项（`SCOPE_OPTIONS` 那种形状，抽在 feed-config 里纯逻辑可测） */
-const OPTIONS = FEED_TABS.map((value) => ({ value, label: FEED_TAB_LABEL[value] }));
-
 export function HomeFeed(): JSX.Element {
+  const { t } = useTranslation();
   // 默认落在「最新评价」：官网首页排第一的那栏，也是三栏里唯一天天有新鲜内容的
   const [tab, setTab] = useState<FeedTab>("reviews");
+  const options = FEED_TABS.map((value) => ({ value, label: t(FEED_TAB_LABEL_KEY[value]) }));
 
   return (
     <View className="mt-2 gap-1">
       <View className="px-4">
-        <SegmentedControl options={OPTIONS} value={tab} onChange={setTab} />
+        <SegmentedControl options={options} value={tab} onChange={setTab} />
       </View>
 
       {tab === "reviews" ? <ReviewList limit={FEED_COUNT} /> : null}

@@ -37,6 +37,7 @@ import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { H3, Muted } from "@/components/typo";
 import { StatBlock } from "@/components/ui";
+import { FavoriteButton } from "@/features/favorite/components/favorite-button";
 import { VnDiscussionsTab } from "@/features/discussion/components/vn-discussions-tab";
 import { UlistEditEntry } from "@/features/ulist/components/ulist-edit-entry";
 import { UlistToggleButton } from "@/features/ulist/components/ulist-toggle-button";
@@ -67,6 +68,9 @@ import { VnScreenshotsTab } from "./components/vn-screenshots-tab";
 import { VnStaffTab } from "./components/vn-staff-tab";
 import { useVnDetail } from "./hooks";
 
+import { useTranslation } from "@/hooks/use-translation";
+import type { TranslationKey } from "@/lib/i18n/translate";
+
 type TabKey =
   | "overview"
   | "characters"
@@ -95,18 +99,18 @@ type TabKey =
  * 「讨论」页签的数据走抓取 VNDB 网站（API 同样没有讨论端点），见 features/discussion。
  * 「攻略」页签的数据走独立仓库的静态 JSON（API 也没有），见 features/walkthrough。
  */
-const TABS: readonly { key: TabKey; label: string }[] = [
-  { key: "overview", label: "概览" },
-  { key: "characters", label: "角色" },
-  { key: "staff", label: "制作" },
-  { key: "releases", label: "版本" },
-  { key: "screenshots", label: "截图" },
-  { key: "relations", label: "关联" },
-  { key: "quotes", label: "语录" },
-  { key: "discussions", label: "讨论" },
-  { key: "walkthrough", label: "攻略" },
-  { key: "records", label: "记录" },
-  { key: "extlinks", label: "外链" },
+const TABS: readonly { key: TabKey; labelKey: TranslationKey }[] = [
+  { key: "overview", labelKey: "vn.tabInfo" },
+  { key: "characters", labelKey: "vn.tabCharacters" },
+  { key: "staff", labelKey: "vn.tabStaff" },
+  { key: "releases", labelKey: "vn.tabReleases" },
+  { key: "screenshots", labelKey: "vn.tabScreenshots" },
+  { key: "relations", labelKey: "vn.tabRelations" },
+  { key: "quotes", labelKey: "vn.tabQuotes" },
+  { key: "discussions", labelKey: "vn.tabDiscussions" },
+  { key: "walkthrough", labelKey: "vn.tabWalkthrough" },
+  { key: "records", labelKey: "vn.tabRecords" },
+  { key: "extlinks", labelKey: "vn.tabExtLinks" },
 ] as const;
 
 export default function VnDetailScreen(): JSX.Element {
@@ -123,6 +127,7 @@ export default function VnDetailScreen(): JSX.Element {
   // 箭头图标取主题 muted（不能写死 iOS 系统灰 #8E8E93，换主题后对不上）
   const muted = useThemeColor("muted");
   const recordView = useRecordHistory();
+  const { t } = useTranslation();
   const vn = detail.data;
 
   // 记录浏览历史（数据加载完成后）
@@ -130,10 +135,12 @@ export default function VnDetailScreen(): JSX.Element {
     if (vn) recordView("vn", vn.id, vn.title, vn.alttitle, vn.image?.thumbnail);
   }, [vn, recordView]);
 
-  if (detail.isLoading) return <LoadingState label="加载作品信息…" />;
+  if (detail.isLoading) return <LoadingState label={t("vn.loading")} />;
   if (detail.isError)
     return <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />;
-  if (!vn) return <EmptyState title="作品不存在" description="它可能已从 VNDB 删除" />;
+  if (!vn) {
+    return <EmptyState title={t("vn.notFoundTitle")} description={t("vn.notFoundDescription")} />;
+  }
 
   const myVote = myListItem.data?.vote ?? null;
   // 游玩状态 = 我的清单标签里的状态标签（Playing / Finished / …，VNDB 英文原名）
@@ -148,7 +155,7 @@ export default function VnDetailScreen(): JSX.Element {
           dims: vn.image.dims,
           sexual: vn.image.sexual,
           violence: vn.image.violence,
-          label: `${vn.title} 封面`,
+          label: t("home.coverLabel", { title: vn.title }),
         },
       ]
     : [];
@@ -159,7 +166,7 @@ export default function VnDetailScreen(): JSX.Element {
         <Pressable
           onPress={() => router.back()}
           className="active:opacity-60"
-          accessibilityLabel="返回"
+          accessibilityLabel={t("common.back")}
           hitSlop={8}
         >
           <Icon name="chevronLeft" size={24} color={muted} />
@@ -167,7 +174,14 @@ export default function VnDetailScreen(): JSX.Element {
         <Muted type="body-sm" className="flex-1">
           {vn.id}
         </Muted>
-        {/* 右上角：先「编辑」（改状态 / 打分 / 标签），再「加入 / 移出清单」 */}
+        {/* 右上角：收藏 → 编辑（改状态 / 打分 / 标签）→ 加入 / 移出清单 */}
+        <FavoriteButton
+          type="vn"
+          entryId={vn.id}
+          title={vn.title}
+          subtitle={vn.alttitle}
+          imageUrl={vn.image?.thumbnail}
+        />
         <UlistEditEntry vnId={vn.id} />
         <UlistToggleButton vnId={vn.id} />
       </View>
@@ -181,25 +195,21 @@ export default function VnDetailScreen(): JSX.Element {
 
       {/* 三列概览：评价人数 / 均分 / 游玩时长（信息 Tabs 上方） */}
       <View className="flex-row gap-2 px-4 pb-3">
-        <StatBlock value={formatCount(vn.votecount)} label="评价人数" />
-        <StatBlock value={formatRating(vn.rating)} label="均分" tone="accent" />
+        <StatBlock value={formatCount(vn.votecount)} label={t("vn.statVotes")} />
+        <StatBlock value={formatRating(vn.rating)} label={t("vn.statRating")} tone="accent" />
         <StatBlock
           value={
             vn.length_minutes != null
               ? (formatMinutes(vn.length_minutes) ?? "—")
               : formatLength(vn.length)
           }
-          label="游玩时长"
+          label={t("vn.statLength")}
         />
       </View>
 
       {/* 开始游戏：拉起全局计时浮层 */}
       <View className="px-4 pb-3">
-        <StartGameButton
-          vnId={vn.id}
-          vnTitle={vn.title}
-          coverUrl={vn.image?.thumbnail ?? vn.image?.url ?? null}
-        />
+        <StartGameButton vnId={vn.id} vnTitle={vn.title} />
       </View>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1">
@@ -208,9 +218,9 @@ export default function VnDetailScreen(): JSX.Element {
           <Tabs.ScrollView>
             {/* ⚠️ 指示块要自己挂：HeroUI 不会自动注入，漏了就没有「选中」的底色 */}
             <Tabs.Indicator />
-            {TABS.map((t) => (
-              <Tabs.Trigger key={t.key} value={t.key}>
-                <Tabs.Label>{t.label}</Tabs.Label>
+            {TABS.map((tabDef) => (
+              <Tabs.Trigger key={tabDef.key} value={tabDef.key}>
+                <Tabs.Label>{t(tabDef.labelKey)}</Tabs.Label>
               </Tabs.Trigger>
             ))}
           </Tabs.ScrollView>
@@ -259,6 +269,7 @@ function Header({
   onCoverPress: () => void;
 }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   // 只显示第一个开发商（VNDB 的开发商列表常有重复条目，全铺会把头部撑长）
   const developer = vn.developers?.[0];
   const inDevelopment = vn.devstatus === 1;
@@ -274,7 +285,7 @@ function Header({
         violence={vn.image?.violence}
         roundedClassName="rounded-lg"
         priority="high"
-        accessibilityLabel={`${vn.title} 封面`}
+        accessibilityLabel={t("home.coverLabel", { title: vn.title })}
         onPress={onCoverPress}
       />
       <View className="flex-1 gap-2">

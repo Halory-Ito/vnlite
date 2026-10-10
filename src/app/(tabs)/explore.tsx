@@ -24,6 +24,7 @@ import { DEFAULT_BROWSE_SORT, findSortOption } from "@/features/sort/sort-option
 import { flattenPages, useVnList } from "@/features/vn/hooks";
 import { VnInfiniteList } from "@/features/vn/components/vn-infinite-list";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnFilterState } from "@/lib/api/filters";
 import type { VnSummary } from "@/lib/api/types";
 import { CARD_FIELD, setPreference } from "@/lib/storage/preferences";
@@ -33,6 +34,7 @@ export default function BrowseTab(): JSX.Element {
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const preferences = usePreferences();
+  const { t } = useTranslation();
 
   const [filters, setFilters] = useState<VnFilterState>({});
   const [sortOpen, setSortOpen] = useState(false);
@@ -68,7 +70,11 @@ export default function BrowseTab(): JSX.Element {
               onPress={() => setSortOpen(true)}
               className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
               accessibilityRole="button"
-              accessibilityLabel={customizedSort ? "排序设置，已自定义" : "排序设置"}
+              accessibilityLabel={
+                customizedSort
+                  ? t("browse.toolbar.sortLabelCustomized")
+                  : t("browse.toolbar.sortLabel")
+              }
               hitSlop={6}
             >
               <Icon
@@ -77,7 +83,7 @@ export default function BrowseTab(): JSX.Element {
                 color={customizedSort ? accent : muted}
               />
               <Muted type="body-sm" className={customizedSort ? "text-accent" : "text-muted"}>
-                排序
+                {t("browse.toolbar.sort")}
               </Muted>
             </Pressable>
 
@@ -86,12 +92,16 @@ export default function BrowseTab(): JSX.Element {
               onPress={() => setDisplayOpen(true)}
               className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
               accessibilityRole="button"
-              accessibilityLabel={customizedDisplay ? "卡片显示设置，已自定义" : "卡片显示设置"}
+              accessibilityLabel={
+                customizedDisplay
+                  ? t("browse.toolbar.displayLabelCustomized")
+                  : t("browse.toolbar.displayLabel")
+              }
               hitSlop={6}
             >
               <Icon name="eye" size={18} color={customizedDisplay ? accent : muted} />
               <Muted type="body-sm" className={customizedDisplay ? "text-accent" : "text-muted"}>
-                显示
+                {t("browse.toolbar.display")}
               </Muted>
             </Pressable>
 
@@ -100,7 +110,9 @@ export default function BrowseTab(): JSX.Element {
               className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
               accessibilityRole="button"
               accessibilityLabel={
-                activeFilterCount > 0 ? `筛选，已选 ${activeFilterCount} 项` : "筛选"
+                activeFilterCount > 0
+                  ? t("browse.toolbar.filterLabelWithCount", { count: activeFilterCount })
+                  : t("browse.toolbar.filterLabel")
               }
               hitSlop={6}
             >
@@ -110,7 +122,9 @@ export default function BrowseTab(): JSX.Element {
                 type="body-sm"
                 className={activeFilterCount > 0 ? "text-accent" : "text-muted"}
               >
-                筛选{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
+                {activeFilterCount > 0
+                  ? t("browse.toolbar.filterWithCount", { count: activeFilterCount })
+                  : t("browse.toolbar.filter")}
               </Muted>
             </Pressable>
           </View>
@@ -132,8 +146,14 @@ export default function BrowseTab(): JSX.Element {
         }}
         onRetry={() => void query.refetch()}
         onPressItem={(id) => router.push(`/vn/${id}`)}
-        emptyTitle={activeFilterCount > 0 ? "没有符合条件的作品" : "列表是空的"}
-        emptyDescription={activeFilterCount > 0 ? "试着放宽筛选条件" : undefined}
+        emptyTitle={
+          activeFilterCount > 0
+            ? t("browse.toolbar.emptyFilteredTitle")
+            : t("browse.toolbar.emptyTitle")
+        }
+        emptyDescription={
+          activeFilterCount > 0 ? t("browse.toolbar.emptyFilteredDescription") : undefined
+        }
       />
 
       {/*

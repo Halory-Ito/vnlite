@@ -112,6 +112,21 @@ const MIGRATIONS: string[][] = [
     );`,
     `CREATE INDEX IF NOT EXISTS idx_play_session_vn ON play_session (vn_id, started_at DESC);`,
   ],
+
+  // v6 —— 收藏（作品 / 人员 / 用户 / 厂商四类，纯本地；VNDB 没有通用收藏端点）
+  [
+    `CREATE TABLE IF NOT EXISTS favorite (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      type         TEXT NOT NULL,             -- 'vn' | 'character' | 'staff' | 'producer' | 'user'
+      entry_id     TEXT NOT NULL,             -- 如 v123 / c456 / s789 / p012 / u345
+      title        TEXT NOT NULL,             -- 显示名称
+      subtitle     TEXT,                      -- 罗马字原名等
+      image_url    TEXT,                      -- 封面 / 头像 URL
+      favorited_at INTEGER NOT NULL           -- unix 毫秒时间戳
+    );`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_favorite_entry ON favorite (type, entry_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_favorite_time ON favorite (favorited_at DESC);`,
+  ],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

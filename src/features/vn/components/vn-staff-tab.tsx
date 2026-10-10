@@ -13,10 +13,12 @@ import { Pressable, ScrollView, View } from "react-native";
 import { EmptyState } from "@/components/screen-state";
 import { Muted, Paragraph } from "@/components/typo";
 import { SectionHeader } from "@/components/ui";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail, VnStaff } from "@/lib/api/types";
 import { staffRoleLabel } from "@/utils/format";
 
 export function VnStaffTab({ vn }: { vn: VnDetail }): JSX.Element {
+  const { t } = useTranslation();
   const staff = useMemo(() => vn.staff ?? [], [vn.staff]);
   const va = vn.va ?? [];
 
@@ -33,7 +35,7 @@ export function VnStaffTab({ vn }: { vn: VnDetail }): JSX.Element {
   }, [staff]);
 
   if (staff.length === 0 && va.length === 0) {
-    return <EmptyState title="没有登记制作人员" />;
+    return <EmptyState title={t("vn.staffEmpty")} />;
   }
 
   return (
@@ -69,7 +71,7 @@ export function VnStaffTab({ vn }: { vn: VnDetail }): JSX.Element {
 
       {va.length > 0 ? (
         <>
-          <SectionHeader title="配音" />
+          <SectionHeader title={t("vn.cast")} />
           <View className="px-4 pb-8">
             {va.map((entry, i) =>
               entry.character ? (

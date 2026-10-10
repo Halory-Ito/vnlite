@@ -14,6 +14,7 @@ import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { CoverImage } from "@/components/cover-image";
 import { Muted } from "@/components/typo";
 import { imageGate, useNsfwMode } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
 
@@ -62,6 +63,7 @@ function Card({
   nsfwMode: NsfwMode;
   onPress: (id: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const image = vn.image;
   const cover = (
     <CoverImage
@@ -70,7 +72,7 @@ function Card({
       height={COVER_RATIO}
       sexual={image?.sexual}
       violence={image?.violence}
-      accessibilityLabel={`${vn.title} 封面`}
+      accessibilityLabel={t("home.coverLabel", { title: vn.title })}
       onPress={() => onPress(vn.id)}
     />
   );
@@ -83,7 +85,7 @@ function Card({
         <Pressable
           onPress={() => onPress(vn.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${vn.title}（已按内容偏好隐藏封面）`}
+          accessibilityLabel={t("home.coverHiddenLabel", { title: vn.title })}
         >
           {cover}
         </Pressable>

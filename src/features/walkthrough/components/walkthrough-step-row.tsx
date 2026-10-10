@@ -35,6 +35,7 @@ import { memo } from "react";
 import { View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { stepMeta } from "../select";
 import type { WalkthroughStep } from "../types";
@@ -58,8 +59,9 @@ function WalkthroughStepRowBase({
   done,
   onToggle,
 }: WalkthroughStepRowProps): JSX.Element {
-  // 唯一的计算：save / load 有中文小标签，choice 没有（满屏都是字就没法扫了）
-  const label = stepMeta(step.type).label;
+  const { t } = useTranslation();
+  // 唯一的计算：save / load 有小标签，choice 没有（满屏都是字就没法扫了）
+  const labelKey = stepMeta(step.type).labelKey;
 
   return (
     <View className={`flex-row items-start gap-2.5 ${done ? DONE_FADE : ""}`}>
@@ -72,14 +74,18 @@ function WalkthroughStepRowBase({
       <Checkbox
         isSelected={done}
         onSelectedChange={() => onToggle(step.id, "done")}
-        accessibilityLabel={done ? `取消已走过：${step.content}` : `标记已走过：${step.content}`}
+        accessibilityLabel={
+          done
+            ? t("walkthrough.unmarkStep", { step: step.content })
+            : t("walkthrough.markStep", { step: step.content })
+        }
       />
 
       <View className="flex-1 gap-0.5">
         <View className="flex-row flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-          {label ? (
+          {labelKey ? (
             <Muted type="body-xs" className="font-semibold text-accent">
-              {label}
+              {t(labelKey)}
             </Muted>
           ) : null}
           {/* `prefix` 是作者给的重点标记（★ 之类），放在内容前面 */}

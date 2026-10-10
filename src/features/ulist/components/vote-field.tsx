@@ -11,6 +11,7 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 export interface VoteFieldProps {
   vote: number | null;
@@ -18,11 +19,12 @@ export interface VoteFieldProps {
 }
 
 export function VoteField({ vote, onChange }: VoteFieldProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
         <Muted type="body-xs" className="font-medium">
-          打分
+          {t("ulist.vote")}
         </Muted>
         {vote != null ? (
           <View className="flex-row items-center gap-3">
@@ -33,21 +35,21 @@ export function VoteField({ vote, onChange }: VoteFieldProps): JSX.Element {
               onPress={() => onChange(null)}
               className="active:opacity-60"
               accessibilityRole="button"
-              accessibilityLabel="清除打分"
+              accessibilityLabel={t("ulist.clearVote")}
             >
               <Typography type="body-xs" className="text-muted">
-                清除
+                {t("common.clear")}
               </Typography>
             </Pressable>
           </View>
         ) : (
-          <Muted type="body-xs">未打分</Muted>
+          <Muted type="body-xs">{t("ulist.notVoted")}</Muted>
         )}
       </View>
 
       {vote == null ? (
         <Button size="sm" variant="secondary" className="self-start" onPress={() => onChange(70)}>
-          <Button.Label>打分（10–100）</Button.Label>
+          <Button.Label>{t("ulist.voteRange")}</Button.Label>
         </Button>
       ) : (
         <Slider
@@ -56,7 +58,7 @@ export function VoteField({ vote, onChange }: VoteFieldProps): JSX.Element {
           maxValue={100}
           step={1}
           onChange={(next) => onChange(scalar(next))}
-          accessibilityLabel="打分"
+          accessibilityLabel={t("ulist.vote")}
         >
           <Slider.Track>
             <Slider.Fill />

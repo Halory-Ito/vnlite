@@ -16,21 +16,23 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { BackBar } from "@/components/back-bar";
+import { ClearCategoriesDialog } from "@/components/clear-categories-dialog";
 import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ViewModeButton } from "@/components/view-mode-button";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import type { HistoryEntry } from "@/lib/db/dao/history";
 import { setPreference } from "@/lib/storage/preferences";
 
-import { ClearHistoryDialog } from "./components/clear-dialog";
 import { HistoryList } from "./components/history-list";
 import { TimeRangePanel } from "./components/time-range-panel";
 import {
   isDateFilterEmpty,
   EMPTY_DATE_FILTER,
   HISTORY_TAB_OPTIONS,
+  historyTabOptions,
   type HistoryDateFilter,
   type HistoryTab,
 } from "./history-constants";
@@ -38,6 +40,7 @@ import { useClearHistory, useHistoryInfinite, useRemoveHistoryEntry } from "./ho
 
 export default function HistoryScreen(): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const danger = useThemeColor("danger");
@@ -48,6 +51,7 @@ export default function HistoryScreen(): JSX.Element {
   const [clearOpen, setClearOpen] = useState(false);
   // 清空弹窗里勾选的分类，默认全选
   const [clearTabs, setClearTabs] = useState<HistoryTab[]>([]);
+  const tabOptions = historyTabOptions(t);
 
   const query = useHistoryInfinite(tab, dateFilter);
   const clearHistory = useClearHistory();
@@ -76,7 +80,7 @@ export default function HistoryScreen(): JSX.Element {
   return (
     <View className="flex-1">
       <BackBar
-        title="浏览历史"
+        title={t("history.title")}
         onPress={() => router.back()}
         trailing={
           <View className="flex-row items-center gap-1">
@@ -86,7 +90,9 @@ export default function HistoryScreen(): JSX.Element {
               className="rounded-full p-1.5 active:opacity-70"
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel={customizedRange ? "时间范围，已筛选" : "时间范围"}
+              accessibilityLabel={
+                customizedRange ? t("history.timeRangeFiltered") : t("history.timeRange")
+              }
             >
               <Icon name="calendar" size={18} color={customizedRange ? accent : muted} />
             </Pressable>
@@ -103,7 +109,7 @@ export default function HistoryScreen(): JSX.Element {
               size="sm"
               variant="ghost"
               onPress={openClear}
-              accessibilityLabel="清空浏览历史"
+              accessibilityLabel={t("history.clearTitle")}
             >
               <Icon name="trashBin" size={18} color={danger} />
             </Button>
@@ -112,15 +118,15 @@ export default function HistoryScreen(): JSX.Element {
       />
 
       <View className="px-4 pb-2">
-        <SegmentedControl options={HISTORY_TAB_OPTIONS} value={tab} onChange={setTab} />
+        <SegmentedControl options={tabOptions} value={tab} onChange={setTab} />
       </View>
 
       {query.isLoading ? (
-        <LoadingState label="加载历史记录…" />
+        <LoadingState label={t("history.loading")} />
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : entries.length === 0 ? (
-        <EmptyState title="暂无浏览历史" description="浏览过的作品、人员、用户与厂商会记录在这里" />
+        <EmptyState title={t("history.emptyTitle")} description={t("history.emptyDescription")} />
       ) : (
         <HistoryList
           entries={entries}
@@ -133,9 +139,12 @@ export default function HistoryScreen(): JSX.Element {
         />
       )}
 
-      <ClearHistoryDialog
+      <ClearCategoriesDialog
         isOpen={clearOpen}
         onClose={() => setClearOpen(false)}
+        title={t("history.clearTitle")}
+        description={t("history.clearDescription")}
+        options={tabOptions}
         selected={clearTabs}
         onChange={setClearTabs}
         onConfirm={confirmClear}

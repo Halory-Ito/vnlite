@@ -160,10 +160,37 @@ export const queryKeys = {
       ["history", "list", tab, start, end] as const,
   },
 
+  /* ---- 收藏（本地 SQLite，见 features/favorite） ---- */
+  favorite: {
+    all: ["favorite"] as const,
+    /** 某档位的分页列表（key 固定，写入后失效重取） */
+    list: (tab: string) => ["favorite", "list", tab] as const,
+    /** 单条是否已收藏（详情页收藏按钮） */
+    state: (type: string, entryId: string) => ["favorite", "state", type, entryId] as const,
+  },
+
   /* ---- 游玩记录（本地 SQLite，见 features/play-records） ---- */
   playRecords: {
     all: ["playRecords"] as const,
     /** 某作品的全部游玩记录 */
     list: (vnId: string) => ["playRecords", "list", vnId] as const,
+    /** 全部作品的游玩记录（记录统计页聚合用） */
+    allSessions: () => ["playRecords", "allSessions"] as const,
+  },
+
+  /* ---- 记录统计（游玩数据聚合） ---- */
+  stats: {
+    all: ["stats"] as const,
+    /** 记录统计里按 vnId 批量取「作品名 + 类型标签」 */
+    playedVns: (idsKey: string) => ["stats", "playedVns", idsKey] as const,
+  },
+
+  /* ---- 厂商 LOGO（鲲 Galgame 静态索引，见 features/catalog/kungal-logo） ---- */
+  catalog: {
+    all: ["catalog"] as const,
+    /** 整份厂商 LOGO 索引（懒加载，缓存不过期） */
+    kungalIndex: () => ["catalog", "kungalIndex"] as const,
+    /** 某个厂商解析出的 LOGO（详情页 / 收藏 / 历史共用） */
+    producerLogo: (producerId: string) => ["producer", "logo", producerId] as const,
   },
 } as const;

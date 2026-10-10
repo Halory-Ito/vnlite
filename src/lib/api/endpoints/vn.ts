@@ -6,9 +6,15 @@
  */
 
 import { MAX_RESULTS_PER_PAGE } from "@/constants/config";
+import { t } from "@/lib/i18n/translate";
 
 import { api } from "../client";
-import { VN_COVER_CARD_FIELDS, VN_DETAIL_FIELDS, VN_LIST_FIELDS } from "../fields";
+import {
+  VN_COVER_CARD_FIELDS,
+  VN_DETAIL_FIELDS,
+  VN_LIST_FIELDS,
+  VN_PLAY_INFO_FIELDS,
+} from "../fields";
 import {
   byTag,
   byVn,
@@ -86,6 +92,34 @@ export function getVns(
     },
     { signal }
   );
+}
+
+/**
+ * 按 ID 批量取「作品名 + 类型标签」（记录统计用）。
+ *
+ * `getVns` 用的是列表字段集（不含 tags），这里单独一套瘦字段。
+ * 入参可能超过单次上限，自动按 `MAX_RESULTS_PER_PAGE` 分块串行请求。
+ */
+export async function queryVnsPlayInfo(
+  ids: readonly string[],
+  signal?: AbortSignal
+): Promise<QueryResponse<VnSummary>> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const results: VnSummary[] = [];
+  for (let i = 0; i < unique.length; i += MAX_RESULTS_PER_PAGE) {
+    const chunk = unique.slice(i, i + MAX_RESULTS_PER_PAGE);
+    const response = await api.query<VnSummary>(
+      "/vn",
+      {
+        filters: ["or", ...chunk.map((id) => ["id", "=", id] as const)],
+        fields: toFieldsString(VN_PLAY_INFO_FIELDS),
+        results: chunk.length,
+      },
+      { signal }
+    );
+    results.push(...response.results);
+  }
+  return { results, more: false };
 }
 
 /** 某 VN 下的全部发行版 */
@@ -266,7 +300,7 @@ export async function queryRandomVn(signal?: AbortSignal): Promise<VnSummary> {
     const vn = res.results[0];
     if (vn) return vn;
   }
-  throw new Error("随机作品暂时取不到，请稍后再试");
+  throw new Error(t("misc.randomUnavailable"));
 }
 
 /** 随机一条语录（每日语录当天抽一次就用它） */

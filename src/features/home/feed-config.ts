@@ -12,14 +12,17 @@
  * 所以本项目按**作品**（VN）来 —— 有封面、能跳进站内作品详情。
  */
 
+import type { TranslationKey } from "@/lib/i18n/translate";
+
 /** 三个页签，顺序即页签从左到右的顺序 */
 export const FEED_TABS = ["reviews", "upcoming", "released"] as const;
 export type FeedTab = (typeof FEED_TABS)[number];
 
-export const FEED_TAB_LABEL: Record<FeedTab, string> = {
-  reviews: "最新评价",
-  upcoming: "即将发售",
-  released: "最新上架",
+/** 页签文案的翻译键（不存文案：语言可切换） */
+export const FEED_TAB_LABEL_KEY: Record<FeedTab, TranslationKey> = {
+  reviews: "home.feedReviews",
+  upcoming: "home.feedUpcoming",
+  released: "home.feedReleased",
 };
 
 /** 与官网首页一致的条数（三栏都是 10） */

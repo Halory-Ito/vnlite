@@ -30,16 +30,10 @@ import type { JSX } from "react";
 import { Pressable, useWindowDimensions, View } from "react-native";
 
 import { Muted } from "@/components/muted";
-import {
-  LANGUAGE_LABEL,
-  LENGTH,
-  PLATFORM_LABEL,
-  type DevStatus,
-  type Language,
-  type Platform,
-} from "@/lib/api/enums";
+import { useTranslation } from "@/hooks/use-translation";
+import { LENGTH, type DevStatus, type Language, type Platform } from "@/lib/api/enums";
 import type { VnFilterState } from "@/lib/api/filters";
-import { devStatusLabel } from "@/utils/format";
+import { devStatusLabel, languageLabel, platformLabel } from "@/utils/format";
 
 import {
   FilterChip,
@@ -50,7 +44,7 @@ import {
 import { FilterSummary, describeFilters } from "./filter-summary";
 import { FullScreenPanel } from "./panel";
 
-/** 常用语言放前面，减少滚动 */
+/** 常用语言放前面，减少滚动（标签渲染期用 `languageLabel()` 取） */
 const POPULAR_LANGUAGES: Language[] = [
   "ja",
   "zh",
@@ -65,11 +59,8 @@ const POPULAR_LANGUAGES: Language[] = [
   "it",
   "pt-br",
 ];
-const LANGUAGE_OPTIONS: FilterChipOption[] = POPULAR_LANGUAGES.map((l) => ({
-  value: l,
-  label: LANGUAGE_LABEL[l],
-}));
 
+/** 常用平台放前面（标签渲染期用 `platformLabel()` 取） */
 const POPULAR_PLATFORMS: Platform[] = [
   "win",
   "mac",
@@ -82,19 +73,11 @@ const POPULAR_PLATFORMS: Platform[] = [
   "swi",
   "xbo",
 ];
-const PLATFORM_OPTIONS: FilterChipOption[] = POPULAR_PLATFORMS.map((p) => ({
-  value: p,
-  label: PLATFORM_LABEL[p],
-}));
 
+/** 时长选项直接用 VNDB 的英文描述（VNDB 原文即英文，两种语言都不翻译） */
 const LENGTH_OPTIONS: FilterChipOption[] = [1, 2, 3, 4, 5].map((n) => ({
   value: String(n),
   label: LENGTH[n] as string,
-}));
-
-const DEV_STATUS_OPTIONS: FilterChipOption[] = ([0, 1, 2] as DevStatus[]).map((n) => ({
-  value: String(n),
-  label: devStatusLabel(n),
 }));
 
 const RATING_OPTIONS: FilterChipOption[] = [
@@ -104,20 +87,11 @@ const RATING_OPTIONS: FilterChipOption[] = [
   { value: "70", label: "70+" },
 ];
 
-const VOTECOUNT_OPTIONS: FilterChipOption[] = [
-  { value: "10", label: "≥10 票" },
-  { value: "50", label: "≥50 票" },
-  { value: "100", label: "≥100 票" },
-  { value: "500", label: "≥500 票" },
-];
+/** 票数下限（标签渲染期翻译，模块级不存文案） */
+const VOTECOUNTS = [10, 50, 100, 500] as const;
 
-const DECADE_OPTIONS: FilterChipOption[] = [
-  { value: "2020-01-01", label: "2020 起" },
-  { value: "2015-01-01", label: "2015 起" },
-  { value: "2010-01-01", label: "2010 起" },
-  { value: "2005-01-01", label: "2005 起" },
-  { value: "2000-01-01", label: "2000 起" },
-];
+/** 发行年代：value 是 `releasedFrom` 的起始日期，标签渲染期翻译 */
+const DECADE_YEARS = [2020, 2015, 2010, 2005, 2000] as const;
 
 export interface FilterPanelProps {
   onClose: () => void;
@@ -134,7 +108,30 @@ export function FilterPanel({
   resultCount,
 }: FilterPanelProps): JSX.Element {
   const { height } = useWindowDimensions();
+  const { t } = useTranslation();
   const activeCount = describeFilters(value).length;
+
+  // 选项标签在渲染期取（语言可切换，模块级常量不能存文案）
+  const languageOptions: FilterChipOption[] = POPULAR_LANGUAGES.map((l) => ({
+    value: l,
+    label: languageLabel(l),
+  }));
+  const platformOptions: FilterChipOption[] = POPULAR_PLATFORMS.map((p) => ({
+    value: p,
+    label: platformLabel(p),
+  }));
+  const votecountOptions: FilterChipOption[] = VOTECOUNTS.map((min) => ({
+    value: String(min),
+    label: t("browse.filter.votecountOption", { min }),
+  }));
+  const devStatusOptions: FilterChipOption[] = ([0, 1, 2] as DevStatus[]).map((n) => ({
+    value: String(n),
+    label: devStatusLabel(n),
+  }));
+  const decadeOptions: FilterChipOption[] = DECADE_YEARS.map((year) => ({
+    value: `${year}-01-01`,
+    label: t("browse.filter.releasedOption", { year }),
+  }));
 
   const update = (patch: Partial<VnFilterState>): void => onChange({ ...value, ...patch });
 
@@ -152,8 +149,8 @@ export function FilterPanel({
 
   return (
     <FullScreenPanel
-      title="筛选"
-      accessibilityLabel="筛选"
+      title={t("browse.filter.title")}
+      accessibilityLabel={t("browse.filter.title")}
       onClose={onClose}
       fixedHeader={<FilterSummary filters={value} onChange={onChange} />}
       footer={
@@ -161,8 +158,10 @@ export function FilterPanel({
         <View className="flex-row items-center justify-between gap-3 border-t border-separator px-4 py-3">
           <Muted type="body-xs">
             {activeCount === 0
-              ? "未设置筛选条件"
-              : `已选 ${activeCount} 项${resultCount != null ? ` · 命中 ${resultCount} 个` : ""}`}
+              ? t("browse.filter.none")
+              : resultCount != null
+                ? t("browse.filter.selectedHits", { count: activeCount, hits: resultCount })
+                : t("browse.filter.selected", { count: activeCount })}
           </Muted>
           <Pressable
             onPress={() => onChange({})}
@@ -171,77 +170,77 @@ export function FilterPanel({
               activeCount === 0 ? "border-border opacity-40" : "border-accent"
             }`}
             accessibilityRole="button"
-            accessibilityLabel="清空全部筛选条件"
+            accessibilityLabel={t("browse.filter.clearAll")}
             accessibilityState={{ disabled: activeCount === 0 }}
           >
             <Typography type="body-xs" className="font-semibold text-accent">
-              清空
+              {t("common.clear")}
             </Typography>
           </Pressable>
         </View>
       }
     >
       <SingleSelectGroup
-        label="最低评分"
+        label={t("browse.filter.rating")}
         options={RATING_OPTIONS}
         selected={value.ratingRange ? String(value.ratingRange[0]) : null}
         onSelect={(v) => update({ ratingRange: v ? [Number(v), 100] : undefined })}
       />
 
       <SingleSelectGroup
-        label="最少投票数"
-        options={VOTECOUNT_OPTIONS}
+        label={t("browse.filter.votecount")}
+        options={votecountOptions}
         selected={value.minVotecount ? String(value.minVotecount) : null}
         onSelect={(v) => update({ minVotecount: v ? Number(v) : undefined })}
       />
 
       <MultiSelectGroup
-        label="原语言"
-        options={LANGUAGE_OPTIONS}
+        label={t("browse.filter.olang")}
+        options={languageOptions}
         selected={value.olang ?? []}
         onToggle={(v) => toggleList("olang", value.olang, v as Language)}
       />
 
       <MultiSelectGroup
-        label="平台"
-        options={PLATFORM_OPTIONS}
+        label={t("browse.filter.platform")}
+        options={platformOptions}
         selected={value.platform ?? []}
         onToggle={(v) => toggleList("platform", value.platform, v as Platform)}
       />
 
       <MultiSelectGroup
-        label="时长"
+        label={t("browse.filter.length")}
         options={LENGTH_OPTIONS}
         selected={(value.length ?? []).map(String)}
         onToggle={(v) => toggleList("length", (value.length ?? []).map(String), v)}
       />
 
       <SingleSelectGroup
-        label="开发状态"
-        options={DEV_STATUS_OPTIONS}
+        label={t("browse.filter.devstatus")}
+        options={devStatusOptions}
         selected={value.devstatus ? String(value.devstatus[0]) : null}
         onSelect={(v) => update({ devstatus: v ? [Number(v) as DevStatus] : undefined })}
       />
 
       <SingleSelectGroup
-        label="发行年代"
-        options={DECADE_OPTIONS}
+        label={t("browse.filter.released")}
+        options={decadeOptions}
         selected={value.releasedFrom ?? null}
         onSelect={(v) => update({ releasedFrom: v ?? undefined, releasedTo: undefined })}
       />
 
       <View className="gap-2">
         <Typography type="body-sm" className="font-semibold">
-          内容完整度
+          {t("browse.filter.content")}
         </Typography>
         <View className="flex-row flex-wrap gap-1.5">
           <FilterChip
-            option={{ value: "desc", label: "有简介" }}
+            option={{ value: "desc", label: t("browse.filter.hasDescription") }}
             active={Boolean(value.hasDescription)}
             onPress={() => update({ hasDescription: !value.hasDescription })}
           />
           <FilterChip
-            option={{ value: "shot", label: "有截图" }}
+            option={{ value: "shot", label: t("browse.filter.hasScreenshot") }}
             active={Boolean(value.hasScreenshot)}
             onPress={() => update({ hasScreenshot: !value.hasScreenshot })}
           />

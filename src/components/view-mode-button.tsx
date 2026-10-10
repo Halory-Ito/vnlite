@@ -15,12 +15,17 @@ import { Pressable } from "react-native";
 
 import { Icon, type IconName } from "@/components/icon";
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
+import type { TranslationKey } from "@/lib/i18n/translate";
 import type { VnViewMode } from "@/lib/storage/preferences";
 
 /** 当前视图 → 切过去的目标视图（图标 / 文案都描述目标） */
-const SWITCH_TO: Record<VnViewMode, { next: VnViewMode; icon: IconName; label: string }> = {
-  grid: { next: "list", icon: "bars", label: "列表" },
-  list: { next: "grid", icon: "layoutCells", label: "网格" },
+const SWITCH_TO: Record<
+  VnViewMode,
+  { next: VnViewMode; icon: IconName; labelKey: TranslationKey }
+> = {
+  grid: { next: "list", icon: "bars", labelKey: "viewMode.list" },
+  list: { next: "grid", icon: "layoutCells", labelKey: "viewMode.grid" },
 };
 
 export interface ViewModeButtonProps {
@@ -30,7 +35,9 @@ export interface ViewModeButtonProps {
 
 export function ViewModeButton({ value, onChange }: ViewModeButtonProps): JSX.Element {
   const accent = useThemeColor("accent");
+  const { t } = useTranslation();
   const target = SWITCH_TO[value];
+  const label = t(target.labelKey);
 
   return (
     <Pressable
@@ -38,12 +45,12 @@ export function ViewModeButton({ value, onChange }: ViewModeButtonProps): JSX.El
       className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
       hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel={`切换到${target.label}视图`}
+      accessibilityLabel={t("viewMode.switchTo", { target: label })}
     >
       {/* 图标只能吃具体色值（不吃 className），所以走主题 accent */}
       <Icon name={target.icon} size={18} color={accent} />
       <Muted type="body-sm" className="text-accent">
-        {target.label}
+        {label}
       </Muted>
     </Pressable>
   );

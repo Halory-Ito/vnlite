@@ -15,21 +15,23 @@
  * 方向由用户在排序面板里选，`reverse` 是**该字段的默认方向**（true = 高 / 新在前）。
  */
 
+import type { TranslationKey } from "@/lib/i18n/translate";
 import type { BrowseSortField } from "@/lib/storage/preferences";
 
 export interface SortOption {
   value: BrowseSortField;
-  label: string;
+  /** 字段名翻译键（模块级不存文案，面板渲染时 `t(key)`） */
+  labelKey: TranslationKey;
   /** 该字段的默认方向：true = 降序（高 / 新在前） */
   reverse: boolean;
 }
 
 /** 浏览页可选排序字段（数组顺序 = 面板里的展示顺序） */
 export const BROWSE_SORT_OPTIONS: readonly SortOption[] = [
-  { value: "votecount", label: "人气", reverse: true },
-  { value: "rating", label: "评分", reverse: true },
-  { value: "released", label: "发行日期", reverse: true },
-  { value: "id", label: "ID 顺序", reverse: true },
+  { value: "votecount", labelKey: "browse.sort.option.votecount", reverse: true },
+  { value: "rating", labelKey: "browse.sort.option.rating", reverse: true },
+  { value: "released", labelKey: "browse.sort.option.released", reverse: true },
+  { value: "id", labelKey: "browse.sort.option.id", reverse: true },
 ];
 
 /** 默认排序：人气降序（Master 定） */

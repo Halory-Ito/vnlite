@@ -35,6 +35,7 @@ import { ScrollView } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { useWalkthrough, useWalkthroughIndex, useWalkthroughMarks } from "../hooks";
 import { findEntry, markProgress } from "../select";
@@ -43,13 +44,16 @@ import { WalkthroughRoutes } from "./walkthrough-routes";
 
 export function VnWalkthroughTab({ vnId }: { vnId: string }): JSX.Element {
   const { spoilerShield } = usePreferences();
+  const { t } = useTranslation();
   const indexQuery = useWalkthroughIndex();
   const entry = findEntry(indexQuery.data, vnId);
   const walkthroughQuery = useWalkthrough(entry);
   // ⚠️ 标记的 hook 必须在下面的提前 return **之前**调用（rules-of-hooks）
   const marks = useWalkthroughMarks(vnId);
 
-  if (indexQuery.isLoading) return <LoadingState label="加载攻略索引…" className="py-12" />;
+  if (indexQuery.isLoading) {
+    return <LoadingState label={t("walkthrough.loadingIndex")} className="py-12" />;
+  }
   // 索引没拿到，正文无从谈起 —— 只在「既没数据也没缓存」时才会走到这里
   if (indexQuery.isError && !indexQuery.data) {
     return <ErrorState error={indexQuery.error} onRetry={() => void indexQuery.refetch()} />;
@@ -58,11 +62,16 @@ export function VnWalkthroughTab({ vnId }: { vnId: string }): JSX.Element {
   // 索引已就绪（哪怕是从过期缓存来的）且确实没有这一条 —— 这是真实结论
   if (!entry) {
     return (
-      <EmptyState title="暂无攻略" description="攻略由社区维护，覆盖范围有限，这部作品还不在其中" />
+      <EmptyState
+        title={t("walkthrough.emptyTitle")}
+        description={t("walkthrough.emptyDescription")}
+      />
     );
   }
 
-  if (walkthroughQuery.isLoading) return <LoadingState label="加载攻略…" className="py-12" />;
+  if (walkthroughQuery.isLoading) {
+    return <LoadingState label={t("walkthrough.loading")} className="py-12" />;
+  }
   if (walkthroughQuery.isError) {
     return (
       <ErrorState error={walkthroughQuery.error} onRetry={() => void walkthroughQuery.refetch()} />
@@ -72,7 +81,7 @@ export function VnWalkthroughTab({ vnId }: { vnId: string }): JSX.Element {
   const walkthrough = walkthroughQuery.data;
   // ⚠️ 有条目但正文解析出 0 条线路：仓库里的文件坏了，如实说明而不是显示空白
   if (!walkthrough || walkthrough.routes.length === 0) {
-    return <EmptyState title="这份攻略暂时没有可用内容" />;
+    return <EmptyState title={t("walkthrough.noContent")} />;
   }
 
   return (

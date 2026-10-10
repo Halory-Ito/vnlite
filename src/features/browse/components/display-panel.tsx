@@ -13,20 +13,22 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { usePreferences } from "@/hooks/use-preferences";
-import {
-  CARD_FIELD,
-  CARD_FIELD_LABEL,
-  setPreference,
-  type CardField,
-} from "@/lib/storage/preferences";
+import { useTranslation } from "@/hooks/use-translation";
+import type { TranslationKey } from "@/lib/i18n/translate";
+import { CARD_FIELD, setPreference, type CardField } from "@/lib/storage/preferences";
 
 import { FilterChip, FilterGroup, type FilterChipOption } from "./filter-group";
 import { FullScreenPanel } from "./panel";
 
-const CARD_FIELD_OPTIONS: FilterChipOption[] = CARD_FIELD.map((field) => ({
-  value: field,
-  label: CARD_FIELD_LABEL[field],
-}));
+/** 卡片字段 → 翻译键（模块级不存文案，渲染时 `t(key)`） */
+const CARD_FIELD_LABEL_KEY: Record<CardField, TranslationKey> = {
+  rating: "browse.display.field.rating",
+  released: "browse.display.field.released",
+  olang: "browse.display.field.olang",
+  length: "browse.display.field.length",
+  platforms: "browse.display.field.platforms",
+  devstatus: "browse.display.field.devstatus",
+};
 
 export interface DisplayPanelProps {
   onClose: () => void;
@@ -34,7 +36,13 @@ export interface DisplayPanelProps {
 
 export function DisplayPanel({ onClose }: DisplayPanelProps): JSX.Element {
   const preferences = usePreferences();
+  const { t } = useTranslation();
   const selected = preferences.cardFields;
+
+  const options: FilterChipOption[] = CARD_FIELD.map((field) => ({
+    value: field,
+    label: t(CARD_FIELD_LABEL_KEY[field]),
+  }));
 
   /** 保持 CARD_FIELD 的固定顺序，免得 chip 顺序跟着点选跳 */
   const toggle = (field: CardField): void => {
@@ -46,8 +54,8 @@ export function DisplayPanel({ onClose }: DisplayPanelProps): JSX.Element {
 
   return (
     <FullScreenPanel
-      title="卡片显示"
-      accessibilityLabel="卡片显示"
+      title={t("browse.display.title")}
+      accessibilityLabel={t("browse.display.title")}
       onClose={onClose}
       footer={
         <View className="flex-row items-center justify-between gap-3 border-t border-separator px-4 py-3">
@@ -58,18 +66,18 @@ export function DisplayPanel({ onClose }: DisplayPanelProps): JSX.Element {
               selected.length === CARD_FIELD.length ? "border-border opacity-40" : "border-accent"
             }`}
             accessibilityRole="button"
-            accessibilityLabel="全部显示"
+            accessibilityLabel={t("browse.display.showAll")}
             accessibilityState={{ disabled: selected.length === CARD_FIELD.length }}
           >
             <Typography type="body-xs" className="font-semibold text-accent">
-              全部显示
+              {t("browse.display.showAll")}
             </Typography>
           </Pressable>
         </View>
       }
     >
-      <FilterGroup label="列表卡片上显示的信息" activeCount={selected.length}>
-        {CARD_FIELD_OPTIONS.map((option) => (
+      <FilterGroup label={t("browse.display.groupLabel")} activeCount={selected.length}>
+        {options.map((option) => (
           <FilterChip
             key={option.value}
             option={option}

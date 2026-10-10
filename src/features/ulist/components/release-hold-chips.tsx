@@ -14,6 +14,7 @@ import { View } from "react-native";
 
 import { Muted } from "@/components/typo";
 import { usePermission } from "@/hooks/use-session";
+import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import type { UListRelease } from "@/lib/api/types";
 import { listStatusLabel } from "@/utils/format";
@@ -33,6 +34,7 @@ export function ReleaseHoldChips({ vnId, release }: ReleaseHoldChipsProps): JSX.
   const canWrite = usePermission("listwrite");
   const item = useUlistItem(vnId, canWrite);
   const hold = useUlistReleaseHold();
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   if (!canWrite) return null;
@@ -44,7 +46,7 @@ export function ReleaseHoldChips({ vnId, release }: ReleaseHoldChipsProps): JSX.
       { releaseId: release.id, status: current === status ? null : status },
       {
         onError: (error) =>
-          toast.show(error instanceof ApiError ? error.userMessage : "更新失败，请重试"),
+          toast.show(error instanceof ApiError ? error.userMessage : t("ulist.updateFailed")),
       }
     );
   };
@@ -64,7 +66,7 @@ export function ReleaseHoldChips({ vnId, release }: ReleaseHoldChipsProps): JSX.
       ))}
       {item.isLoading ? (
         <Muted type="body-xs" className="text-[10px]">
-          查询中…
+          {t("ulist.checking")}
         </Muted>
       ) : null}
     </View>

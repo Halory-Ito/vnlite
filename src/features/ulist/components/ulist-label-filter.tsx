@@ -12,6 +12,7 @@
 import type { JSX } from "react";
 import { ScrollView, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
 import type { UListLabel } from "@/lib/api/types";
 
 import { Pill } from "./pill";
@@ -27,6 +28,7 @@ export function UlistLabelFilter({
   labelFilter,
   onLabelFilterChange,
 }: UlistLabelFilterProps): JSX.Element | null {
+  const { t } = useTranslation();
   // 虚拟标签（0 = No label、7 = Voted）不可筛选
   const selectable = labels.filter((label) => label.id !== 0 && label.id !== 7);
   // 标签还没加载出来（或加载失败）时整条不渲染，列表直接顶上来
@@ -41,7 +43,7 @@ export function UlistLabelFilter({
         contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
       >
         <Pill
-          label="全部"
+          label={t("common.all")}
           active={labelFilter === null}
           onPress={() => onLabelFilterChange(null)}
         />

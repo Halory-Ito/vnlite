@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Pressable } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { maskText } from "../select";
 
@@ -33,6 +34,7 @@ export function SpoilerText({
   className = "",
   numberOfLines,
 }: SpoilerTextProps): JSX.Element {
+  const { t } = useTranslation();
   const [revealed, setRevealed] = useState(false);
   // 开关没开时不需要任何交互，直接显示原文
   if (!shield || revealed) {
@@ -52,7 +54,7 @@ export function SpoilerText({
       onPress={() => setRevealed(true)}
       className={`flex-1 active:opacity-60 ${className}`}
       accessibilityRole="button"
-      accessibilityLabel="点按显示"
+      accessibilityLabel={t("walkthrough.reveal")}
     >
       {/* `selectable={false}`：外面套着 Pressable，长按归「点开」那一层，
           不关的话系统选区会先弹出来把点击吃掉 */}

@@ -25,6 +25,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from "react-nativ
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/icon";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { finishGameTimer } from "../actions";
 import { formatGameDuration } from "../format";
@@ -43,6 +44,7 @@ const EDGE = 8;
 export function GameTimerOverlay(): JSX.Element | null {
   const timer = useGameTimer();
   const elapsed = useElapsedMs();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
@@ -110,22 +112,29 @@ export function GameTimerOverlay(): JSX.Element | null {
           <View className="flex-row gap-2" style={{ marginBottom: GAP }}>
             <TimerActionButton
               icon={paused ? "play" : "pause"}
-              label={paused ? "继续计时" : "暂停计时"}
+              label={paused ? t("timer.resumeTimer") : t("timer.pauseTimer")}
               onPress={toggleGameTimerPause}
             />
-            <TimerActionButton icon="stop" label="结束计时" tone="danger" onPress={finish} />
+            <TimerActionButton
+              icon="stop"
+              label={t("timer.stopTimer")}
+              tone="danger"
+              onPress={finish}
+            />
           </View>
         ) : null}
 
         <GestureDetector gesture={gesture}>
           <View
-            className={`items-center justify-center rounded-full border border-border ${
+            className={`items-center justify-center rounded-full ${
               paused ? "bg-default-soft" : "bg-accent"
             }`}
             style={{ width: CIRCLE, height: CIRCLE }}
             accessibilityRole="button"
-            accessibilityLabel={`游戏计时 ${time}${paused ? "，已暂停" : ""}`}
-            accessibilityHint="点按展开暂停与结束，拖动可移动位置"
+            accessibilityLabel={
+              paused ? t("timer.a11yPaused", { time }) : t("timer.a11y", { time })
+            }
+            accessibilityHint={t("timer.expandHint")}
           >
             <Typography
               type="body-sm"
@@ -160,7 +169,7 @@ function TimerActionButton({
   return (
     <Pressable
       onPress={onPress}
-      className="items-center justify-center rounded-full border border-border bg-background active:opacity-70"
+      className="items-center justify-center rounded-full bg-background active:opacity-70"
       style={{ width: BUTTON, height: BUTTON }}
       accessibilityRole="button"
       accessibilityLabel={label}

@@ -11,12 +11,14 @@ import type { JSX } from "react";
 import { Muted } from "@/components/typo";
 import { VnInfiniteList } from "@/features/vn/components/vn-infinite-list";
 import { flattenPages, useVnList } from "@/features/vn/hooks";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 
-import { resultHeadline, SCOPE_NOUN } from "../search-logic";
+import { emptyDescription, resultHeadline } from "../search-logic";
 
 export function VnSearchResults({ keyword }: { keyword: string }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const query = useVnList({
     filters: { search: keyword },
@@ -39,8 +41,8 @@ export function VnSearchResults({ keyword }: { keyword: string }): JSX.Element {
       }}
       onRetry={() => void query.refetch()}
       onPressItem={(id) => router.push(`/vn/${id}`)}
-      emptyTitle="没有找到作品"
-      emptyDescription={`没有与「${keyword}」匹配的${SCOPE_NOUN.vn}`}
+      emptyTitle={t("search.vnEmptyTitle")}
+      emptyDescription={emptyDescription(keyword, "vn")}
       header={
         <Muted type="body-xs" className="px-4 pb-1">
           {resultHeadline(keyword)}

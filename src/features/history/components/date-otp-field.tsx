@@ -17,6 +17,7 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import { todayIso } from "@/utils/format";
 
 import { isoToDigits } from "../history-constants";
@@ -40,6 +41,7 @@ export function DateOtpField({
   onChange,
   error = null,
 }: DateOtpFieldProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
       <View className="flex-row items-center justify-between">
@@ -51,10 +53,10 @@ export function DateOtpField({
             onPress={() => onChange(isoToDigits(todayIso()))}
             className="active:opacity-60"
             accessibilityRole="button"
-            accessibilityLabel={`${label}设为今天`}
+            accessibilityLabel={t("history.setToday", { label })}
           >
             <Typography type="body-xs" className="text-accent">
-              今天
+              {t("history.today")}
             </Typography>
           </Pressable>
           {value !== "" ? (
@@ -62,10 +64,10 @@ export function DateOtpField({
               onPress={() => onChange("")}
               className="active:opacity-60"
               accessibilityRole="button"
-              accessibilityLabel={`清除${label}`}
+              accessibilityLabel={t("history.clearField", { label })}
             >
               <Typography type="body-xs" className="text-muted">
-                清除
+                {t("common.clear")}
               </Typography>
             </Pressable>
           ) : null}

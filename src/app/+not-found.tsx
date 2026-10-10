@@ -4,16 +4,18 @@ import { View } from "react-native";
 
 import { EmptyState } from "@/components/screen-state";
 import { LinkText } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function NotFoundScreen(): JSX.Element {
+  const { t } = useTranslation();
   return (
     <View className="flex-1 justify-center">
       <EmptyState
-        title="页面不存在"
-        description="链接可能已失效"
+        title={t("common.notFoundTitle")}
+        description={t("common.notFoundDescription")}
         action={
           <Link href="/(tabs)" className="mt-2">
-            <LinkText>回到首页</LinkText>
+            <LinkText>{t("common.goHome")}</LinkText>
           </Link>
         }
       />

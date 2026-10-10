@@ -24,6 +24,7 @@ import { Pressable, View } from "react-native";
 import { AppDialog } from "@/components/dialog";
 import { Muted } from "@/components/typo";
 import { PostContent } from "@/features/discussion/components/post-content";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { useReview } from "../hooks";
 
@@ -35,6 +36,7 @@ export interface ReviewDialogProps {
 
 export function ReviewDialog({ reviewId, onClose }: ReviewDialogProps): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const query = useReview(reviewId ?? "");
   const review = query.data;
 
@@ -52,21 +54,23 @@ export function ReviewDialog({ reviewId, onClose }: ReviewDialogProps): JSX.Elem
     <AppDialog
       isOpen={reviewId !== null}
       onClose={onClose}
-      title="用户评价"
-      accessibilityLabel="用户评价正文"
+      title={t("review.dialogTitle")}
+      accessibilityLabel={t("review.dialogLabel")}
     >
       {query.isLoading ? (
         <View className="items-center gap-3 py-8">
           <Spinner size="md" />
-          <Muted type="body-sm">抓取评价…</Muted>
+          <Muted type="body-sm">{t("review.loading")}</Muted>
         </View>
       ) : null}
 
       {query.isError ? (
         <View className="gap-3 py-6">
           <Muted type="body-sm" className="text-center">
-            读取失败：
-            {query.error instanceof Error ? query.error.message : "未知错误"}
+            {t("review.loadFailed", {
+              message:
+                query.error instanceof Error ? query.error.message : t("common.unknownError"),
+            })}
           </Muted>
           <Pressable
             onPress={() => void query.refetch()}
@@ -74,7 +78,7 @@ export function ReviewDialog({ reviewId, onClose }: ReviewDialogProps): JSX.Elem
             accessibilityRole="button"
           >
             <Muted type="body-sm" className="text-link">
-              重试
+              {t("common.retry")}
             </Muted>
           </Pressable>
         </View>
@@ -82,7 +86,7 @@ export function ReviewDialog({ reviewId, onClose }: ReviewDialogProps): JSX.Elem
 
       {!query.isLoading && !query.isError && !review ? (
         <Muted type="body-sm" className="py-6 text-center">
-          没有读到这条评价（VNDB 可能改版导致解析失败）
+          {t("review.notFound")}
         </Muted>
       ) : null}
 
@@ -94,7 +98,7 @@ export function ReviewDialog({ reviewId, onClose }: ReviewDialogProps): JSX.Elem
               onPress={() => goVn(review.vnId as string)}
               className="self-start active:opacity-60"
               accessibilityRole="button"
-              accessibilityLabel={`打开作品详情：${review.title}`}
+              accessibilityLabel={t("review.openVn", { title: review.title })}
             >
               <Muted type="h6" className="text-link">
                 {review.title}
@@ -111,7 +115,9 @@ export function ReviewDialog({ reviewId, onClose }: ReviewDialogProps): JSX.Elem
                 onPress={review.authorId ? () => goUser(review.authorId as string) : undefined}
                 className={review.authorId ? "active:opacity-60" : ""}
                 accessibilityRole={review.authorId ? "button" : "text"}
-                accessibilityLabel={review.authorId ? `打开用户页：${review.author}` : undefined}
+                accessibilityLabel={
+                  review.authorId ? t("review.openUser", { author: review.author }) : undefined
+                }
               >
                 <Muted type="body-sm" className={review.authorId ? "text-link" : ""}>
                   {review.author}

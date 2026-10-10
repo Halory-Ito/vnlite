@@ -9,6 +9,7 @@
 import type { SegmentedOption } from "@/components/segmented-control";
 import { isValidDate } from "@/features/ulist/entry-logic";
 import type { HistoryType } from "@/lib/db/dao/history";
+import type { TranslationKey } from "@/lib/i18n/translate";
 
 /** 展示档位 */
 export type HistoryTab = "vn" | "people" | "user" | "producer";
@@ -21,13 +22,23 @@ export const HISTORY_TAB_TYPES: Record<HistoryTab, HistoryType[]> = {
   producer: ["producer"],
 };
 
-/** 分段控件的选项（顺序即展示顺序） */
-export const HISTORY_TAB_OPTIONS: SegmentedOption<HistoryTab>[] = [
-  { value: "vn", label: "作品" },
-  { value: "people", label: "人员" },
-  { value: "user", label: "用户" },
-  { value: "producer", label: "厂商" },
+/** 分段控件的选项（顺序即展示顺序；**存翻译键**，渲染时用 `historyTabOptions`） */
+export const HISTORY_TAB_OPTIONS: readonly { value: HistoryTab; labelKey: TranslationKey }[] = [
+  { value: "vn", labelKey: "history.tabVn" },
+  { value: "people", labelKey: "history.tabPeople" },
+  { value: "user", labelKey: "history.tabUser" },
+  { value: "producer", labelKey: "history.tabProducer" },
 ];
+
+/** 渲染期把档位翻成带文案的选项（分段控件与清空弹窗共用） */
+export function historyTabOptions(
+  t: (key: TranslationKey) => string
+): SegmentedOption<HistoryTab>[] {
+  return HISTORY_TAB_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+  }));
+}
 
 /** 存储类型 → 详情页路由（`as const` 让 expo-router 的类型推断能通过） */
 export const HISTORY_TYPE_ROUTE = {
@@ -74,38 +85,50 @@ export function digitsToIso(digits: string): string {
  * 单个日期（8 位数字）的校验错误；合法 / 未填时为 null。
  *
  * 未填满 8 位时提示「请填满 8 位」而不是格式错误 —— OTP 输入本来就在逐位敲，
- * 中途报「格式不对」没有意义。
+ * 中途报「格式不对」没有意义。返回翻译键，由调用方翻成文案。
  */
-export function dateDigitsFieldError(digits: string): string | null {
+export function dateDigitsFieldError(digits: string): TranslationKey | null {
   if (digits === "") return null;
-  if (digits.length < 8) return "请填满 8 位";
-  return isValidDate(digitsToIso(digits)) ? null : "日期无效";
+  if (digits.length < 8) return "history.dateIncomplete";
+  return isValidDate(digitsToIso(digits)) ? null : "history.dateInvalid";
 }
 
-/** 开始 / 结束两个日期（均为 8 位数字）的校验错误；合法时为 null */
+/** 开始 / 结束两个日期（均为 8 位数字）的校验错误（翻译键）；合法时为 null */
 export function dateDigitsRangeErrors(
   startDigits: string,
   endDigits: string
-): { start: string | null; end: string | null } {
+): { start: TranslationKey | null; end: TranslationKey | null } {
   const startError = dateDigitsFieldError(startDigits);
   const endError = dateDigitsFieldError(endDigits);
   if (startError || endError) return { start: startError, end: endError };
 
   const start = digitsToIso(startDigits);
   const end = digitsToIso(endDigits);
-  if (start && end && end < start) return { start: null, end: "结束日期早于开始日期" };
+  if (start && end && end < start) return { start: null, end: "history.dateRangeOrder" };
   return { start: null, end: null };
 }
 
 /** 快捷时间段 */
 export type HistoryPreset = "all" | "today" | "week" | "month";
 
-export const HISTORY_PRESET_OPTIONS: SegmentedOption<HistoryPreset>[] = [
-  { value: "all", label: "全部" },
-  { value: "today", label: "今天" },
-  { value: "week", label: "近 7 天" },
-  { value: "month", label: "近 30 天" },
-];
+/** 快捷时间段的选项（**存翻译键**，渲染时用 `historyPresetOptions`） */
+export const HISTORY_PRESET_OPTIONS: readonly { value: HistoryPreset; labelKey: TranslationKey }[] =
+  [
+    { value: "all", labelKey: "common.all" },
+    { value: "today", labelKey: "history.presetToday" },
+    { value: "week", labelKey: "history.presetWeek" },
+    { value: "month", labelKey: "history.presetMonth" },
+  ];
+
+/** 渲染期把快捷时间段翻成带文案的选项 */
+export function historyPresetOptions(
+  t: (key: TranslationKey) => string
+): SegmentedOption<HistoryPreset>[] {
+  return HISTORY_PRESET_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+  }));
+}
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 const isoOf = (d: Date): string =>

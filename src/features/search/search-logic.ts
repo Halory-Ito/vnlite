@@ -3,16 +3,20 @@
  *
  * 一个输入框、四种「搜什么」：作品（默认）/ 制作人员(staff) / 用户 / 制作者(producer)。
  * 文案与判定函数都放这里（不依赖 React），冒烟脚本可以直接测。
- * 分段控件上用短名「作品 / 人员 / 用户 / 厂商」（见下面 `SCOPE_LABEL` 的说明）。
+ * 分段控件上用短名「作品 / 人员 / 用户 / 厂商」（见下面 `SCOPE_LABEL_KEY` 的说明）。
  *
  * ⚠️ **「用户」这一档的语义和其它三档不同**：Kana 的 `GET /user` 没有模糊搜索，
  * 只认完整用户名（不区分大小写）或 `u123` 形式的 id（实测 `?q=yor` 查不到
  * `Yorhel`）。所以这一档最多一条结果，且必须把限制写在 UI 上，
  * 否则用户会以为「搜不到人」。
+ *
+ * ⚠️ 模块级常量只存 `TranslationKey`（语言可切换，不能存死文案）；
+ * 纯函数里的展示文案用全局 `t`。
  */
 
-import { PRODUCER_TYPE_LABEL } from "@/lib/api/enums";
+import { t, type TranslationKey } from "@/lib/i18n/translate";
 import type { Producer, Staff } from "@/lib/api/types";
+import { producerTypeLabel } from "@/utils/format";
 
 /** 搜索页支持的范围，顺序即分段控件里从左到右的顺序 */
 export const SEARCH_SCOPES = ["vn", "staff", "user", "producer"] as const;
@@ -24,38 +28,38 @@ export type SearchScope = (typeof SEARCH_SCOPES)[number];
  * ⚠️ 「制作人员」(staff) 与「制作者」(producer) 只差一个字，四档并排时用户
  * 分不清，所以控件上用短名「人员 / 厂商」，完整说法放在 placeholder 与空态提示里。
  */
-export const SCOPE_LABEL: Record<SearchScope, string> = {
-  vn: "作品",
-  staff: "人员",
-  user: "用户",
-  producer: "厂商",
+export const SCOPE_LABEL_KEY: Record<SearchScope, TranslationKey> = {
+  vn: "search.scope.vn",
+  staff: "search.scope.staff",
+  user: "search.scope.user",
+  producer: "search.scope.producer",
 };
 
 /** 完整的集合名：空态文案（「没有与 x 匹配的制作者」）与行长数据用 */
-export const SCOPE_NOUN: Record<SearchScope, string> = {
-  vn: "作品",
-  staff: "制作人员",
-  user: "用户",
-  producer: "制作者",
+export const SCOPE_NOUN_KEY: Record<SearchScope, TranslationKey> = {
+  vn: "search.noun.vn",
+  staff: "search.noun.staff",
+  user: "search.noun.user",
+  producer: "search.noun.producer",
 };
 
-/** 分段控件的选项（`SegmentedControl` 直接吃这个形状） */
-export const SCOPE_OPTIONS: { value: SearchScope; label: string }[] = SEARCH_SCOPES.map(
+/** 分段控件的选项（渲染时 `t(labelKey)` 翻成档位名） */
+export const SCOPE_OPTIONS: { value: SearchScope; labelKey: TranslationKey }[] = SEARCH_SCOPES.map(
   (value) => ({
     value,
-    label: SCOPE_LABEL[value],
+    labelKey: SCOPE_LABEL_KEY[value],
   })
 );
 
 /**
- * 输入框的 placeholder。
+ * 输入框的 placeholder（复用通用的「搜索」文案）。
  *
  * ⚠️ 刻意**只有一句通用文案**，不给每一档配「怎么搜」的提示（Master 要求移除
  * 每个搜索条目的 hint）：档位名已经写在分段控件上了；而「用户只能精确匹配」
  * 这种限制属于**搜不到时**才需要知道的事，写在未命中的空态里更合适
  * （见 `userMissDescription`）。
  */
-export const SEARCH_PLACEHOLDER = "搜索";
+export const SEARCH_PLACEHOLDER_KEY: TranslationKey = "common.search";
 
 /**
  * 结果列表顶部的标题。
@@ -64,7 +68,12 @@ export const SEARCH_PLACEHOLDER = "搜索";
  * 制作人员」这种别扭的句子）：当前在搜什么由上面的分段控件与行内容表达。
  */
 export function resultHeadline(keyword: string): string {
-  return `搜索「${keyword}」的结果`;
+  return t("search.resultsHeadline", { keyword });
+}
+
+/** 空态描述：「没有与「x」匹配的{完整集合名}」 */
+export function emptyDescription(keyword: string, scope: SearchScope): string {
+  return t("search.emptyDescription", { keyword, noun: t(SCOPE_NOUN_KEY[scope]) });
 }
 
 /** `/user` 把 `u123` 形式的串按 id 处理，不会当用户名比 */
@@ -75,8 +84,8 @@ export function looksLikeUserId(query: string): boolean {
 /** 用户档查不到时的说明：id 形式与用户名形式给不同的文案 */
 export function userMissDescription(query: string): string {
   return looksLikeUserId(query)
-    ? `没有这个用户 ID（${query.trim()}）`
-    : "要搜完整用户名（如 Yorhel）或用户 ID（如 u2）—— 用户接口不支持模糊搜索";
+    ? t("search.userMissId", { id: query.trim() })
+    : t("search.userMissHint");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -145,6 +154,6 @@ export function toProducerEntries(pages: { results: Producer[] }[] | undefined):
     id: producer.id,
     title: producer.name,
     original: producer.original ?? null,
-    meta: `${PRODUCER_TYPE_LABEL[producer.type ?? "in"]} · ${producer.id}`,
+    meta: `${producerTypeLabel(producer.type ?? "in")} · ${producer.id}`,
   }));
 }

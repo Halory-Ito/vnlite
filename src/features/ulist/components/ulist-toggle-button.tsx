@@ -11,11 +11,14 @@
 
 import { useToast, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
-import { Alert, Pressable } from "react-native";
+import { useState } from "react";
+import { Pressable } from "react-native";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Icon } from "@/components/icon";
 import { Muted } from "@/components/typo";
 import { usePermission } from "@/hooks/use-session";
+import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 
 import { useUlistItem, useUlistMutations } from "../hooks";
@@ -24,9 +27,11 @@ export function UlistToggleButton({ vnId }: { vnId: string }): JSX.Element | nul
   const canWrite = usePermission("listwrite");
   const item = useUlistItem(vnId, canWrite);
   const { updateEntry, removeEntry } = useUlistMutations(vnId);
+  const { t } = useTranslation();
   const { toast } = useToast();
   const accent = useThemeColor("accent");
   const danger = useThemeColor("danger");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // 游客 / 只有 listread 的 token：详情页保持只读，不出现这个按钮
   if (!canWrite) return null;
@@ -42,43 +47,53 @@ export function UlistToggleButton({ vnId }: { vnId: string }): JSX.Element | nul
     updateEntry.mutate(
       {},
       {
-        onSuccess: () => toast.show("已加入清单"),
-        onError: (error) => reportError(error, "加入失败，请重试"),
+        onSuccess: () => toast.show(t("ulist.added")),
+        onError: (error) => reportError(error, t("ulist.addFailed")),
       }
     );
   };
 
   const remove = (): void => {
     removeEntry.mutate(undefined, {
-      onSuccess: () => toast.show("已移出清单"),
-      onError: (error) => reportError(error, "移出失败，请重试"),
+      onSuccess: () => toast.show(t("ulist.removed")),
+      onError: (error) => reportError(error, t("ulist.removeFailed")),
     });
   };
 
-  const confirmRemove = (): void => {
-    Alert.alert("移出清单", "会同时删除该作品的全部发行版持有记录，且不可撤销。", [
-      { text: "取消", style: "cancel" },
-      { text: "移出", style: "destructive", onPress: remove },
-    ]);
-  };
+  const confirmRemove = (): void => setConfirmOpen(true);
 
   return (
-    <Pressable
-      onPress={inList ? confirmRemove : add}
-      disabled={busy}
-      className={`flex-row items-center gap-1 rounded-full border px-2.5 py-1 ${
-        busy ? "opacity-50" : "active:opacity-70"
-      } ${inList ? "border-border" : "border-accent"}`}
-      hitSlop={6}
-      accessibilityRole="button"
-      accessibilityLabel={inList ? "移出清单" : "加入清单"}
-      accessibilityState={{ disabled: busy }}
-    >
-      {/* 图标只能吃具体色值（不吃 className），所以走主题 accent / danger */}
-      <Icon name={inList ? "trashBin" : "plus"} size={14} color={inList ? danger : accent} />
-      <Muted type="body-xs" className={inList ? "text-danger" : "text-accent"}>
-        {inList ? "移除" : "加入清单"}
-      </Muted>
-    </Pressable>
+    <>
+      <Pressable
+        onPress={inList ? confirmRemove : add}
+        disabled={busy}
+        className={`flex-row items-center gap-1 rounded-full border px-2.5 py-1 ${
+          busy ? "opacity-50" : "active:opacity-70"
+        } ${inList ? "border-border" : "border-accent"}`}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={inList ? t("ulist.removeFromList") : t("ulist.addToList")}
+        accessibilityState={{ disabled: busy }}
+      >
+        {/* 图标只能吃具体色值（不吃 className），所以走主题 accent / danger */}
+        <Icon name={inList ? "trashBin" : "plus"} size={14} color={inList ? danger : accent} />
+        <Muted type="body-xs" className={inList ? "text-danger" : "text-accent"}>
+          {inList ? t("ulist.remove") : t("ulist.addToList")}
+        </Muted>
+      </Pressable>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title={t("ulist.removeFromList")}
+        description={t("ulist.removeConfirmDescription")}
+        confirmLabel={t("ulist.removeConfirm")}
+        isPending={removeEntry.isPending}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          remove();
+        }}
+        onClose={() => setConfirmOpen(false)}
+      />
+    </>
   );
 }

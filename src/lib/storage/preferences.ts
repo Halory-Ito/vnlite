@@ -8,6 +8,7 @@
  */
 
 import { kv } from "./key-value";
+import type { Language } from "@/lib/i18n/translate";
 import { BACKGROUND_BLUR_RANGE, DEFAULT_BACKGROUND_OPACITY } from "@/theme/background";
 
 /** NSFW 内容展示档位（Q6） */
@@ -74,15 +75,6 @@ export const CARD_FIELD = [
 
 export type CardField = (typeof CARD_FIELD)[number];
 
-export const CARD_FIELD_LABEL: Record<CardField, string> = {
-  rating: "评分",
-  released: "发售日期",
-  olang: "原语言",
-  length: "时长",
-  platforms: "平台",
-  devstatus: "开发状态",
-};
-
 /**
  * 作品列表的两种视图。
  *
@@ -94,6 +86,11 @@ export type VnViewMode = "grid" | "list";
 export interface Preferences {
   /** NSFW 图片处理，默认 blur */
   nsfwMode: NsfwMode;
+  /**
+   * 界面语言：`system` 跟随设备语言，其余为强制指定。
+   * 目前支持简体中文与 English 两档（见 `lib/i18n`）。
+   */
+  language: Language;
   /**
    * 作品列表的视图模式（清单 Tab / 制作者详情的「作品」页签共用）。
    * `grid` = 纯封面网格（默认），`list` = 带元信息的行。
@@ -140,6 +137,7 @@ export interface Preferences {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   nsfwMode: "blur",
+  language: "system",
   vnViewMode: "grid",
   pageSize: 25,
   browseSort: { field: "votecount", reverse: true },
@@ -231,6 +229,9 @@ export function migratePreferences(stored: Record<string, unknown>): Preferences
 
   // 剧透保护是布尔开关：手改过存储时可能存成 "true" / 1 之类，只认严格 true
   next.spoilerShield = next.spoilerShield === true;
+
+  // 界面语言只认三档，脏值 / 老数据回「跟随系统」
+  next.language = next.language === "zh" || next.language === "en" ? next.language : "system";
 
   delete (next as unknown as Record<string, unknown>).backgroundDim;
   return next;

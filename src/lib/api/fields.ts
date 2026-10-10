@@ -411,3 +411,15 @@ export const ULIST_TAG_FIELDS = [
   "id",
   "vn.tags.id",
 ] as const satisfies readonly FieldSpec<UListItem>[];
+
+/**
+ * 记录统计 · 游玩时长排名 / 类型时长分布用。
+ *
+ * 只取作品名与类型标签 id（类型靠本地固定清单比对，见 `stats/play-stats-logic`）。
+ * 入参是本地游玩记录里去重后的 vnId —— 数量可控，一次（或分块几次）就能取回。
+ */
+export const VN_PLAY_INFO_FIELDS = [
+  "id",
+  "title",
+  "tags.id",
+] as const satisfies readonly FieldSpec<VnSummary>[];

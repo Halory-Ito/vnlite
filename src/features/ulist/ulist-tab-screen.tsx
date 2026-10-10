@@ -24,6 +24,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { ViewModeButton } from "@/components/view-mode-button";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useSession } from "@/hooks/use-session";
+import { useTranslation } from "@/hooks/use-translation";
 import { setPreference } from "@/lib/storage/preferences";
 
 import { UlistItems } from "./components/ulist-items";
@@ -32,21 +33,23 @@ import { useUlistInfinite, useUlistLabels } from "./hooks";
 import { filterByLabel } from "./list-filter";
 
 export function UlistTabScreen(): JSX.Element {
+  const { t } = useTranslation();
   const session = useSession();
-  if (session.status === "loading") return <LoadingState label="加载账号…" />;
+  if (session.status === "loading") return <LoadingState label={t("ulist.loadingAccount")} />;
   if (session.status !== "authenticated") return <GuestState />;
   return <UlistContent />;
 }
 
 function GuestState(): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   return (
     <EmptyState
-      title="登录后启用清单"
+      title={t("ulist.guestTitle")}
       description=""
       action={
         <Button size="sm" onPress={() => router.push("/settings/account")}>
-          <Button.Label>去登录</Button.Label>
+          <Button.Label>{t("ulist.goLogin")}</Button.Label>
         </Button>
       }
     />
@@ -55,6 +58,7 @@ function GuestState(): JSX.Element {
 
 function UlistContent(): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const viewMode = usePreferences().vnViewMode;
   const [labelFilter, setLabelFilter] = useState<number | null>(null);
   // ⚠️ 不传 labelId：标签筛选是纯客户端行为，切标签不会换 queryKey
@@ -72,7 +76,7 @@ function UlistContent(): JSX.Element {
     if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
   };
 
-  if (list.isLoading) return <LoadingState label="从 VNDB 拉取清单…" />;
+  if (list.isLoading) return <LoadingState label={t("ulist.loadingList")} />;
   if (list.isError) return <ErrorState error={list.error} onRetry={refresh} />;
 
   return (
@@ -98,11 +102,9 @@ function UlistContent(): JSX.Element {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         >
           <EmptyState
-            title={labelFilter == null ? "清单是空的" : "该标签下没有作品"}
+            title={labelFilter == null ? t("ulist.emptyTitle") : t("ulist.emptyLabelTitle")}
             description={
-              labelFilter == null
-                ? "下拉刷新可从 VNDB 重新获取；也可以先去 vndb.org 网站上收藏作品"
-                : "下拉刷新可从 VNDB 重新获取"
+              labelFilter == null ? t("ulist.emptyDescription") : t("ulist.emptyLabelDescription")
             }
             action={
               // 还没加载完时，「没有」只是「暂时没加载到」——给个继续加载的出口
@@ -161,9 +163,10 @@ function LoadMoreButton({
   loading: boolean;
   onPress: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <Button size="sm" variant="ghost" onPress={onPress} isDisabled={loading}>
-      <Button.Label>{loading ? "加载中…" : "加载更多"}</Button.Label>
+      <Button.Label>{loading ? t("common.loading") : t("ulist.loadMore")}</Button.Label>
     </Button>
   );
 }

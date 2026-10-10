@@ -171,6 +171,9 @@
         走 **RN 原生 `Modal`** 而不是 HeroUI `Dialog.Portal`
         （PortalHost 那个坑见 `features/browse/components/panel.tsx` 顶部）；
         遮罩色取主题 `backdrop` token，不写死 `rgba(0,0,0,.5)`
+  - [x] `components/confirm-dialog` —— **危险操作二次确认**统一组件：
+        外壳 `AppDialog` + 内容 HeroUI `Alert`（状态图标 + 标题 + 说明）+ 取消 / 确认按钮；
+        **取代系统 `Alert.alert`**（样式不可控、与主题无关），「记录删除」「移出清单」等一律用它
   - [x] 「即将发售」「最新上架」= **横向可滚动封面墙**（`VnCoverCarousel`），
         只画封面 + 名称，右侧多露一格暗示能滑；点封面进站内作品详情
   - [x] ⚠️ **两档都按「作品」而不是官网的「发行版」**（Master 选定）：发行版没有封面，
@@ -287,6 +290,31 @@
       `/vn` 的 `staff` 嵌套过滤器（新增 `vnWithStaff` + `queryVnsByStaff`）拉取
       该制作人员参与的全部作品（覆盖脚本 / 原画 / 音乐等全部职责），
       作品页签共用 `VnCollection` 支持网格 / 列表双视图（与制作者页签一致）
+- [x] **厂商 LOGO**（Master 要求）：VNDB 无厂商 LOGO（Kana 无 `image`/`logo` 字段，
+      VNDB 网页厂商页 0 个 `<img>`）
+  - [x] ~~IGDB（Twitch）→ Google favicon~~ **已整体替换**（2026-10-10，Master 要求）：
+        改走**鲲 Galgame 会社库** `https://www.kungal.com/galgame/official`（4000+ 家公司
+        的 LOGO）；IGDB 客户端 / 凭据 / 署名全部删除
+  - [x] **构建期静态索引**：该站搜索接口要登录、`/api` 在 robots 里被禁止，公开可抓的
+        只有分页列表页与详情页 —— `bun run sync:kungal`
+        （`scripts/sync-kungal-logos.ts`）把公开页面抓成
+        `features/catalog/kungal-logos.json`（**129 KB**：692 条官网域名 +
+        877 条公司名；4073 家里 882 家有 LOGO，其余是站点本身没上传），
+        运行时零请求只做本地查表；过期重跑脚本即可
+  - [x] `features/catalog/kungal-logo.ts` —— 纯逻辑 `normalizeCompanyName`
+        （构建脚本与运行时共用，保证归一化一致）/ `kungalLogoUrl` / `lookupKungalLogo`
+        （**先官网域名、后 name/original 名称**）+ 懒加载索引的 `resolveKungalLogo`；
+        `components/producer-logo.tsx` 按 producer id 长缓存，接在厂商详情
+        `DetailShell` 的 `cover` 槽
+  - [x] 「关于」页署名改为「厂商 LOGO — 鲲 Galgame」（可点进会社库）；冒烟覆盖
+        归一化 / 图床 URL 拼接 / 域名优先 / 原名兜底
+  - [x] **历史 / 收藏里的厂商条目也补 LOGO**（2026-10-10，Master 要求）：- 新记录：厂商详情页解析出 LOGO 后写入浏览历史与收藏
+        （`useProducerLogoUrl`，同一个 query 与头部 LOGO 共用，域名优先）- 老条目：列表渲染时按名称兜底查索引的 `names` 表
+        （`useKungalNameLogo`；索引懒加载，加载完自动把兜底图标换成 LOGO）
+  - [x] **厂商 LOGO 不做 NSFW 处理**（2026-10-10，Master 要求）：详情页头部的 LOGO
+        本来就是普通 `Image`；历史 / 收藏行给 `EntryListItem` 传 `imageIsSafe`
+        （`CoverImage` 显式按「安全」分级渲染），不再因为缺 `sexual`/`violence`
+        被默认策略当成露骨内容糊住 / 隐藏
 - [x] **VN 详情页签细化**：概览 / 角色 / 制作 / 版本 / **截图 / 关联 / 语录 / 讨论 / 攻略 / 外链**
   - [x] 截图 / 关联作品 / 语录 / 讨论 / 攻略 / 外部链接从概览里拆成独立页签
         （它们都是列表型内容，混在概览里既把页面拉得极长、又只能挤在窄带里）
@@ -715,7 +743,7 @@
 - [x] VN 详情清单入口（`UlistQuickButton`）：服务端直读，不再有「本地没同步到」的误判
 - [x] **VN 详情页清单操作改版**（Master 要求）：
   - [x] 右上角 `UlistToggleButton`：未加入 → 「加入清单」，已加入 → 「移除」
-        （移除走系统 Alert 二次确认 —— `DELETE /ulist` 会连带删发行版持有记录）
+        （移除走 `ConfirmDialog` 二次确认 —— `DELETE /ulist` 会连带删发行版持有记录）
   - [x] 头部原来的 `UlistQuickButton` 改成 `UlistEditEntry`：只在已加入时渲染，
         只显示「我的打分 N · 编辑」/「打分 / 标签 / 备注」并进编辑页，
         不再重复「已加入 / 加入清单」这个状态
@@ -735,7 +763,7 @@
 
 - [x] ~~`features/stats/RankScreen` —— 榜单~~ **已移除**（2026-09-30，Master 要求）：
       首页常用入口删掉后它没有入口了，`/rank` 路由、页面、`queryKeys.account.ratingRank`
-      一并删除；统计需求由 `/stats` 收藏统计承接
+      一并删除；统计需求由 `/stats` 记录统计承接
 - [x] **收藏统计页 `/stats`（M4 增强，chart-kit 图表页）**
   - [x] 数据：`features/stats/hooks.ts` 翻页拉完整份清单（每页 100，最多 20 页），
         字段集 `ULIST_STATS_FIELDS`（只取年份 / 厂商 / 标签 / 打分，比清单页瘦）
@@ -749,8 +777,38 @@
         走**独立查询**：它慢慢加载，年代 / 标签 / 厂商先出来
   - [x] **卡片标题不带「· 数量」**（Master 明确不喜欢这种形式）—— 同类清理：
         详情页的「标签 / 特性 / 相关作品 / 制作 / 配音」标题也一并去掉数量后缀
-  - [x] 颜色取主题 token（`accent` / `muted`），换主题跟着变；入口在「我的 → 收藏统计」
+  - [x] 颜色取主题 token（`accent` / `muted`），换主题跟着变；入口在「我的 → 记录统计」
   - [x] `components/BackBar` —— 抽出的共用返回栏（统计页与榜单页共用）
+
+### Type 3.4 · 记录统计（加入游玩数据，2026-10-10）
+
+> Master 要求：`收藏统计` 增加**游戏信息统计**并改名为 **`记录统计`**。
+> 页面变成两块：上半是本地 `play_session` 的**游玩统计**（不需要登录），
+> 下半是原有 VNDB 清单的**收藏统计**（需要登录）。未登录时只显示游玩部分 + 登录提示。
+
+- [x] 页面与入口改名为「记录统计」（`/stats` 路由不变，`me-screen` 文案）
+- [x] 数据层
+  - [x] `lib/db/dao/play-session.ts#getAllPlaySessions` —— 全部游玩记录
+  - [x] `queryKeys.playRecords.allSessions` + `useAllPlaySessions`
+  - [x] `lib/api/fields.ts#VN_PLAY_INFO_FIELDS`（`id` / `title` / `tags.id`）+
+        `queryVnsPlayInfo`（按 vnId 分块批量取，供时长排名的作品名与类型分布）
+  - [x] `queryKeys.stats.playedVns` + `usePlayedVnInfo`
+- [x] 聚合纯函数 `features/stats/play-stats-logic.ts`（冒烟已测）
+  - [x] `playtimeByVn` —— 按作品累计时长（降序）
+  - [x] `playtimeByGameType` —— 按类型（ADV / NVL / RPG…）累计时长，复用固定类型标签清单
+  - [x] `monthlyPlayBuckets` —— 近 12 个月每月时长（含当月、空月补 0）
+  - [x] `recentWeekBuckets` —— 近 8 周（**跨月滚动窗口**，周一为一周起点）时长与次数；
+        逐周按日历回退，避开夏令时漂移
+- [x] 展示 `features/stats/play-stats-section.tsx`
+  - [x] 游玩总览三列：**总游玩时长 / 游玩次数 / 游玩作品数**
+  - [x] **游玩时长排名**（Top 8 横条）、**游戏类型时长分布**（横条，避免饼图里塞毫秒）
+  - [x] **每月游玩时长**（近 12 个月竖条）、**每周游玩统计**（近 8 周竖条）；
+        当前月 / 本周高亮
+- [x] **抽出共用图表外壳** `features/stats/components/charts.tsx`：
+      `Section` / `PieSection`（chart-kit 饼图）/ `VerticalBars`（手绘竖条）/
+      `HorizontalBars`（手绘横条）；收藏统计的厂商 Top 与游玩排名共用横条
+- [x] 冒烟新增 4 条：`playtimeByVn` / `playtimeByGameType` /
+      `monthlyPlayBuckets` / `recentWeekBuckets` 的聚合与边界
 
 ---
 
@@ -788,6 +846,17 @@
 - [x] 首页移除二级内容：调试读数挪进「外观」页，存储说明 / 示例作品链接删掉
 - [x] 清空缓存后弹 toast 反馈（HeroUI `useToast`，原来点完没反应）
 - [x] 关于页版本号取 `app.json`（不再手写）
+- [x] **关于页：开发者信息 + 检查更新**（Master 要求）
+  - [x] 开发者信息集中在 `constants/config.ts#DEVELOPER_INFO`（开发者 / GitHub / 仓库 / 反馈 / 攻略仓库）
+  - [x] 开发者 / 开源仓库 / 问题反馈 / 攻略仓库均可点，用 `Linking.openURL` 打开
+        （`SettingsItem` 新增 `trailingIcon`：外链行用 `arrowUpRightFromSquare`，
+        不再用暗示「应用内下一级」的右箭头）
+  - [x] **检查更新**（`features/settings/components/update-check-item.tsx`）：点按查最新版本
+    - [x] 数据源三级回退：GitHub 最新 Release → GitHub Tags → jsDelivr 上的 `package.json`
+          （GitHub 直连不稳时的国内镜像）
+    - [x] 版本比对为纯函数 `update-check.ts#parseVersion` / `isNewerVersion`（冒烟覆盖）
+    - [x] 有更新 → 行上显示「发现 vX.Y.Z」并弹 `AppDialog` 引导去发布页；再点直接打开
+    - [x] 已是最新 / 失败 → 行上给结果 + `useToast` 轻提示
 - [ ] 设置项搜索 / 分组标题（条目变多之后再说）
 
 ### Type 4.5 · 构建与分发
@@ -972,7 +1041,7 @@
   - [x] 用「本段起点 `segmentStartedAt` + 已累计 `accumulatedMs`」表达耗时，
         后台 / 掉帧 / 卡顿都不掉时间；另存 `sessionStartedAt` 作为会话落记录的起点
   - [x] 全局**同时只有一个**计时器；动作 start / pause / resume / togglePause / stop
-  - [x] 状态带作品名与封面（`coverUrl`，通知大图用）；
+  - [x] 状态带作品名（`vnTitle`，通知标题用）；
         `stopGameTimer` 返回本次会话成果（起止 + 实际时长）供落库；
         `sanitizeGameTimer` 兜底持久化脏数据
 - [x] `features/game-timer/persistence.ts` —— 计时状态持久化到 AsyncStorage，
@@ -988,8 +1057,9 @@
 
 - [x] VN 详情页新增「开始游戏」按钮（`components/start-game-button.tsx`），
       位于三列概览下方
-  - [x] 全局唯一计时器：空闲 → 开始；本作运行中 → 置灰「计时中」；
-        本作暂停 → 「继续游戏」；其他作品计时中 → 置灰提示
+  - [x] 全局唯一计时器：空闲 → 「开始游戏」；**本作计时中 → 同一行「暂停 / 结束」；
+        本作暂停 → 同一行「继续 / 结束」**；其他作品计时中 → 置灰提示
+        （「结束」走共享 `finishGameTimer`，落游玩记录）
 
 ### Type 6.3 · 全局浮层
 
@@ -1005,45 +1075,169 @@
 ### Type 6.5 · 游玩记录（详情页「记录」页签）
 
 - [x] SQLite 迁移 v5：`play_session` 表（vn_id / started_at / ended_at / duration_ms + `vn_id, started_at DESC` 索引）
-- [x] `lib/db/dao/play-session.ts` —— insert / getPlaySessions / delete / clear
+- [x] `lib/db/dao/play-session.ts` —— insert / getPlaySessions / **updatePlaySession** /
+      delete / clear
+- [x] `features/play-records/session-time.ts` —— 「设置」弹窗纯逻辑：`toLocalTimestamp` /
+      `dateTimeFieldError` / `sessionRangeError` / `durationBetween` / 日期时间格式化（冒烟覆盖）
 - [x] `features/play-records/play-stats.ts` —— 纯函数：`summarizeSessions`
       （总时长 / 次数 / 平均 / 最长 / 最近）+ `weeksOfMonth` / `weeklyBuckets`
       （按**实际月长**切周：1-7 / 8-14 / … 收月末）+ `monthTotalMs` / `monthSessionCount` /
       `currentWeekIndex` / `currentYearMonth`
 - [x] `features/play-records/format.ts` —— `formatPlayDuration`（`1 小时 24 分`）/
       `formatPlayDurationShort`（统计块 `1.5 h`）/ 日期、`HH:MM` 时间、`YYYY 年 M 月`
-- [x] `features/play-records/hooks.ts` —— `usePlaySessions`（本地查询）
+- [x] `features/play-records/hooks.ts` —— `usePlaySessions`（查询）+
+      `useUpdatePlaySession` / `useDeletePlaySession`（写后失效）
 - [x] `features/play-records/components/play-records-tab.tsx` —— 「图表 / 列表」两视图
       （`SegmentedControl` 切换）
   - [x] 图表视图：四块统计（总时长 / 次数 / 平均每次 / 最长一次）+ 按月按周的
         **手绘竖条**（Master 嫌 chart-kit 丑后重做）：读数在柱顶、日期范围在柱底、
         今天所在周满色高亮、其余周半透明；顶部圆钮切换年月 + 本月合计
         （配色 / 圆角 / 间距全走主题 token 与 uniwind，与「厂商 Top」横条同一思路）
-  - [x] 列表视图：每次游玩的日期、起止时间与时长
+  - [x] 列表视图：每次游玩的日期、起止时间与时长；每条是**卡片**
+        （左右留白 `px-4` + `rounded-lg bg-default`，**实色不透明**，背景图不透出）；
+        文字 `selectable={false}`（**不允许长按复制**）
+  - [x] **列表项左滑操作**（Master 要求）：`ReanimatedSwipeable` 露出「设置 / 删除」
+        两个 icon button（`containerStyle` 圆角裁切）—— 设置打开 `session-edit-dialog`
+        （改**开始 / 结束时间**，时长自动 = 两者之差）；删除弹 `ConfirmDialog` 二次确认后移除
 - [x] VN 详情页页签表新增「记录」
 
 ### Type 6.6 · 系统通知（锁屏可见）
 
-- [x] 引入 `@notifee/react-native`（原生模块，需 EAS 开发构建；Expo Go 不支持）
-- [x] `features/game-timer/notification.ts` —— 常驻通知：封面大图 + 游戏名称 +
-      计时（`HH:MM:SS`）+「暂停 / 继续」「结束」按钮；`visibility: PUBLIC` 锁屏可见；
-      计时中每秒刷新，暂停 / 空闲时停刷新；按钮走 store 动作
+- [x] 引入 `expo-notifications`（Expo 官方组件库；本地通知 Expo Go 可用）
+      —— 曾用 `@notifee/react-native`，按「优先用 expo 组件库」换成官方库
+- [x] `features/game-timer/notification.ts` —— 常驻通知：游戏名称 + 计时（`HH:MM:SS`）+「暂停 / 继续」「结束」按钮；走分类（`setNotificationCategoryAsync`）；
+      `sticky: true` 不可滑删、频道 `lockscreenVisibility: PUBLIC` 锁屏可见；
+      计时中每秒刷新（固定 `identifier` 就地更新），暂停 / 空闲时停刷新；
+      按钮走 store 动作
+  - [x] 取舍：expo-notifications 无大图字段，**通知里不再有作品封面**（此前 Notifee 有）
 - [x] `features/game-timer/actions.ts` —— 共享 `finishGameTimer`（停计时 → 落记录 → 失效），
       浮层与通知按钮共用
 
-### Type 6.7 · 系统悬浮球（跨 App 悬浮）
+### Type 6.7 · 系统悬浮球（已移除）
 
-- [x] 引入 `react-native-android-overlay`（原生模块，需 EAS 开发构建；Android only）
-- [x] `features/game-timer/overlay-window.ts` —— 计时开始即显示、结束即收起；
-      动态 `import` + try/catch，未链接（Expo Go / iOS）时静默降级
-- [x] `features/game-timer/components/overlay-window-view.tsx` —— 悬浮球里渲染的组件：
-      独立 AppRegistry 根、不依赖 HeroUI/Theme Provider，配色自取主题 token
-- [x] 自定义入口 `index.js`：先引 `expo-router/entry`，再 `AppRegistry.registerComponent`
-      注册「GameTimerOverlayWindow」；`package.json` 的 `main` 指向它
+- [x] ~~`expo-draw-over-apps` 跨 App 悬浮球~~ —— **已移除**（Master 决定：通知栏已够用，
+      不再要系统悬浮窗；App 内的可拖动浮层 `components/game-timer-overlay.tsx` 保留）
+  - 移除内容：`expo-draw-over-apps` 依赖、`overlay-window.ts`、
+    `components/game-timer-bubble.tsx`，以及根布局里的初始化
+  - 副作用：通知不再有「悬浮球前台服务」保活，退后台 / 被杀后不再每秒刷新；
+    但耗时按时间戳计算，回前台会立刻校准（不丢时间）
 
 ### Type 6.4 · 质量
 
 - [x] 冒烟测试：`formatGameDuration` 的时分秒 / 小时不封顶；
       start / pause / resume / stop 状态流转、暂停冻结、`stopGameTimer` 成果、
       `sanitizeGameTimer` 脏数据兜底；`play_session` DAO 的写 / 查 / 删（验证 v5 迁移）；
-      `formatPlayDuration` / `summarizeSessions` / `weeklyBuckets` / `monthTotalMs` 的纯逻辑
+      `formatPlayDuration` / `summarizeSessions` / `weeklyBuckets` / `monthTotalMs` /
+      `session-time`（时间解析 / 校验 / 时长）的纯逻辑
+
+---
+
+## Module 7 · 收藏
+
+> **收藏只落本地库**：VNDB 的 Kana API 没有通用收藏端点（`/ulist` 只覆盖作品），
+> 角色 / 制作人员 / 用户 / 厂商无处可存，所以四类收藏与浏览历史同构、纯本地。
+
+### Type 7.1 · 数据层
+
+- [x] SQLite 迁移 v6：`favorite` 表（type / entry_id / title / subtitle / image_url /
+      favorited_at，唯一索引 `(type, entry_id)` + `favorited_at DESC` 索引）
+- [x] `lib/db/dao/favorite.ts` —— addFavorite / removeFavorite / isFavorite /
+      getFavoritesPage / getFavoriteCount / clearFavorites
+  - [x] 查询按**类型集合**工作（与历史一致）：「人员」档 = 角色 + 制作人员
+  - [x] **重复收藏保留首次时间**（`favorited_at` 不被覆盖），只刷新元数据；
+        列表按 `favorited_at DESC, id DESC` 排序（同毫秒也稳定）
+- [x] `features/favorite/hooks.ts` —— React Query：`useFavoritesInfinite` /
+      `useToggleFavorite`（读状态 + 切换）/ `useClearFavorites` / `useRemoveFavorite`
+- [x] `queryKeys.favorite`（list / state）
+
+### Type 7.2 · 详情页收藏开关
+
+- [x] `features/favorite/components/favorite-button.tsx` —— 星标开关
+      （未收藏 = 描边 `star` + 主题 muted，已收藏 = 实心 `starFill` + 主题 accent），
+      支持只显示图标 / 带「收藏·已收藏」文字两种形态；切换后 `useToast` 反馈
+- [x] 接入 **VN / 角色 / 制作人员 / 制作者 / 用户** 五个详情页顶栏
+  - [x] `catalog` 的 `DetailShell` 新增顶栏 `trailing` 槽位（角色 / 制作者 / staff 共用）
+  - [x] 用户详情页复用 `BackBar` 的 `trailing`
+
+### Type 7.3 · 收藏页面
+
+- [x] 路由 `app/favorites.tsx` + 「我的」入口（`starFill` 图标，排在「收藏统计」后）
+- [x] `features/favorite/favorite-screen.tsx` —— 顶部 `SegmentedControl` 四档
+      （作品 / 人员 / 用户 / 厂商）+ 作品档**网格 / 列表**切换（存 `preferences.vnViewMode`）+ 清空二次确认（弹窗内勾选分类，默认全选）
+- [x] `favorite-item` / `favorite-list` —— 复用抽取的 `components/entry-list-item`
+- [x] **抽取共用组件**（顺手消除历史与收藏的重复）：
+  - [x] `components/entry-list-item` —— 「封面 / 头像 + 标题 + 副标题 + 时间」行，
+        历史行与收藏行共用（兜底图标 / 时间语义各自传参）
+  - [x] `components/clear-categories-dialog` —— 分类勾选式清空确认框（泛型选项），
+        浏览历史与收藏共用；旧的 `features/history/components/clear-dialog.tsx` 删除
+
+### Type 7.4 · 质量
+
+- [x] 冒烟：favorite DAO 的增删查、类型集合聚合、**重复收藏保时间 / 只刷元数据**、
+      按类型清空与全量清空（`scripts/smoke-db.ts` 第 8 节）
+
+---
+
+## Module 8 · 国际化（i18n）
+
+> 2026-10-10：Master 要求实现国际化。技术选型（已确认）：
+> **expo-localization + i18n-js**，支持**简体中文 + English** 两档。
+> 采用分批迁移：`- [x]` 是已迁移，`- [ ]` 是尚未迁移的页面。
+
+### Type 8.1 · 基础设施
+
+- [x] 依赖：`expo-localization`（设备语言）+ `i18n-js`（插值 / 回退）
+- [x] `lib/i18n/catalogs/` —— **按语言分目录**：`zh/` 与 `en/` 各含一份
+      `core.ts`（核心命名空间）与各模块文件（`browse.ts` / `vn.ts` / `ulist.ts` …），
+      入口 `zh/index.ts` / `en/index.ts` 聚合导出；`catalog-types.ts` 放 `CatalogOf` 类型工具
+  - [x] `zh/*.ts` 是权威目录；`en/*.ts` 用 `CatalogOf<typeof zhXxx>` 卡住结构
+        （漏键 / 多键都编译报错）
+  - [x] 语言切换入口用 **HeroUI `Select`**（不是分段控件）：`/settings/language`
+- [x] `lib/i18n/translate.ts` —— 纯 JS 运行时（`t` / `setLocale` / `resolveLocale` /
+      `createTranslator`）；`TranslationKey` 由目录派生，`t("...")` 有补全与拼写检查；
+      不 import 原生模块，bun 冒烟可直接跑
+- [x] `lib/i18n/index.ts` —— 启动初始化：读设备语言 + 语言偏好；订阅偏好变化同步全局
+      `locale`（纯函数 / 工具函数里的 `t` 靠它）；在 `_layout` **模块加载时**调用，首帧即对
+- [x] `hooks/use-translation.ts` —— `useTranslation()`：订阅 `language`
+      （`useSyncExternalStore`），切换语言即时重渲染
+- [x] `Preferences.language`（`system` / `zh` / `en`）+ 迁移兜底（脏值回 `system`）
+- [x] 设置页新增 `/settings/language`（跟随系统 / 简体中文 / English）+
+      「我的」入口（`globe` 图标）；`settings/options.ts` 的选项表改为**翻译键**
+
+### Type 8.2 · 核心界面（第一批，已迁移）
+
+- [x] Tab 栏五个标题
+- [x] 通用组件：`BackBar` / `ScreenState` / `ConfirmDialog` / `AppDialog` /
+      `ViewModeButton` / `ClearCategoriesDialog`
+- [x] 「我的」+ 设置四个二级页（外观 / 内容 / 账号 / 关于）+ 背景设置 / 检查更新
+- [x] 首页 + 信息流（`feed-config` 存翻译键；含评价列表 / 评价对话框 /
+      讨论正文的剧透占位）
+- [x] `utils/format` 的通用文案（未知 / 预定 / 相对时间 / 月日）+ 语言枚举表
+- [x] 冒烟：语言偏好迁移、zh/en 键集合一致、插值与语言切换（`smoke:db` 第 4b 节）
+
+### Type 8.3 · 页面迁移（全部完成）
+
+- [x] 浏览 / 搜索（筛选 / 排序 / 卡片显示面板）—— 2026-10-10 完成
+      （`catalogs/zh/browse.ts` + `search.ts`，共 79 键）
+- [x] 清单 Tab 与 `/ulist/[id]` 编辑页（ulist 53 键；校验错误改返回翻译键）
+- [x] VN 详情（11 个页签）与作品列表 / 封面墙
+- [x] 角色 / 制作者 / staff / 标签详情（catalog 模块）
+- [x] 用户详情（资料 / 全部投票 / 投票列）
+- [x] 讨论列表与帖子页（discussion 15 键）
+- [x] 攻略页签（walkthrough 24 键；步骤 labelKey、全局 `t` 混用已统一）
+- [x] 游戏计时按钮 / 悬浮层 / 通知 / 游玩记录页签（timer 14 + records 33 键）
+- [x] 浏览历史 / 我的收藏 / 记录统计（history 26 + favorite 18 + stats 39 键）
+- [x] 浏览历史与收藏保存/清空、统计图表标题与空态
+- [x] `lib/api/enums.ts` 的中文标签表迁进 `catalogs/*/enums.ts`，旧 `*_LABEL` 表删除
+- [x] VNDB 数据里的英文枚举（清单标签、发行版持有状态）保持英文，不翻译
+
+### Type 8.4 · 收尾清扫（2026-10-10）
+
+- [x] `+not-found` 页面、`ThemeTile` 无障碍标签、角色生日格式（月/日）
+- [x] 剩余封面 label（VN 详情 / `VnCollection`）与列表尾部总数
+- [x] `ErrorState` 对非 `ApiError` 一律给通用文案（内部 `Error.message` 不再上屏）；
+      首页随机 / 信息流的错误显示优先用 `ApiError.userMessage`
+- [x] `queryRandomVn` 的兜底错误改走 `misc.randomUnavailable`
+- [x] 首页信息流英文档位改短词 `Reviews / Upcoming / Released`（原名在分段控件里放不下）
+- [x] `bun run check` 全绿：typecheck / lint / format / smoke:api / smoke:theme /
+      smoke:db（60 项，含 zh / en 键集合一致性）

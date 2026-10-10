@@ -26,6 +26,8 @@ import { Accordion, Checkbox, Chip, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import { View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 import { endingMeta } from "../select";
 import type { WalkthroughEnding } from "../types";
 import type { WalkthroughMarkApi } from "../use-marks";
@@ -40,6 +42,7 @@ export interface EndingCardProps {
 }
 
 export function EndingCard({ ending, shield, marks }: EndingCardProps): JSX.Element {
+  const { t } = useTranslation();
   const success = useThemeColor("success");
   const meta = endingMeta(ending.type);
   const achieved = marks.isAchieved(ending.id);
@@ -70,7 +73,7 @@ export function EndingCard({ ending, shield, marks }: EndingCardProps): JSX.Elem
         <View className="flex-1">
           <Accordion.Trigger
             className="flex-col items-stretch gap-1 p-0"
-            accessibilityLabel={`${ending.name}，点按展开步骤`}
+            accessibilityLabel={t("walkthrough.expandEnding", { ending: ending.name })}
           >
             <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
               <SpoilerText
@@ -109,7 +112,9 @@ export function EndingCard({ ending, shield, marks }: EndingCardProps): JSX.Elem
             isSelected={achieved}
             onSelectedChange={() => marks.toggleEnding(ending.id)}
             accessibilityLabel={
-              achieved ? `取消已达成：${ending.name}` : `标记已达成：${ending.name}`
+              achieved
+                ? t("walkthrough.unmarkEnding", { ending: ending.name })
+                : t("walkthrough.markEnding", { ending: ending.name })
             }
           />
           {stepCount > 0 ? <Accordion.Indicator /> : <View className="w-4" />}

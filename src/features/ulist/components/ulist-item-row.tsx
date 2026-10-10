@@ -13,6 +13,7 @@ import { View } from "react-native";
 
 import { Muted } from "@/components/typo";
 import { VnListItem } from "@/features/vn/components/vn-list-item";
+import { useTranslation } from "@/hooks/use-translation";
 import type { UListItem } from "@/lib/api/types";
 
 import { VoteBadge } from "./vote-badge";
@@ -23,6 +24,7 @@ export interface UlistItemRowProps {
 }
 
 export function UlistItemRow({ item, onPress }: UlistItemRowProps): JSX.Element {
+  const { t } = useTranslation();
   /*
    * ⚠️ `/ulist` 返回的 `vn` 子对象**没有 `id`**：它和顶层 `id` 相同，VNDB 会省略
    * （请求了 `vn.id` 也不返回）。而 `VnListItem` 的点击回调给的是 `vn.id` ——
@@ -60,7 +62,7 @@ export function UlistItemRow({ item, onPress }: UlistItemRowProps): JSX.Element 
           ) : null}
           {custom.length > 1 ? (
             <Muted type="body-xs" className="text-[10px]">
-              +{custom.length} labels
+              {t("ulist.moreLabels", { count: custom.length })}
             </Muted>
           ) : null}
         </View>

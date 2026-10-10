@@ -10,11 +10,13 @@ import { Button, useToast } from "heroui-native";
 import type { JSX } from "react";
 
 import { EmptyState } from "@/components/screen-state";
+import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 
 import { useUlistMutations } from "../hooks";
 
 export function NotInList({ vnId }: { vnId: string }): JSX.Element {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { updateEntry } = useUlistMutations(vnId);
 
@@ -22,20 +24,22 @@ export function NotInList({ vnId }: { vnId: string }): JSX.Element {
     updateEntry.mutate(
       {},
       {
-        onSuccess: () => toast.show("已加入清单"),
+        onSuccess: () => toast.show(t("ulist.added")),
         onError: (error) =>
-          toast.show(error instanceof ApiError ? error.userMessage : "加入失败，请重试"),
+          toast.show(error instanceof ApiError ? error.userMessage : t("ulist.addFailed")),
       }
     );
   };
 
   return (
     <EmptyState
-      title="还没有加入清单"
-      description="加入后可以打分、贴标签、记录游玩进度；数据直接写回 VNDB"
+      title={t("ulist.notInListTitle")}
+      description={t("ulist.notInListDescription")}
       action={
         <Button size="sm" onPress={add} isDisabled={updateEntry.isPending}>
-          <Button.Label>{updateEntry.isPending ? "加入中…" : "加入清单"}</Button.Label>
+          <Button.Label>
+            {updateEntry.isPending ? t("ulist.adding") : t("ulist.addToList")}
+          </Button.Label>
         </Button>
       }
     />

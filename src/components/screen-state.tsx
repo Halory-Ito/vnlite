@@ -11,21 +11,24 @@ import { Button, Spinner } from "heroui-native";
 import type { JSX, ReactNode } from "react";
 import { View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 
 import { H4, Muted, Paragraph } from "./typo";
 
 export function LoadingState({
-  label = "加载中…",
+  label,
   className = "py-16",
 }: {
   label?: string;
   className?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <View className={`items-center justify-center gap-3 ${className}`}>
       <Spinner size="md" />
-      <Muted className="text-center">{label}</Muted>
+      <Muted className="text-center">{label ?? t("common.loading")}</Muted>
     </View>
   );
 }
@@ -41,21 +44,18 @@ export function ErrorState({
   onRetry,
   className = "py-16 px-6",
 }: ErrorStateProps): JSX.Element {
+  const { t } = useTranslation();
   const apiError = error instanceof ApiError ? error : null;
-  const message = apiError
-    ? apiError.userMessage
-    : error instanceof Error
-      ? error.message
-      : "出错了";
+  const message = apiError ? apiError.userMessage : t("common.errorFallback");
   const canRetry = apiError ? apiError.isRetryable || apiError.kind === "unknown" : true;
 
   return (
     <View className={`items-center justify-center gap-4 ${className}`}>
-      <H4 className="text-center">出错了</H4>
+      <H4 className="text-center">{t("common.errorTitle")}</H4>
       <Paragraph className="text-center text-muted">{message}</Paragraph>
       {onRetry && canRetry ? (
         <Button size="sm" onPress={onRetry}>
-          <Button.Label>重试</Button.Label>
+          <Button.Label>{t("common.retry")}</Button.Label>
         </Button>
       ) : null}
     </View>

@@ -23,6 +23,7 @@ import { Pressable, View } from "react-native";
 import { Muted } from "@/components/muted";
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useImageGate, useNsfwMode } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 
 /** 宽高比写法：`[宽, 高]`，例如 `[62, 82]` 表示 62:82 */
 export type SizeSpec = number | readonly [number, number];
@@ -64,6 +65,7 @@ export function CoverImage({
   onPress,
   disableToggle = false,
 }: CoverImageProps): JSX.Element {
+  const { t } = useTranslation();
   const gate = useImageGate({ sexual, violence });
   const nsfwMode = useNsfwMode();
   const [revealed, setRevealed] = useState(false);
@@ -79,10 +81,10 @@ export function CoverImage({
     <View
       className={`items-center justify-center bg-default-soft ${roundedClassName}`}
       style={{ width: w, height: h }}
-      accessibilityLabel="暂无封面"
+      accessibilityLabel={t("common.noCover")}
     >
       <Muted type="body-xs" className="text-[10px]">
-        无图
+        {t("common.noImage")}
       </Muted>
     </View>
   );
@@ -120,7 +122,7 @@ export function CoverImage({
       {blurred ? (
         <View className="absolute inset-0 items-center justify-center">
           <Muted type="body-xs" className="text-[10px] opacity-80">
-            双击显示
+            {t("common.doubleTapReveal")}
           </Muted>
         </View>
       ) : null}
@@ -149,13 +151,14 @@ function TogglePressable({
   }, [canReveal, onToggle]);
   // 不需要「双击显示」时（非敏感图 / 关掉了切换）不挂双击，单击立刻生效
   const { onPress: handlePress } = useDoubleTap(canReveal ? toggle : undefined, onPress);
+  const { t } = useTranslation();
 
   return (
     <Pressable
       onPress={handlePress}
       accessibilityRole="imagebutton"
       accessibilityState={{ selected: revealed }}
-      accessibilityHint={canReveal ? "双击可显示或隐藏敏感内容" : undefined}
+      accessibilityHint={canReveal ? t("common.doubleTapRevealHint") : undefined}
     >
       {children}
     </Pressable>

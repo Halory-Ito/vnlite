@@ -19,6 +19,8 @@ import { useThemeColor } from "heroui-native";
 import type { JSX, ReactNode } from "react";
 import { Modal, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 import { Icon } from "./icon";
 import { H5 } from "./typo";
 
@@ -39,6 +41,7 @@ export function AppDialog({
   accessibilityLabel,
   children,
 }: AppDialogProps): JSX.Element {
+  const { t } = useTranslation();
   const backdrop = useThemeColor("backdrop");
   const muted = useThemeColor("muted");
   const { width, height } = useWindowDimensions();
@@ -60,7 +63,7 @@ export function AppDialog({
           style={{ backgroundColor: backdrop }}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="关闭"
+          accessibilityLabel={t("common.close")}
         />
 
         <View
@@ -79,7 +82,7 @@ export function AppDialog({
                 hitSlop={10}
                 className="h-8 w-8 items-center justify-center rounded-full active:opacity-60"
                 accessibilityRole="button"
-                accessibilityLabel="关闭"
+                accessibilityLabel={t("common.close")}
               >
                 <Icon name="xmark" size={16} color={muted} />
               </Pressable>

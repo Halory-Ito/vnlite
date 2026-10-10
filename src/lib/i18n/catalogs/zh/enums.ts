@@ -1,0 +1,120 @@
+/**
+ * VNDB 枚举 → 中文文案。
+ *
+ * 枚举**值**仍然住在 `lib/api/enums.ts`（纯数据），这里只放展示文案。
+ * `utils/format` 的 `platformLabel` / `sexLabel` 等从这里取；页面不要再直接
+ * 引用 `lib/api/enums.ts` 里的 `*_LABEL` 表。
+ *
+ * ⚠️ 数值键（devStatus / voiced / contentLevel）在 JS 对象里是字符串，
+ * 取值时用 `String(n)`。
+ */
+export const zhEnums = {
+  platform: {
+    win: "Windows",
+    lin: "Linux",
+    mac: "macOS",
+    web: "Web",
+    ios: "iOS",
+    and: "Android",
+    swi: "Switch",
+    sw2: "Switch 2",
+    ps1: "PlayStation",
+    ps2: "PlayStation 2",
+    ps3: "PlayStation 3",
+    ps4: "PlayStation 4",
+    ps5: "PlayStation 5",
+    psp: "PlayStation Portable",
+    psv: "PlayStation Vita",
+    xbo: "Xbox",
+    xxs: "Xbox Series",
+    xb1: "Xbox 360",
+    xb3: "Xbox One",
+    nds: "Nintendo DS",
+    n3d: "Nintendo 3DS",
+    wii: "Wii",
+    wiu: "Wii U",
+    gba: "Game Boy Advance",
+    gbc: "Game Boy Color",
+    drc: "Dreamcast",
+    sat: "Saturn",
+    smd: "Mega Drive",
+    scd: "Mega-CD",
+    pce: "PC Engine",
+    pcf: "PC-FX",
+    nes: "NES",
+    sfc: "Super Famicom",
+    dos: "MS-DOS",
+    msx: "MSX",
+    p88: "PC-88",
+    p98: "PC-98",
+    x68: "X68000",
+    x1s: "X1",
+    fmt: "FM Towns",
+    fm7: "FM-7",
+    fm8: "FM-8",
+    tdo: "T-DOS",
+    bdp: "Bandai Pippin",
+    dvd: "DVD",
+    vnd: "Vnd",
+    mob: "移动端",
+    oth: "其他",
+  },
+  sex: {
+    m: "男",
+    f: "女",
+    b: "双性",
+    n: "无性",
+  },
+  staffRole: {
+    scenario: "剧本",
+    director: "导演",
+    chardesign: "角色设计",
+    art: "美术",
+    music: "音乐",
+    songs: "歌曲",
+    translator: "翻译",
+    editor: "编辑",
+    qa: "测试",
+    staff: "其他",
+  },
+  /** 与 VNDB 一致，保持英文（VNDB 的 devstatus 没有本地化） */
+  devStatus: {
+    "0": "Finished",
+    "1": "In development",
+    "2": "Cancelled",
+  },
+  voiced: {
+    "0": "未知",
+    "1": "无配音",
+    "2": "仅成人场景",
+    "3": "部分配音",
+    "4": "全配音",
+  },
+  relation: {
+    seq: "续作",
+    preq: "前传",
+    ser: "系列",
+    alt: "替代版本",
+    char: "登场角色",
+    parent: "母作",
+    side: "番外",
+  },
+  producerType: {
+    co: "公司",
+    in: "个人",
+    ng: "业余团体",
+  },
+  characterRole: {
+    main: "主角",
+    primary: "主要角色",
+    side: "次要角色",
+    appears: "登场",
+  },
+  contentLevel: {
+    "0": "安全",
+    "1": "暗示",
+    "2": "露骨",
+  },
+  /** relation 字段缺失 / 无法识别时的兜底 */
+  relationDefault: "关联",
+} as const;

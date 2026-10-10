@@ -14,6 +14,7 @@ import { Database } from "bun:sqlite";
 
 import type { Producer, UListItem } from "@/lib/api/types";
 import * as accountDao from "@/lib/db/dao/account";
+import * as favoriteDao from "@/lib/db/dao/favorite";
 import * as historyDao from "@/lib/db/dao/history";
 import * as playSessionDao from "@/lib/db/dao/play-session";
 import {
@@ -64,6 +65,34 @@ import {
   weeksOfMonth,
 } from "@/features/play-records/play-stats";
 import { formatPlayDuration, formatPlayDurationShort } from "@/features/play-records/format";
+import {
+  domainOf,
+  kungalLogoUrl,
+  lookupKungalLogo,
+  lookupKungalLogoByName,
+  normalizeCompanyName,
+  officialWebsiteOf,
+} from "@/features/catalog/kungal-logo";
+import {
+  dateTimeFieldError,
+  durationBetween,
+  formatLocalDate,
+  formatLocalTime,
+  sessionRangeError,
+  toLocalTimestamp,
+} from "@/features/play-records/session-time";
+import { isNewerVersion, parseVersion } from "@/features/settings/update-check";
+import { diffCatalogKeys, flattenCatalog } from "@/lib/i18n/catalog-utils";
+import { en } from "@/lib/i18n/catalogs/en";
+import { zh } from "@/lib/i18n/catalogs/zh";
+import { resolveLocale, setDeviceLocale, setLocale, t } from "@/lib/i18n/translate";
+import {
+  monthlyPlayBuckets,
+  playtimeByGameType,
+  playtimeByVn,
+  recentWeekBuckets,
+  weekStartMs,
+} from "@/features/stats/play-stats-logic";
 import type { PlaySession } from "@/lib/db/dao/play-session";
 import { imageGate } from "@/hooks/use-preferences";
 import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
@@ -283,7 +312,7 @@ async function main(): Promise<void> {
     assert(!isValidDate("2023-02-31"), "不存在的日期应被拒");
     assert(!isValidDate("2024/01/05"), "斜杠格式应被拒");
     const errs = dateErrors("2024-05-01", "2024-04-01");
-    assert(errs.finished === "完成日期早于开始日期", `错误文案不对：${errs.finished}`);
+    assert(errs.finished === "ulist.dateRangeError", `错误键不对：${errs.finished}`);
   });
 
   await check("isVnId：路由参数只认 v+数字（挡住 /ulist/undefined）", () => {
@@ -383,6 +412,39 @@ async function main(): Promise<void> {
     assert(!imageGate("blur", { sexual: 1, violence: 0 }).blurred, "暗示级不模糊（只模糊露骨）");
     assert(!imageGate("show", { sexual: 2 }).blurred, "show 档不模糊");
     assert(imageGate("blur", {}).level === 2, "缺字段应按露骨处理（最保守）");
+  });
+
+  /* ---- 4b. 国际化（i18n） ---- */
+
+  await check("界面语言偏好：默认跟随系统、合法值保留、脏值回退", () => {
+    assert(migratePreferences({}).language === "system", "老数据应默认跟随系统");
+    assert(migratePreferences({ language: "en" }).language === "en", "en 应保留");
+    assert(migratePreferences({ language: "zh" }).language === "zh", "zh 应保留");
+    assert(migratePreferences({ language: "fr" }).language === "system", "不支持的值应回退");
+    assert(migratePreferences({ language: 1 }).language === "system", "非字符串应回退");
+  });
+
+  await check("翻译目录：zh / en 键集合完全一致", () => {
+    const diff = diffCatalogKeys(zh, en);
+    assert(diff.missing.length === 0, `en 缺键：${diff.missing.join(", ")}`);
+    assert(diff.extra.length === 0, `en 多键：${diff.extra.join(", ")}`);
+    assert(flattenCatalog(zh).length >= 100, "键数过少，目录可能没挂上");
+  });
+
+  await check("翻译运行时：插值 / 语言切换 / 设备语言解析", () => {
+    setLocale("zh");
+    assert(t("tabs.home") === "首页", `zh 应返回中文，实际 ${t("tabs.home")}`);
+    assert(t("format.monthsAgo", { months: 3 }) === "3 个月前", "插值应生效");
+
+    setLocale("en");
+    assert(t("tabs.home") === "Home", `en 应返回英文，实际 ${t("tabs.home")}`);
+    assert(t("format.minutesAgo", { minutes: 5 }) === "5 min ago", "英文插值应生效");
+
+    setDeviceLocale("en");
+    assert(resolveLocale("system") === "en", "system 应跟随设备语言");
+    assert(resolveLocale("zh") === "zh", "显式 zh 应优先于设备语言");
+    setDeviceLocale("zh");
+    setLocale("zh");
   });
 
   /* ---- 5. 收藏统计（纯逻辑） ---- */
@@ -643,10 +705,16 @@ async function main(): Promise<void> {
 
   await check("日期筛选：dateDigitsRangeErrors 校验位数 / 有效性 / 顺序", () => {
     assert(dateDigitsRangeErrors("", "").start === null, "空值应合法");
-    assert(dateDigitsRangeErrors("2026", "").start === "请填满 8 位", "未填满应提示补位");
-    assert(dateDigitsRangeErrors("20260231", "").start === "日期无效", "不存在的日期应报无效");
     assert(
-      dateDigitsRangeErrors("20260501", "20260401").end === "结束日期早于开始日期",
+      dateDigitsRangeErrors("2026", "").start === "history.dateIncomplete",
+      "未填满应提示补位"
+    );
+    assert(
+      dateDigitsRangeErrors("20260231", "").start === "history.dateInvalid",
+      "不存在的日期应报无效"
+    );
+    assert(
+      dateDigitsRangeErrors("20260501", "20260401").end === "history.dateRangeOrder",
       "结束早于开始应报错"
     );
     assert(dateDigitsRangeErrors("20260401", "20260501").end === null, "正常顺序应合法");
@@ -682,6 +750,145 @@ async function main(): Promise<void> {
     assert(
       (await historyDao.getHistoryPage(["vn"], 0, 10, { since: now + 60_000 })).length === 0,
       "分页也应尊重日期上下界"
+    );
+  });
+
+  /* ---- 收藏 DAO（v6） ---- */
+
+  await check("addFavorite / isFavorite / getFavoritesPage / getFavoriteCount 往返", async () => {
+    await favoriteDao.addFavorite("vn", "v1", "CLANNAD", "クラナド", "https://t.vndb.org/cv1.jpg");
+    await favoriteDao.addFavorite("vn", "v2", "Steins;Gate", null, null);
+    await favoriteDao.addFavorite("character", "c1", "Saber", "セイバー", null);
+
+    assert(await favoriteDao.isFavorite("vn", "v1"), "v1 应已收藏");
+    assert(!(await favoriteDao.isFavorite("vn", "v9")), "未收藏的应返回 false");
+
+    const page = await favoriteDao.getFavoritesPage(["vn"], 0, 10);
+    assert(page.length === 2, `应有 2 条作品收藏，实际 ${page.length}`);
+    assert(page[0]?.entryId === "v2", "应按收藏时间倒序");
+    assert(page[1]?.imageUrl === "https://t.vndb.org/cv1.jpg", "封面应还原");
+
+    assert((await favoriteDao.getFavoriteCount(["vn"])) === 2, "作品档计数应为 2");
+    assert((await favoriteDao.getFavoriteCount(["character", "staff"])) === 1, "人员档计数应为 1");
+    assert((await favoriteDao.getFavoriteCount([])) === 0, "空集合计数应为 0");
+    assert((await favoriteDao.getFavoritesPage([], 0, 10)).length === 0, "空集合应为空数组");
+  });
+
+  await check("重复收藏保留首次时间、只刷新元数据", async () => {
+    const before = (await favoriteDao.getFavoritesPage(["vn"], 0, 10)).find(
+      (e) => e.entryId === "v1"
+    );
+    await new Promise((r) => setTimeout(r, 5));
+    await favoriteDao.addFavorite("vn", "v1", "CLANNAD 改名", "クラナド", null);
+    const after = (await favoriteDao.getFavoritesPage(["vn"], 0, 10)).find(
+      (e) => e.entryId === "v1"
+    );
+    assert(after?.title === "CLANNAD 改名", "标题应更新");
+    assert(after?.favoritedAt === before?.favoritedAt, "favorited_at 不应被覆盖");
+    assert((await favoriteDao.getFavoriteCount(["vn"])) === 2, "重复收藏不该多出一条");
+  });
+
+  await check("removeFavorite / clearFavorites", async () => {
+    await favoriteDao.removeFavorite("vn", "v1");
+    assert(!(await favoriteDao.isFavorite("vn", "v1")), "删除后应不再收藏");
+    assert((await favoriteDao.getFavoriteCount(["vn"])) === 1, "删除后作品档应剩 1 条");
+
+    await favoriteDao.clearFavorites(["character"]);
+    assert((await favoriteDao.getFavoriteCount(["character", "staff"])) === 0, "按类型清空");
+    assert((await favoriteDao.getFavoriteCount(["vn"])) === 1, "不应误删其它类型");
+
+    await favoriteDao.clearFavorites();
+    assert((await favoriteDao.getFavoriteCount(["vn"])) === 0, "全量清空后应为 0");
+  });
+
+  /* ---- 记录统计 · 游玩聚合（纯逻辑） ---- */
+
+  await check("playtimeByVn：按作品累计时长、降序", () => {
+    const sessions: PlaySession[] = [
+      { id: 1, vnId: "v1", startedAt: 1, endedAt: 2, durationMs: 3_600_000 },
+      { id: 2, vnId: "v2", startedAt: 3, endedAt: 4, durationMs: 1_800_000 },
+      { id: 3, vnId: "v1", startedAt: 5, endedAt: 6, durationMs: 900_000 },
+    ];
+    const ranking = playtimeByVn(sessions);
+    assert(ranking.length === 2, `应有 2 部作品，实际 ${ranking.length}`);
+    assert(ranking[0]!.vnId === "v1" && ranking[0]!.ms === 4_500_000, "v1 应累计 450 万毫秒");
+    assert(ranking[1]!.vnId === "v2" && ranking[1]!.ms === 1_800_000, "v2 次之");
+    assert(playtimeByVn([]).length === 0, "空记录应为空数组");
+  });
+
+  await check("playtimeByGameType：只认类型标签、按时长降序", () => {
+    const sessions: PlaySession[] = [
+      { id: 1, vnId: "v1", startedAt: 1, endedAt: 2, durationMs: 3_600_000 },
+      { id: 2, vnId: "v2", startedAt: 3, endedAt: 4, durationMs: 1_800_000 },
+    ];
+    // v1 = ADV + RPG，v2 = ADV；v3 没玩过
+    const typesByVn = new Map<string, readonly string[]>([
+      ["v1", ["g32", "g35", "g9999"]],
+      ["v2", ["g32"]],
+      ["v3", ["g43"]],
+    ]);
+    const buckets = playtimeByGameType(sessions, typesByVn);
+    assert(buckets.length === 2, `非类型标签不该进统计，实际 ${buckets.length}`);
+    assert(buckets[0]!.id === "g32" && buckets[0]!.ms === 5_400_000, "ADV 应累计 540 万毫秒");
+    assert(buckets[1]!.id === "g35" && buckets[1]!.ms === 3_600_000, "RPG 次之");
+    assert(
+      buckets.every((b) => b.name !== "g9999"),
+      "未知 id 不该出现"
+    );
+  });
+
+  await check("monthlyPlayBuckets：近 12 个月、含当月、空月补 0", () => {
+    const now = new Date(2026, 9, 10, 12); // 2026-10-10
+    const sessions: PlaySession[] = [
+      {
+        id: 1,
+        vnId: "v1",
+        startedAt: new Date(2026, 9, 5, 10).getTime(),
+        endedAt: new Date(2026, 9, 5, 11).getTime(),
+        durationMs: 3_600_000,
+      },
+      {
+        id: 2,
+        vnId: "v1",
+        startedAt: new Date(2026, 8, 20, 10).getTime(),
+        endedAt: new Date(2026, 8, 20, 10, 30).getTime(),
+        durationMs: 1_800_000,
+      },
+      // 窗口之外的更早记录不计
+      {
+        id: 3,
+        vnId: "v1",
+        startedAt: new Date(2025, 0, 1, 10).getTime(),
+        endedAt: new Date(2025, 0, 1, 12).getTime(),
+        durationMs: 9_999_999,
+      },
+    ];
+    const buckets = monthlyPlayBuckets(sessions, 12, now);
+    assert(buckets.length === 12, `应 12 个月，实际 ${buckets.length}`);
+    assert(buckets[0]!.year === 2025 && buckets[0]!.month === 10, "第一个应是 2025-11");
+    assert(buckets[11]!.year === 2026 && buckets[11]!.month === 9, "最后应是 2026-10");
+    assert(buckets[11]!.ms === 3_600_000, "10 月应为 60 分钟");
+    assert(buckets[10]!.ms === 1_800_000, "9 月应为 30 分钟");
+    assert(buckets[0]!.ms === 0, "窗口外 / 空月应为 0");
+  });
+
+  await check("recentWeekBuckets：近 8 周、周一为起点、含时长与次数", () => {
+    const now = new Date(2026, 9, 10, 12); // 2026-10-10
+    const thisWeek = weekStartMs(now) + 3 * 3_600_000;
+    const lastWeek = new Date(2026, 9, 3, 12).getTime();
+    const sessions: PlaySession[] = [
+      { id: 1, vnId: "v1", startedAt: thisWeek, endedAt: thisWeek + 1, durationMs: 3_600_000 },
+      { id: 2, vnId: "v1", startedAt: thisWeek, endedAt: thisWeek + 1, durationMs: 600_000 },
+      { id: 3, vnId: "v2", startedAt: lastWeek, endedAt: lastWeek + 1, durationMs: 1_800_000 },
+    ];
+    const buckets = recentWeekBuckets(sessions, 8, now);
+    assert(buckets.length === 8, `应 8 周，实际 ${buckets.length}`);
+    assert(buckets[7]!.startAt === weekStartMs(now), "最后一档应是本周一");
+    assert(buckets[7]!.ms === 4_200_000 && buckets[7]!.count === 2, "本周应 2 次共 70 分钟");
+    assert(buckets[6]!.ms === 1_800_000 && buckets[6]!.count === 1, "上周应 1 次 30 分钟");
+    assert(
+      buckets.slice(0, 6).every((b) => b.ms === 0 && b.count === 0),
+      "更早的空周应为 0"
     );
   });
 
@@ -825,6 +1032,115 @@ async function main(): Promise<void> {
     const sessions = [sessionAt(2026, 10, 3, 60_000), sessionAt(2026, 10, 9, 60_000)];
     assert(monthSessionCount(sessions, 2026, 9) === 2, "本月应计 2 次");
     assert(monthSessionCount(sessions, 2026, 8) === 0, "上月应为 0");
+  });
+
+  await check("检查更新：parseVersion / isNewerVersion", () => {
+    assert(parseVersion("v1.2.1")?.patch === 1, "v 前缀应可解析");
+    assert(parseVersion("1.2")?.minor === 2 && parseVersion("1.2")?.patch === 0, "缺段补 0");
+    assert(parseVersion("1.2.1-beta.2")?.patch === 1, "带后缀只取前三段");
+    assert(parseVersion("abc") === null && parseVersion("") === null, "非法输入返回 null");
+
+    assert(isNewerVersion("1.2.1", "1.2.0") === true, "补丁位更大算更新");
+    assert(isNewerVersion("v1.2.0", "1.2.0") === false, "v 前缀不影响相等判断");
+    assert(isNewerVersion("1.3.0", "1.2.9") === true, "次版本优先于补丁位");
+    assert(isNewerVersion("2.0.0", "1.9.9") === true, "主版本优先");
+    assert(isNewerVersion("1.2.0", "1.2.1") === false, "更旧不算更新");
+    assert(isNewerVersion("bad", "1.0.0") === false, "无法解析时保守返回 false");
+  });
+
+  await check("游玩记录编辑：时间解析 / 校验 / 时长", () => {
+    const ts = toLocalTimestamp("2026-10-10", "14:30");
+    assert(ts === new Date(2026, 9, 10, 14, 30, 0, 0).getTime(), "日期+时间应解析为本地时间戳");
+    assert(toLocalTimestamp("2026-02-30", "10:00") === null, "不存在的日期应返回 null");
+    assert(toLocalTimestamp("2026-10-10", "25:00") === null, "非法时间应返回 null");
+
+    assert(dateTimeFieldError("2026-10-10", "09:05") === null, "合法输入无错误");
+    assert(dateTimeFieldError("2026-2-3", "09:05") !== null, "日期格式不对应报错");
+    assert(dateTimeFieldError("2026-10-10", "9:5") !== null, "时间格式不对应报错");
+
+    assert(sessionRangeError(1000, 2000) === null, "结束晚于开始应合法");
+    assert(sessionRangeError(2000, 1000) !== null, "结束早于开始应报错");
+    assert(durationBetween(1000, 4000) === 3000, "时长应为差值");
+    assert(durationBetween(4000, 1000) === 0, "逆序时长按 0");
+
+    assert(formatLocalDate(ts!) === "2026-10-10", "格式化日期");
+    assert(formatLocalTime(ts!) === "14:30", "格式化时间");
+  });
+
+  await check("厂商 LOGO：域名解析 / 官网选择 / 鲲 Galgame 索引查表", () => {
+    assert(domainOf("http://www.guilty-soft.com/") === "guilty-soft.com", "去协议 / www");
+    assert(domainOf("https://stage-nana.sakura.ne.jp") === "stage-nana.sakura.ne.jp", "保留子域");
+    assert(domainOf("not a url") === null, "非法 URL 返回 null");
+
+    const producer = {
+      id: "p115",
+      name: "Guilty",
+      original: "ギルティ",
+      extlinks: [
+        { label: "Official website", name: "", url: "http://www.guilty-soft.com/" },
+        { label: "Wikipedia (ja)", name: "", url: "https://ja.wikipedia.org/wiki/Guilty" },
+      ],
+    };
+    assert(
+      officialWebsiteOf(producer) === "http://www.guilty-soft.com/",
+      "优先取 Official website"
+    );
+
+    // 归一化：大小写 / 空白 / 标点 / 全角 / 株式会社后缀都要抹平
+    assert(normalizeCompanyName("  Alice Soft ") === "alicesoft", "空白与大小写应归一");
+    assert(normalizeCompanyName("ＡＬＩＣＥＳＯＦＴ") === "alicesoft", "全角应归一");
+    assert(normalizeCompanyName("株式会社アリスソフト") === "アリスソフト", "日文公司后缀应去掉");
+    assert(normalizeCompanyName("Key, Inc.") === "key", "英文公司后缀应去掉");
+    assert(normalizeCompanyName("") === "" && normalizeCompanyName(null) === "", "空值应安全");
+
+    // LOGO 文件名（64 位 hex）→ 图床 URL
+    const hash = "e8".repeat(32);
+    assert(
+      kungalLogoUrl(hash) === `https://image.kungal.iloveren.link/e8/e8/${hash}.webp`,
+      "应由文件名拼出图床 URL"
+    );
+
+    // 域名优先：同一家公司域名命中时不看名字
+    const index = {
+      generatedAt: "2026-10-10",
+      source: "https://www.kungal.com/galgame/official",
+      domains: { "guilty-soft.com": hash },
+      names: { [normalizeCompanyName("Guilty")]: "ab".repeat(32) },
+    };
+    assert(lookupKungalLogo(index, producer) === kungalLogoUrl(hash), "域名命中应优先于名字");
+
+    // 名字兜底：VNDB 的 name / original 都试（原名常是日文）
+    const byName = {
+      ...index,
+      domains: {},
+      names: { [normalizeCompanyName("ギルティ")]: hash },
+    };
+    assert(
+      lookupKungalLogo(byName, producer) === kungalLogoUrl(hash),
+      "域名缺失时应按 original 命中"
+    );
+
+    // 都不中 → null（调用方不画图）
+    assert(
+      lookupKungalLogo({ ...index, domains: {}, names: {} }, producer) === null,
+      "未命中应为 null"
+    );
+
+    // extlinks 为空 → 退回名称匹配
+    assert(
+      lookupKungalLogo(byName, { ...producer, extlinks: undefined }) === kungalLogoUrl(hash),
+      "没有 extlinks 时应按名称命中"
+    );
+
+    // 只按名称查表（历史 / 收藏的兜底路径：条目里只有名称）
+    assert(
+      lookupKungalLogoByName(index, ["Guilty", null]) === kungalLogoUrl("ab".repeat(32)),
+      "按名称查表应命中 name"
+    );
+    assert(
+      lookupKungalLogoByName(index, [null, "ギルティ（不存在）"]) === null,
+      "按名称未命中应为 null"
+    );
   });
 
   /* ---- 结果 ---- */

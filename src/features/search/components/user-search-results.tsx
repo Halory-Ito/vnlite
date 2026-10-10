@@ -13,6 +13,7 @@ import { View } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { useUserLookup } from "../hooks";
 import { resultHeadline, userMissDescription } from "../search-logic";
@@ -21,14 +22,17 @@ import { SearchResultRow } from "./search-result-row";
 
 export function UserSearchResults({ keyword }: { keyword: string }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const query = useUserLookup(keyword);
 
-  if (query.isLoading) return <LoadingState label="查找中…" />;
+  if (query.isLoading) return <LoadingState label={t("search.lookingUp")} />;
   if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
 
   const user = query.data;
   if (!user) {
-    return <EmptyState title="没有找到用户" description={userMissDescription(keyword)} />;
+    return (
+      <EmptyState title={t("search.userEmptyTitle")} description={userMissDescription(keyword)} />
+    );
   }
 
   return (

@@ -8,26 +8,28 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { queryClient } from "@/lib/query/client";
+import { initI18n } from "@/lib/i18n";
 import { restoreSession } from "@/lib/storage/session";
 import { GameTimerOverlay } from "@/features/game-timer/components/game-timer-overlay";
 import { initGameTimerNotification } from "@/features/game-timer/notification";
-import { initGameTimerOverlayWindow } from "@/features/game-timer/overlay-window";
 import { initGameTimerPersistence } from "@/features/game-timer/persistence";
 import { ThemeProvider } from "@/theme/theme-provider";
 
 import "../global.css";
+
+/*
+ * 界面语言要在**首帧之前**定下来（设备语言 + 偏好快照），
+ * 否则会先闪一帧默认语言。偏好异步水合完成后 `initI18n` 内部会再同步一次。
+ */
+initI18n();
 
 export default function RootLayout(): JSX.Element {
   // 冷启动恢复登录态：读 SecureStore 的 token → /authinfo 校验 → 写本地 account 表。
   // 清单数据不落库（服务端直读），所以这里没有清单同步要做
   useEffect(() => {
     void restoreSession();
-    // 计时相关：持久化（后台运行）、系统通知、系统悬浮球；统一在卸载时清理
-    const cleanups = [
-      initGameTimerPersistence(),
-      initGameTimerNotification(),
-      initGameTimerOverlayWindow(),
-    ];
+    // 计时相关：持久化（后台运行）、系统通知；统一在卸载时清理
+    const cleanups = [initGameTimerPersistence(), initGameTimerNotification()];
     return () => {
       for (const cleanup of cleanups) cleanup();
     };

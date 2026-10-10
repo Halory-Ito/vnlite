@@ -10,6 +10,8 @@ import { useThemeColor } from "heroui-native";
 import type { JSX, ReactNode } from "react";
 import { Pressable, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 import { Icon } from "@/components/icon";
 import { H5 } from "@/components/typo";
 
@@ -23,6 +25,7 @@ export interface BackBarProps {
 
 export function BackBar({ title, onPress, trailing }: BackBarProps): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const muted = useThemeColor("muted");
 
   return (
@@ -31,7 +34,7 @@ export function BackBar({ title, onPress, trailing }: BackBarProps): JSX.Element
         onPress={onPress ?? (() => router.back())}
         className="active:opacity-60"
         accessibilityRole="button"
-        accessibilityLabel="返回"
+        accessibilityLabel={t("common.back")}
         hitSlop={8}
       >
         <Icon name="chevronLeft" size={24} color={muted} />

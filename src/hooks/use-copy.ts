@@ -21,12 +21,11 @@ import * as Haptics from "expo-haptics";
 import { useToast } from "heroui-native";
 import { useCallback } from "react";
 
+import { useTranslation } from "@/hooks/use-translation";
 import { copyPreview } from "@/utils/copy-text";
 
 /** 长按阈值；与 RN Pressability 的默认值一致（`DEFAULT_LONG_PRESS_DELAY_MS`） */
 const LONG_PRESS_MS = 500;
-
-const COPY_HINT = "长按可复制";
 
 export interface CopyOptions {
   /** toast 主文案，默认「已复制」 */
@@ -49,6 +48,7 @@ export interface CopyProps {
 
 function useCopy(): CopyFn {
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   return useCallback(
     (text, options) => {
@@ -58,13 +58,13 @@ function useCopy(): CopyFn {
       void Clipboard.setStringAsync(body)
         .then(() => {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          const head = options?.message ?? "已复制";
+          const head = options?.message ?? t("misc.copy.done");
           const summary = copyPreview(options?.preview ?? body);
-          toast.show(summary ? `${head}：${summary}` : head);
+          toast.show(summary ? t("misc.copy.message", { head, preview: summary }) : head);
         })
-        .catch(() => toast.show("复制失败，请重试"));
+        .catch(() => toast.show(t("misc.copy.failed")));
     },
-    [toast]
+    [toast, t]
   );
 }
 
@@ -81,6 +81,7 @@ function useCopy(): CopyFn {
  */
 export function useCopyProps(text: string | null | undefined, options?: CopyOptions): CopyProps {
   const copy = useCopy();
+  const { t } = useTranslation();
   const message = options?.message;
   const preview = options?.preview;
 
@@ -89,6 +90,6 @@ export function useCopyProps(text: string | null | undefined, options?: CopyOpti
       copy(text ?? "", { message, preview });
     }, [copy, text, message, preview]),
     delayLongPress: LONG_PRESS_MS,
-    accessibilityHint: COPY_HINT,
+    accessibilityHint: t("misc.copy.hint"),
   };
 }

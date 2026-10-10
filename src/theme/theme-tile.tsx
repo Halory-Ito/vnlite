@@ -12,6 +12,7 @@ import { Typography } from "heroui-native";
 import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
 import type { ThemeMode } from "@/theme/seeds";
 import { themeSwatch, themeSwatchAlt, type ThemeDefinition } from "@/theme/themes";
 export interface ThemeTileProps {
@@ -23,6 +24,7 @@ export interface ThemeTileProps {
 }
 
 export function ThemeTile({ theme, active, mode, onPress }: ThemeTileProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={onPress}
@@ -31,7 +33,10 @@ export function ThemeTile({ theme, active, mode, onPress }: ThemeTileProps): JSX
       }`}
       accessibilityRole="radio"
       accessibilityState={{ checked: active }}
-      accessibilityLabel={`${theme.name}，当前${mode === "dark" ? "暗色" : "亮色"}模式`}
+      accessibilityLabel={t("common.themeTileLabel", {
+        name: theme.name,
+        mode: mode === "dark" ? t("settings.schemeDark") : t("settings.schemeLight"),
+      })}
     >
       {/* 背景图缩略 */}
       <View className="h-16 w-full">

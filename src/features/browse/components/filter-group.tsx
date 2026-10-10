@@ -19,6 +19,8 @@ import type { JSX, ReactNode } from "react";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 export interface FilterChipOption {
   value: string;
   label: string;
@@ -109,6 +111,7 @@ export function MultiSelectGroup({
   onToggle,
   collapseAfter = 8,
 }: MultiSelectGroupProps): JSX.Element {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const collapsible = options.length > collapseAfter;
   const visible = collapsible && !expanded ? options.slice(0, collapseAfter) : options;
@@ -139,13 +142,13 @@ export function MultiSelectGroup({
           accessibilityState={{ expanded }}
         >
           <Typography type="body-xs" className="text-accent">
-            {expanded ? "收起" : `更多 ${hidden} 项`}
+            {expanded ? t("browse.group.collapse") : t("browse.group.more", { count: hidden })}
           </Typography>
         </Pressable>
       ) : null}
       {hiddenSelected ? (
         <Typography type="body-xs" className="text-warning-soft-foreground">
-          有已选项被折叠了，展开才能看到
+          {t("browse.group.hiddenSelected")}
         </Typography>
       ) : null}
     </FilterGroup>

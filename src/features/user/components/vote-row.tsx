@@ -10,10 +10,16 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted, Paragraph } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 import type { UListItem } from "@/lib/api/types";
 
 import type { VndbLengthVote } from "../scrape";
-import { isAccentColumn, voteColumnValue, type VoteColumn } from "../vote-columns";
+import {
+  isAccentColumn,
+  VOTE_FIELD_LABEL_KEY,
+  voteColumnValue,
+  type VoteColumn,
+} from "../vote-columns";
 
 export function VoteRow({
   item,
@@ -25,6 +31,7 @@ export function VoteRow({
   length: VndbLengthVote | undefined;
 }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const title = item.vn?.title ?? item.id;
 
   return (
@@ -32,7 +39,7 @@ export function VoteRow({
       onPress={() => router.push({ pathname: "/vn/[id]", params: { id: item.id } })}
       className="gap-1 px-4 py-3 active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel={`打开作品：${title}`}
+      accessibilityLabel={t("user.openVn", { title })}
     >
       {visible.includes("title") ? <Paragraph className="line-clamp-1">{title}</Paragraph> : null}
 
@@ -42,7 +49,7 @@ export function VoteRow({
           .map((column) => (
             <Field
               key={column}
-              label={labelOf(column)}
+              label={t(VOTE_FIELD_LABEL_KEY[column])}
               value={voteColumnValue(column, item, length) ?? "—"}
               accent={isAccentColumn(column)}
             />
@@ -50,19 +57,6 @@ export function VoteRow({
       </View>
     </Pressable>
   );
-}
-
-/** 列名（`title` 已经是主行，这里只给其余列用） */
-function labelOf(column: VoteColumn): string {
-  const short: Partial<Record<VoteColumn, string>> = {
-    score: "评分",
-    playtime: "时长",
-    speed: "速度",
-    votedAt: "投票",
-    started: "开始",
-    finished: "完成",
-  };
-  return short[column] ?? column;
 }
 
 /** 「标签 + 值」一个小字段。标签与值是两个元素，中间靠间距 */

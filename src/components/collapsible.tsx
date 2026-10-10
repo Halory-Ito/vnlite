@@ -12,6 +12,8 @@ import type { JSX } from "react";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
+
 import { Paragraph } from "./typo";
 
 /* -------------------------------------------------------------------------- */
@@ -30,6 +32,7 @@ export function CollapsibleText({
   lines = 6,
   className = "",
 }: CollapsibleTextProps): JSX.Element {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [truncated, setTruncated] = useState(false);
 
@@ -58,10 +61,10 @@ export function CollapsibleText({
           onPress={() => setExpanded((v) => !v)}
           className="self-start active:opacity-60"
           accessibilityRole="button"
-          accessibilityLabel={expanded ? "收起" : "展开全部"}
+          accessibilityLabel={expanded ? t("common.collapse") : t("common.expand")}
         >
           <Typography type="body-sm" className="text-link">
-            {expanded ? "收起" : "展开全部"}
+            {expanded ? t("common.collapse") : t("common.expand")}
           </Typography>
         </Pressable>
       ) : null}
@@ -102,15 +105,16 @@ export function ExpandToggle({
   expanded: boolean;
   onPress: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={onPress}
       className="self-start active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel={expanded ? "收起" : `展开全部`}
+      accessibilityLabel={expanded ? t("common.collapse") : t("common.expand")}
     >
       <Typography type="body-sm" className="text-link">
-        {expanded ? "收起" : `展开全部`}
+        {expanded ? t("common.collapse") : t("common.expand")}
       </Typography>
     </Pressable>
   );

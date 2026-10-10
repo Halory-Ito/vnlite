@@ -11,7 +11,7 @@ import type { JSX } from "react";
 import { useMemo } from "react";
 
 import { useProducerSearch, useStaffSearch } from "../hooks";
-import { SCOPE_NOUN, toProducerEntries, toStaffEntries } from "../search-logic";
+import { toProducerEntries, toStaffEntries } from "../search-logic";
 
 import { CatalogResultList } from "./catalog-result-list";
 
@@ -50,7 +50,7 @@ function StaffResults({ keyword }: { keyword: string }): JSX.Element {
       }}
       onRetry={() => void query.refetch()}
       onPressItem={(id) => router.push(`/staff/${id}`)}
-      noun={SCOPE_NOUN.staff}
+      scope="staff"
       keyword={keyword}
     />
   );
@@ -77,7 +77,7 @@ function ProducerResults({ keyword }: { keyword: string }): JSX.Element {
       }}
       onRetry={() => void query.refetch()}
       onPressItem={(id) => router.push(`/producer/${id}`)}
-      noun={SCOPE_NOUN.producer}
+      scope="producer"
       keyword={keyword}
     />
   );

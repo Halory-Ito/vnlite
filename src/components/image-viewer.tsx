@@ -37,6 +37,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/icon";
 import { Muted } from "@/components/typo";
 import { useImageGate } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 
 export interface ViewerImage {
   /** 高清图（查看器显示的就是它） */
@@ -73,6 +74,7 @@ export function ImageViewer({
   const window = useWindowDimensions();
   const background = useThemeColor("background");
   const foreground = useThemeColor("foreground");
+  const { t } = useTranslation();
   // 点开过的图（按 url 记）：blur 档下点一下图就放行这一张
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -136,7 +138,7 @@ export function ImageViewer({
               hitSlop={10}
               className="h-9 w-9 items-center justify-center rounded-full bg-default-soft active:opacity-60"
               accessibilityRole="button"
-              accessibilityLabel="关闭"
+              accessibilityLabel={t("common.close")}
             >
               <Icon name="xmark" size={18} color={foreground} />
             </Pressable>
@@ -160,6 +162,7 @@ function ViewerItem({
   revealed: boolean;
   window: { width: number; height: number };
 }): JSX.Element {
+  const { t } = useTranslation();
   const gate = useImageGate({ sexual: image.sexual, violence: image.violence });
   const blurred = gate.blurred && !revealed;
 
@@ -175,7 +178,7 @@ function ViewerItem({
         className="items-center justify-center"
         style={{ width: window.width, height: window.height }}
       >
-        <Muted type="body-xs">已隐藏（成人内容）</Muted>
+        <Muted type="body-xs">{t("common.hiddenAdult")}</Muted>
       </View>
     );
   }
@@ -194,13 +197,13 @@ function ViewerItem({
         allowDownscaling={!active}
         recyclingKey={image.url}
         priority="high"
-        accessibilityLabel={image.label ?? "图片"}
+        accessibilityLabel={image.label ?? t("common.image")}
         accessibilityIgnoresInvertColors
       />
       {blurred ? (
         <View className="absolute bottom-8 left-0 right-0 items-center">
           <View className="rounded-full bg-background/85 px-3 py-1.5">
-            <Muted type="body-xs">敏感内容 · 点击显示</Muted>
+            <Muted type="body-xs">{t("common.sensitiveTapReveal")}</Muted>
           </View>
         </View>
       ) : null}

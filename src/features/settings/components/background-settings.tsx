@@ -19,6 +19,7 @@ import { View } from "react-native";
 
 import { Paragraph } from "@/components/typo";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import {
   BACKGROUND_BLUR_RANGE,
   BACKGROUND_OPACITY_RANGE,
@@ -31,12 +32,13 @@ import { LabeledSlider } from "./labeled-slider";
 
 export function BackgroundSettings(): JSX.Element {
   const preferences = usePreferences();
+  const { t } = useTranslation();
 
   return (
     <View className="gap-4">
       <View className="flex-row items-center justify-between">
         <View className="flex-1">
-          <Paragraph className="text-sm">显示背景图</Paragraph>
+          <Paragraph className="text-sm">{t("settings.showBackground")}</Paragraph>
         </View>
         <Switch
           isSelected={preferences.showBackground}
@@ -50,12 +52,13 @@ export function BackgroundSettings(): JSX.Element {
 }
 
 function BackgroundSliders({ preferences }: { preferences: Preferences }): JSX.Element {
+  const { t } = useTranslation();
   const { backgroundOpacity, backgroundBlur } = preferences;
 
   return (
     <View className="gap-5">
       <LabeledSlider
-        label="遮罩透明度"
+        label={t("settings.backgroundOpacity")}
         value={backgroundOpacity}
         minValue={BACKGROUND_OPACITY_RANGE.min}
         maxValue={BACKGROUND_OPACITY_RANGE.max}
@@ -67,7 +70,7 @@ function BackgroundSliders({ preferences }: { preferences: Preferences }): JSX.E
       />
 
       <LabeledSlider
-        label="背景模糊"
+        label={t("settings.backgroundBlur")}
         value={backgroundBlur}
         minValue={BACKGROUND_BLUR_RANGE.min}
         maxValue={BACKGROUND_BLUR_RANGE.max}

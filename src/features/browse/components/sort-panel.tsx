@@ -14,6 +14,7 @@ import { Typography } from "heroui-native";
 import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
+import { useTranslation } from "@/hooks/use-translation";
 import type { BrowseSortPreference } from "@/lib/storage/preferences";
 
 import { FilterChip, FilterGroup } from "./filter-group";
@@ -27,13 +28,14 @@ export interface SortPanelProps {
 }
 
 export function SortPanel({ value, onChange, onClose }: SortPanelProps): JSX.Element {
+  const { t } = useTranslation();
   const isDefault =
     value.field === DEFAULT_BROWSE_SORT.value && value.reverse === DEFAULT_BROWSE_SORT.reverse;
 
   return (
     <FullScreenPanel
-      title="排序"
-      accessibilityLabel="排序"
+      title={t("browse.sort.title")}
+      accessibilityLabel={t("browse.sort.title")}
       onClose={onClose}
       footer={
         <View className="flex-row items-center justify-between gap-3 border-t border-separator px-4 py-3">
@@ -46,21 +48,21 @@ export function SortPanel({ value, onChange, onClose }: SortPanelProps): JSX.Ele
               isDefault ? "border-border opacity-40" : "border-accent"
             }`}
             accessibilityRole="button"
-            accessibilityLabel="恢复默认排序"
+            accessibilityLabel={t("browse.sort.resetLabel")}
             accessibilityState={{ disabled: isDefault }}
           >
             <Typography type="body-xs" className="font-semibold text-accent">
-              恢复默认
+              {t("browse.sort.reset")}
             </Typography>
           </Pressable>
         </View>
       }
     >
-      <FilterGroup label="排序字段">
+      <FilterGroup label={t("browse.sort.field")}>
         {BROWSE_SORT_OPTIONS.map((option) => (
           <FilterChip
             key={option.value}
-            option={{ value: option.value, label: option.label }}
+            option={{ value: option.value, label: t(option.labelKey) }}
             active={value.field === option.value}
             // 换字段时带上该字段的常用方向（如「发行日期」默认最新在前）
             onPress={() => onChange({ field: option.value, reverse: option.reverse })}
@@ -68,14 +70,14 @@ export function SortPanel({ value, onChange, onClose }: SortPanelProps): JSX.Ele
         ))}
       </FilterGroup>
 
-      <FilterGroup label="方向">
+      <FilterGroup label={t("browse.sort.direction")}>
         <FilterChip
-          option={{ value: "desc", label: "降序" }}
+          option={{ value: "desc", label: t("browse.sort.desc") }}
           active={value.reverse}
           onPress={() => onChange({ ...value, reverse: true })}
         />
         <FilterChip
-          option={{ value: "asc", label: "升序）" }}
+          option={{ value: "asc", label: t("browse.sort.asc") }}
           active={!value.reverse}
           onPress={() => onChange({ ...value, reverse: false })}
         />

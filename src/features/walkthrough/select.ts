@@ -1,11 +1,15 @@
 /**
- * 攻略的展示层映射（**纯函数**）：枚举 → 中文文案 / 配色 / 图标，以及步骤分段。
+ * 攻略的展示层映射（**纯函数**）：枚举 → 文案 / 配色 / 图标，以及步骤分段。
  *
  * 都放在这里是惯例（见 `utils/format`、`lib/api/enums`）：文案与视觉决策集中一处，
  * 组件里不散落 `switch`，冒烟测试也能直接断言。
+ *
+ * ⚠️ 模块级常量不存文案：结局 / 步骤类型只存 `TranslationKey`，
+ * 由调用方在渲染期 `t(...)`（`endingMeta` 例外，它自己查表，见下）。
  */
 
 import type { IconName } from "@/components/icon";
+import { t, type TranslationKey } from "@/lib/i18n/translate";
 
 import type { WalkthroughMarks } from "./marks";
 import type {
@@ -54,19 +58,30 @@ export interface EndingMeta {
  * 仓库里实际出现 `true` / `good` / `normal` / `bad` 四种（另有未知值时的兜底）。
  * 排序按「好结局在前」不太可靠（作者给的顺序往往就是游玩顺序），所以保持原序展示。
  */
-const ENDING_META: Record<WalkthroughEndingType, EndingMeta> = {
-  true: { label: "真结局", tone: "accent" },
-  good: { label: "好结局", tone: "success" },
-  normal: { label: "普通结局", tone: "default" },
-  bad: { label: "bad 结局", tone: "danger" },
+interface EndingMetaDef {
+  labelKey: TranslationKey;
+  tone: Tone;
+}
+
+const ENDING_META: Record<WalkthroughEndingType, EndingMetaDef> = {
+  true: { labelKey: "walkthrough.ending.true", tone: "accent" },
+  good: { labelKey: "walkthrough.ending.good", tone: "success" },
+  normal: { labelKey: "walkthrough.ending.normal", tone: "default" },
+  bad: { labelKey: "walkthrough.ending.bad", tone: "danger" },
 };
 
 const UNKNOWN_ENDING: EndingMeta = { label: "", tone: "default" };
 
-/** 查不到就返回空 label —— 调用方据此**不挂徽标**，而不是显示原始英文枚举 */
+/**
+ * 查不到就返回空 label —— 调用方据此**不挂徽标**，而不是显示原始英文枚举。
+ *
+ * 这里是纯函数映射（语言切换由调用方重渲染触发），所以直接用全局 `t` 取文案，
+ * 与 `utils/format` 同一套约定。
+ */
 export function endingMeta(type: WalkthroughEndingType | string | undefined): EndingMeta {
-  if (!type) return UNKNOWN_ENDING;
-  return ENDING_META[type as WalkthroughEndingType] ?? UNKNOWN_ENDING;
+  const meta = type ? ENDING_META[type as WalkthroughEndingType] : undefined;
+  if (!meta) return UNKNOWN_ENDING;
+  return { label: t(meta.labelKey), tone: meta.tone };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -76,8 +91,11 @@ export function endingMeta(type: WalkthroughEndingType | string | undefined): En
 export interface StepMeta {
   /** 图标（Gravity UI） */
   icon: IconName;
-  /** 行首序号右侧的小标签；`choice` 是最常见的形态，不加标签免得满屏都是字 */
-  label: string;
+  /**
+   * 行首小标签的键（`choice` 是最常见的形态，不加标签免得满屏都是字）；
+   * 渲染期 `t(labelKey)`，`null` 表示不挂标签。
+   */
+  labelKey: TranslationKey | null;
   /** 主题语义色，用于图标 */
   tone: Tone;
 }
@@ -89,13 +107,13 @@ export interface StepMeta {
  * 存档 / 读档用软盘与回转箭头 —— 这两个必须一眼可辨，错了会毁掉一整周目。
  */
 const STEP_META: Record<WalkthroughStepType, StepMeta> = {
-  choice: { icon: "check", label: "", tone: "default" },
-  save: { icon: "floppyDisk", label: "存档", tone: "accent" },
-  load: { icon: "arrowRotateLeft", label: "读档", tone: "accent" },
-  note: { icon: "circleInfo", label: "备注", tone: "default" },
+  choice: { icon: "check", labelKey: null, tone: "default" },
+  save: { icon: "floppyDisk", labelKey: "walkthrough.step.save", tone: "accent" },
+  load: { icon: "arrowRotateLeft", labelKey: "walkthrough.step.load", tone: "accent" },
+  note: { icon: "circleInfo", labelKey: "walkthrough.step.note", tone: "default" },
 };
 
-const UNKNOWN_STEP: StepMeta = { icon: "check", label: "", tone: "default" };
+const UNKNOWN_STEP: StepMeta = { icon: "check", labelKey: null, tone: "default" };
 
 export function stepMeta(type: WalkthroughStepType | string): StepMeta {
   return STEP_META[type as WalkthroughStepType] ?? UNKNOWN_STEP;
@@ -111,8 +129,8 @@ export function stepMeta(type: WalkthroughStepType | string): StepMeta {
  * 0 是仓库里的「未标注」，不显示 —— 猜一个文案不如不显示。
  */
 export function levelLabel(level: number): string {
-  if (level === 1) return "详细攻略";
-  if (level === 2) return "简略攻略";
+  if (level === 1) return t("walkthrough.level.detailed");
+  if (level === 2) return t("walkthrough.level.brief");
   return "";
 }
 

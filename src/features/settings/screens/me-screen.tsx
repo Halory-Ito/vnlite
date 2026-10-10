@@ -4,8 +4,7 @@
  * 传统设置页布局：**顶部是用户信息**（点头像 / 整行走账号页），
  * 下面是一串 item；主题、背景、内容显示这些具体设置都收进各自的二级页。
  *
- * 以前这一页把主题选择、背景滑杆、token 输入框、调试读数全摊在一起，
- * 首屏要滑很久才见底，且大部分是「偶尔才改一次」的东西。
+ * 文案一律走 i18n（`useTranslation`），切换语言后本页即时重渲染。
  */
 
 import { useRouter } from "expo-router";
@@ -17,9 +16,10 @@ import { Icon } from "@/components/icon";
 import { Divider } from "@/components/separator";
 import { H5, Muted } from "@/components/typo";
 import { SettingsItem } from "@/features/settings/components/settings-item";
-import { NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
+import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useSession } from "@/hooks/use-session";
+import { useTranslation } from "@/hooks/use-translation";
 import { clearContentCache } from "@/lib/query/client";
 import { clearWalkthroughCache } from "@/features/walkthrough/cache";
 import { getTheme } from "@/theme/themes";
@@ -27,6 +27,7 @@ import { getTheme } from "@/theme/themes";
 export default function MeScreen(): JSX.Element {
   const router = useRouter();
   const preferences = usePreferences();
+  const { t } = useTranslation();
   const { toast } = useToast();
   // 「外观」那行的读数是主题名，同步算出来即可，不用另存状态
   const theme = getTheme(preferences.themeId);
@@ -35,7 +36,7 @@ export default function MeScreen(): JSX.Element {
     // 内存缓存（所有业务数据）+ 攻略的落盘缓存一起清：
     // 攻略索引有 ~190KB 且带 24h TTL，只清内存的话用户会觉得「清完还在」
     void Promise.all([clearContentCache(), clearWalkthroughCache()]).then(() =>
-      toast.show("已清空浏览缓存")
+      toast.show(t("me.cacheCleared"))
     );
   };
 
@@ -46,37 +47,61 @@ export default function MeScreen(): JSX.Element {
       <ListGroup className="mx-4">
         <SettingsItem
           icon="palette"
-          label="外观"
-          value={`${theme.name}`}
+          label={t("me.appearance")}
+          value={theme.name}
           onPress={() => router.push("/settings/appearance")}
         />
         <Divider className="mx-4" />
 
         <SettingsItem
+          icon="globe"
+          label={t("settings.languageTitle")}
+          value={optionLabel(LANGUAGE_OPTIONS, preferences.language, t)}
+          onPress={() => router.push("/settings/language")}
+        />
+        <Divider className="mx-4" />
+
+        <SettingsItem
           icon="eye"
-          label="内容显示"
-          value={optionLabel(NSFW_OPTIONS, preferences.nsfwMode)}
+          label={t("me.content")}
+          value={optionLabel(NSFW_OPTIONS, preferences.nsfwMode, t)}
           onPress={() => router.push("/settings/content")}
         />
         <Divider className="mx-4" />
 
-        {/* 收藏统计原来在首页的常用入口里，按 Master 要求挪进「我的」 */}
-        <SettingsItem icon="chartPie" label="收藏统计" onPress={() => router.push("/stats")} />
+        {/* 记录统计：收藏清单 + 游玩数据的图表页 */}
+        <SettingsItem
+          icon="chartPie"
+          label={t("me.records")}
+          onPress={() => router.push("/stats")}
+        />
+        <Divider className="mx-4" />
+
+        <SettingsItem
+          icon="starFill"
+          label={t("me.favorites")}
+          onPress={() => router.push("/favorites")}
+        />
         <Divider className="mx-4" />
 
         <SettingsItem
           icon="clockArrowRotateLeft"
-          label="浏览历史"
+          label={t("me.history")}
           onPress={() => router.push("/history")}
         />
         <Divider className="mx-4" />
 
-        <SettingsItem icon="trashBin" label="清空浏览缓存" tone="danger" onPress={clearCache} />
+        <SettingsItem
+          icon="trashBin"
+          label={t("me.clearCache")}
+          tone="danger"
+          onPress={clearCache}
+        />
         <Divider className="mx-4" />
 
         <SettingsItem
           icon="circleInfo"
-          label="关于"
+          label={t("me.about")}
           onPress={() => router.push("/settings/about")}
         />
       </ListGroup>
@@ -88,6 +113,7 @@ export default function MeScreen(): JSX.Element {
 function ProfileHeader(): JSX.Element {
   const router = useRouter();
   const session = useSession();
+  const { t } = useTranslation();
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const account = session.status === "authenticated" ? session.account : null;
@@ -98,7 +124,7 @@ function ProfileHeader(): JSX.Element {
       onPress={() => router.push("/settings/account")}
       className="flex-row items-center gap-3 px-4 py-4 active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel="账号"
+      accessibilityLabel={t("settings.accountTitle")}
     >
       <View className="h-14 w-14 items-center justify-center rounded-full bg-accent-soft">
         {account ? (
@@ -111,13 +137,11 @@ function ProfileHeader(): JSX.Element {
       </View>
 
       <View className="flex-1 gap-0.5">
-        <H5>{account?.username ?? "未登录"}</H5>
-        <Muted type="body-xs">
-          {account ? `ID ${account.userId}` : "登录 VNDB 账号，启用清单同步"}
-        </Muted>
+        <H5>{account?.username ?? t("me.notLoggedIn")}</H5>
+        <Muted type="body-xs">{account ? `ID ${account.userId}` : t("me.loginHint")}</Muted>
         {account && !canWrite ? (
           <Muted type="body-xs" className="text-warning-soft-foreground">
-            缺少 listwrite 权限，无法写入清单
+            {t("me.noListwrite")}
           </Muted>
         ) : null}
       </View>

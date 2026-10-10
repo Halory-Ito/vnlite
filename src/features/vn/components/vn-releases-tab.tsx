@@ -12,16 +12,18 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { Muted, Paragraph } from "@/components/typo";
 import { PlatformBadges } from "@/components/ui";
 import { ReleaseHoldChips } from "@/features/ulist/components/release-hold-chips";
+import { useTranslation } from "@/hooks/use-translation";
 import { formatReleased } from "@/utils/format";
 
 import { useVnReleases } from "../hooks";
 
 export function VnReleasesTab({ vnId }: { vnId: string }): JSX.Element {
+  const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useVnReleases(vnId);
 
-  if (isLoading) return <LoadingState label="加载发行版…" className="py-12" />;
+  if (isLoading) return <LoadingState label={t("vn.releasesLoading")} className="py-12" />;
   if (isError) return <ErrorState error={error} onRetry={() => void refetch()} />;
-  if (!data || data.length === 0) return <EmptyState title="没有登记发行版" />;
+  if (!data || data.length === 0) return <EmptyState title={t("vn.releasesEmpty")} />;
 
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>

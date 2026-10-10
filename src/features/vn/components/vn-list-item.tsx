@@ -12,6 +12,7 @@ import { Muted, Paragraph } from "@/components/typo";
 import { PlatformBadges, RatingBadge } from "@/components/ui";
 import { useCopyProps } from "@/hooks/use-copy";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import type { CardField } from "@/lib/storage/preferences";
 import { vnCopyText } from "@/utils/copy-text";
@@ -35,6 +36,7 @@ export function VnListItem({
   trailing,
   fields,
 }: VnListItemProps): JSX.Element {
+  const { t } = useTranslation();
   const preferred = usePreferences().cardFields;
   const show = (field: CardField): boolean => (fields ?? preferred).includes(field);
   // 长按整行复制作品名 —— 浏览 / 搜索 / 标签 / 清单的列表都靠这一处
@@ -62,7 +64,7 @@ export function VnListItem({
         sexual={vn.image?.sexual}
         violence={vn.image?.violence}
         roundedClassName="rounded-md"
-        accessibilityLabel={`${vn.title} 封面`}
+        accessibilityLabel={t("home.coverLabel", { title: vn.title })}
         onPress={onCoverPress}
       />
 
@@ -82,7 +84,7 @@ export function VnListItem({
             {show("devstatus") && inDevelopment ? (
               <View className="rounded bg-warning-soft px-1.5 py-0.5">
                 <Muted type="body-xs" className="text-warning-soft-foreground">
-                  开发中
+                  {devStatusLabel(1)}
                 </Muted>
               </View>
             ) : null}

@@ -28,6 +28,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { InteractionManager, Pressable, View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import type { WalkthroughMarkApi } from "../use-marks";
 import { groupSteps } from "../select";
@@ -54,6 +55,7 @@ export interface WalkthroughStepsProps {
 }
 
 function WalkthroughStepsBase({ steps, shield, marks }: WalkthroughStepsProps): JSX.Element {
+  const { t } = useTranslation();
   const [limit, setLimit] = useState(() => Math.min(steps.length, FIRST_CHUNK));
 
   /*
@@ -95,10 +97,10 @@ function WalkthroughStepsBase({ steps, shield, marks }: WalkthroughStepsProps): 
           onPress={() => setLimit((n) => Math.min(steps.length, n + CHUNK))}
           className="self-start active:opacity-60"
           accessibilityRole="button"
-          accessibilityLabel={`显示更多步骤，还有 ${rest} 步`}
+          accessibilityLabel={t("walkthrough.showMoreLabel", { count: rest })}
         >
           <Muted type="body-xs" className="text-link">
-            显示更多（还有 {rest} 步）
+            {t("walkthrough.showMore", { count: rest })}
           </Muted>
         </Pressable>
       ) : null}

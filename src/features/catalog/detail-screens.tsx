@@ -22,10 +22,14 @@ import { Divider, Separator } from "@/components/separator";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { H2, H6, Muted } from "@/components/typo";
 import { KeyValueRow, SectionHeader, TagChip } from "@/components/ui";
+import { FavoriteButton } from "@/features/favorite/components/favorite-button";
 import { useRecordHistory } from "@/features/history/hooks";
 import { VnListItem } from "@/features/vn/components/vn-list-item";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { CatalogDetailTabs, type CatalogTab } from "./components/catalog-detail-tabs";
+import { ProducerLogo } from "./components/producer-logo";
+import { useProducerLogoUrl } from "./use-kungal-logo";
 import {
   getCharacter,
   getProducer,
@@ -41,7 +45,7 @@ import { queryKeys } from "@/lib/query/keys";
 import type { VnSummary } from "@/lib/api/types";
 import { setPreference } from "@/lib/storage/preferences";
 import { usePreferences } from "@/hooks/use-preferences";
-import { formatCount, sexLabel } from "@/utils/format";
+import { formatCount, producerTypeLabel, sexLabel } from "@/utils/format";
 
 /* -------------------------------------------------------------------------- */
 /* 通用外壳                                                                    */
@@ -55,6 +59,8 @@ interface DetailShellProps {
   subtitle?: string;
   cover?: ReactNode;
   header?: ReactNode;
+  /** 顶栏右侧操作区（如收藏星标） */
+  trailing?: ReactNode;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -73,6 +79,7 @@ function DetailShell({
   subtitle,
   cover,
   header,
+  trailing,
   isLoading,
   isError,
   error,
@@ -81,6 +88,7 @@ function DetailShell({
   scrollable = true,
 }: DetailShellProps): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const muted = useThemeColor("muted");
 
   if (isLoading) return <LoadingState />;
@@ -92,7 +100,7 @@ function DetailShell({
         <Pressable
           onPress={() => router.back()}
           className="active:opacity-60"
-          accessibilityLabel="返回"
+          accessibilityLabel={t("common.back")}
         >
           {/* 返回箭头取主题 muted，之前写死 iOS 系统灰 #8E8E93，换主题后对不上 */}
           <Icon name="chevronLeft" size={24} color={muted} />
@@ -100,6 +108,7 @@ function DetailShell({
         <Muted type="body-sm" className="flex-1" numberOfLines={1}>
           {title}
         </Muted>
+        {trailing}
       </View>
 
       <View className="flex-row items-start gap-4 px-4 pb-4">
@@ -141,6 +150,7 @@ function RelatedVns({
   title: string;
 }): JSX.Element | null {
   const router = useRouter();
+  const { t } = useTranslation();
   // 封面查看器：null = 关着（整段列表共用一个）
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -157,13 +167,13 @@ function RelatedVns({
         dims: (vn as VnSummary).image?.dims,
         sexual: (vn as VnSummary).image?.sexual,
         violence: (vn as VnSummary).image?.violence,
-        label: `${vn.title ?? vn.id} 封面`,
+        label: t("home.coverLabel", { title: vn.title ?? vn.id }),
       });
     }
     return { covers: images, coverIndex: index };
-  }, [vns]);
+  }, [vns, t]);
 
-  if (isLoading) return <LoadingState label="加载作品列表…" className="py-8" />;
+  if (isLoading) return <LoadingState label={t("common.loading")} className="py-8" />;
   if (isError) return <ErrorState error={error} onRetry={onRetry} />;
   if (!vns || vns.length === 0) return null;
 
@@ -201,6 +211,7 @@ function RelatedVns({
 
 export function CharacterDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const recordView = useRecordHistory();
 
   const detail = useQuery({
@@ -228,8 +239,19 @@ export function CharacterDetailScreen(): JSX.Element {
 
   return (
     <DetailShell
-      title={c?.name ?? "角色"}
+      title={c?.name ?? t("catalog.characterFallback")}
       subtitle={c?.original && c.original !== c.name ? c.original : undefined}
+      trailing={
+        c ? (
+          <FavoriteButton
+            type="character"
+            entryId={c.id}
+            title={c.name}
+            subtitle={c.original}
+            imageUrl={c.image?.thumbnail}
+          />
+        ) : undefined
+      }
       isLoading={detail.isLoading}
       isError={detail.isError}
       error={detail.error}
@@ -250,34 +272,34 @@ export function CharacterDetailScreen(): JSX.Element {
         <>
           <Divider />
           <View className="py-2">
-            <KeyValueRow label="性别">
+            <KeyValueRow label={t("catalog.sex")}>
               <Muted type="body-sm">{sexLabel(c.sex)}</Muted>
             </KeyValueRow>
             {c.age ? (
-              <KeyValueRow label="年龄">
+              <KeyValueRow label={t("catalog.age")}>
                 <Muted type="body-sm">
                   {c.age[0] === c.age[1] ? `${c.age[0]}` : `${c.age[0]}–${c.age[1]}`}
                 </Muted>
               </KeyValueRow>
             ) : null}
             {c.birthday ? (
-              <KeyValueRow label="生日">
+              <KeyValueRow label={t("catalog.birthday")}>
                 <Muted type="body-sm">
                   {c.birthday[1]
-                    ? `${c.birthday[0]} 月 ${c.birthday[1]} 日`
-                    : `${c.birthday[0]} 月`}
+                    ? t("catalog.birthdayFormat", { month: c.birthday[0], day: c.birthday[1] })
+                    : t("catalog.birthdayMonth", { month: c.birthday[0] })}
                 </Muted>
               </KeyValueRow>
             ) : null}
             {c.blood_type ? (
-              <KeyValueRow label="血型">
+              <KeyValueRow label={t("catalog.bloodType")}>
                 <Muted type="body-sm">{c.blood_type}</Muted>
               </KeyValueRow>
             ) : null}
             {c.cup || c.bust ? (
-              <KeyValueRow label="体型">
+              <KeyValueRow label={t("catalog.body")}>
                 {c.cup ? <Muted type="body-sm">{c.cup}</Muted> : null}
-                {c.bust ? <Muted type="body-xs">胸围 {c.bust} cm</Muted> : null}
+                {c.bust ? <Muted type="body-xs">{t("catalog.bust", { cm: c.bust })}</Muted> : null}
               </KeyValueRow>
             ) : null}
           </View>
@@ -285,11 +307,16 @@ export function CharacterDetailScreen(): JSX.Element {
           {c.traits && c.traits.length > 0 ? (
             <>
               <Divider />
-              <SectionHeader title="特性" />
+              <SectionHeader title={t("catalog.traits")} />
               <View className="gap-2">
                 <View className="flex-row flex-wrap gap-1.5 px-4">
-                  {traits.shown.map((t) => (
-                    <TagChip key={t.id} id={t.id} name={t.name} spoiler={t.spoiler ?? 0} />
+                  {traits.shown.map((trait) => (
+                    <TagChip
+                      key={trait.id}
+                      id={trait.id}
+                      name={trait.name}
+                      spoiler={trait.spoiler ?? 0}
+                    />
                   ))}
                 </View>
                 {traits.truncated ? (
@@ -304,7 +331,7 @@ export function CharacterDetailScreen(): JSX.Element {
           {c.description ? (
             <>
               <Divider />
-              <SectionHeader title="简介" />
+              <SectionHeader title={t("catalog.description")} />
               <View className="px-4 pb-4">
                 <CollapsibleText text={c.description} lines={6} />
               </View>
@@ -319,7 +346,7 @@ export function CharacterDetailScreen(): JSX.Element {
         isError={vns.isError}
         error={vns.error}
         onRetry={() => void vns.refetch()}
-        title="登场作品"
+        title={t("catalog.relatedVns")}
       />
     </DetailShell>
   );
@@ -332,6 +359,7 @@ export function CharacterDetailScreen(): JSX.Element {
 export function ProducerDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const viewMode = usePreferences().vnViewMode;
   const [tab, setTab] = useState<CatalogTab>("overview");
   const recordView = useRecordHistory();
@@ -352,16 +380,29 @@ export function ProducerDetailScreen(): JSX.Element {
   });
 
   const p = detail.data;
+  const logoUrl = useProducerLogoUrl(p);
 
-  // 记录浏览历史
+  // 记录浏览历史（LOGO 解析出来后再补一次，历史行就能显示厂商 LOGO）
   useEffect(() => {
-    if (p) recordView("producer", p.id, p.name, p.original);
-  }, [p, recordView]);
+    if (p) recordView("producer", p.id, p.name, p.original, logoUrl);
+  }, [p, logoUrl, recordView]);
 
   return (
     <DetailShell
-      title={p?.name ?? "制作者"}
+      title={p?.name ?? t("catalog.producerFallback")}
       subtitle={p?.original && p.original !== p.name ? p.original : undefined}
+      trailing={
+        p ? (
+          <FavoriteButton
+            type="producer"
+            entryId={p.id}
+            title={p.name}
+            subtitle={p.original}
+            imageUrl={logoUrl}
+          />
+        ) : undefined
+      }
+      cover={p ? <ProducerLogo producer={p} /> : undefined}
       isLoading={detail.isLoading}
       isError={detail.isError}
       error={detail.error}
@@ -371,9 +412,7 @@ export function ProducerDetailScreen(): JSX.Element {
       header={
         p ? (
           <View className="self-start rounded bg-default-soft px-2 py-0.5">
-            <Muted type="body-xs">
-              {p.type === "co" ? "公司" : p.type === "in" ? "个人" : "业余团体"}
-            </Muted>
+            <Muted type="body-xs">{producerTypeLabel(p.type)}</Muted>
           </View>
         ) : null
       }
@@ -384,14 +423,14 @@ export function ProducerDetailScreen(): JSX.Element {
         overview={
           p?.description ? (
             <>
-              <SectionHeader title="简介" />
+              <SectionHeader title={t("catalog.description")} />
               <View className="px-4 pb-4">
                 <CollapsibleText text={p.description} />
               </View>
             </>
           ) : (
             <View className="px-4 py-4">
-              <Muted type="body-sm">该制作者没有登记简介</Muted>
+              <Muted type="body-sm">{t("catalog.producerNoDescription")}</Muted>
             </View>
           )
         }
@@ -402,9 +441,9 @@ export function ProducerDetailScreen(): JSX.Element {
           onRetry: () => void vns.refetch(),
           items: vns.data ?? [],
         }}
-        emptyWorksText="VNDB 上这个制作者名下还没有作品"
+        emptyWorksText={t("catalog.worksEmptyProducer")}
         extlinks={p?.extlinks}
-        emptyExtlinksText="VNDB 上这个制作者没有登记外链"
+        emptyExtlinksText={t("catalog.extlinksEmptyProducer")}
         onPressVn={(vnId) => router.push(`/vn/${vnId}`)}
         viewMode={viewMode}
         onChangeViewMode={(mode) => void setPreference("vnViewMode", mode)}
@@ -420,6 +459,7 @@ export function ProducerDetailScreen(): JSX.Element {
 export function StaffDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const viewMode = usePreferences().vnViewMode;
   const [tab, setTab] = useState<CatalogTab>("overview");
   const recordView = useRecordHistory();
@@ -448,8 +488,13 @@ export function StaffDetailScreen(): JSX.Element {
 
   return (
     <DetailShell
-      title={s?.name ?? "制作人员"}
+      title={s?.name ?? t("catalog.staffFallback")}
       subtitle={s?.original && s.original !== s.name ? s.original : undefined}
+      trailing={
+        s ? (
+          <FavoriteButton type="staff" entryId={s.id} title={s.name} subtitle={s.original} />
+        ) : undefined
+      }
       isLoading={detail.isLoading}
       isError={detail.isError}
       error={detail.error}
@@ -463,14 +508,14 @@ export function StaffDetailScreen(): JSX.Element {
         overview={
           s?.description ? (
             <>
-              <SectionHeader title="简介" />
+              <SectionHeader title={t("catalog.description")} />
               <View className="px-4 pb-4">
                 <CollapsibleText text={s.description} />
               </View>
             </>
           ) : (
             <View className="px-4 py-4">
-              <Muted type="body-sm">该制作人员没有登记简介</Muted>
+              <Muted type="body-sm">{t("catalog.staffNoDescription")}</Muted>
             </View>
           )
         }
@@ -481,9 +526,9 @@ export function StaffDetailScreen(): JSX.Element {
           onRetry: () => void vns.refetch(),
           items: vns.data ?? [],
         }}
-        emptyWorksText="VNDB 上这个制作人员名下还没有作品"
+        emptyWorksText={t("catalog.worksEmptyStaff")}
         extlinks={s?.extlinks}
-        emptyExtlinksText="VNDB 上这个制作人员没有登记外链"
+        emptyExtlinksText={t("catalog.extlinksEmptyStaff")}
         onPressVn={(vnId) => router.push(`/vn/${vnId}`)}
         viewMode={viewMode}
         onChangeViewMode={(mode) => void setPreference("vnViewMode", mode)}
@@ -499,6 +544,8 @@ export function StaffDetailScreen(): JSX.Element {
 export function TagDetailScreen(): JSX.Element {
   const router = useRouter();
   const { id = "" } = useLocalSearchParams<{ id: string }>();
+  // ⚠️ 这条数据变量就叫 `t`（标签），翻译函数改名 `tr` 避免撞名
+  const { t: tr } = useTranslation();
   // `tag` 含父标签继承，`dtag` 只取直接标签
   const [direct, setDirect] = useState(false);
 
@@ -521,7 +568,7 @@ export function TagDetailScreen(): JSX.Element {
 
   return (
     <DetailShell
-      title={t?.name ?? "标签"}
+      title={t?.name ?? tr("catalog.tagFallback")}
       subtitle={t?.category}
       isLoading={detail.isLoading}
       isError={detail.isError}
@@ -529,14 +576,14 @@ export function TagDetailScreen(): JSX.Element {
       onRetry={() => void detail.refetch()}
       header={
         t?.vn_count != null ? (
-          <Muted type="body-xs">{formatCount(t.vn_count)} 部作品含此标签</Muted>
+          <Muted type="body-xs">{tr("catalog.tagCount", { count: formatCount(t.vn_count) })}</Muted>
         ) : null
       }
     >
       {t?.description ? (
         <>
           <Divider />
-          <SectionHeader title="说明" />
+          <SectionHeader title={tr("catalog.tagDescription")} />
           <View className="px-4 pb-4">
             <CollapsibleText text={t.description} />
           </View>
@@ -545,20 +592,20 @@ export function TagDetailScreen(): JSX.Element {
 
       <Divider />
       <View className="flex-row items-center gap-3 px-4 py-2">
-        <H6>作品列表</H6>
+        <H6>{tr("catalog.tagWorksTitle")}</H6>
         <Pressable onPress={() => setDirect(!direct)} className="active:opacity-60">
           <Muted type="body-xs" className="text-link">
-            {direct ? "仅直接标签" : "含父标签"}
+            {direct ? tr("catalog.tagDirectOnly") : tr("catalog.tagInherited")}
           </Muted>
         </Pressable>
       </View>
 
       {vns.isLoading ? (
-        <LoadingState label="加载作品列表…" className="py-8" />
+        <LoadingState label={tr("common.loading")} className="py-8" />
       ) : vns.isError ? (
         <ErrorState error={vns.error} onRetry={() => void vns.refetch()} />
       ) : (vns.data ?? []).length === 0 ? (
-        <EmptyState title="该标签下暂无作品" />
+        <EmptyState title={tr("catalog.tagWorksEmpty")} />
       ) : (
         <View>
           {(vns.data ?? []).map((vn) => (

@@ -13,6 +13,8 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
+import { ApiError } from "@/lib/api/errors";
 import type { VnSummary } from "@/lib/api/types";
 
 import { useJustReleasedVns, useUpcomingVns } from "../hooks";
@@ -22,6 +24,7 @@ import { CarouselSkeleton, VnCoverCarousel } from "./vn-cover-carousel";
 /** 「即将发售」页签 */
 export function UpcomingCarousel(): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const query = useUpcomingVns();
   return (
     <FeedCarousel
@@ -31,7 +34,7 @@ export function UpcomingCarousel(): JSX.Element {
       error={query.error}
       onRetry={() => void query.refetch()}
       onPressItem={(id) => router.push(`/vn/${id}`)}
-      emptyText="没有即将发售的作品"
+      emptyText={t("home.upcomingEmpty")}
     />
   );
 }
@@ -39,6 +42,7 @@ export function UpcomingCarousel(): JSX.Element {
 /** 「最新上架」页签 */
 export function JustReleasedCarousel(): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const query = useJustReleasedVns();
   return (
     <FeedCarousel
@@ -48,7 +52,7 @@ export function JustReleasedCarousel(): JSX.Element {
       error={query.error}
       onRetry={() => void query.refetch()}
       onPressItem={(id) => router.push(`/vn/${id}`)}
-      emptyText="没有新发售的作品"
+      emptyText={t("home.releasedEmpty")}
     />
   );
 }
@@ -70,16 +74,25 @@ function FeedCarousel({
   onPressItem: (id: string) => void;
   emptyText: string;
 }): JSX.Element {
+  const { t } = useTranslation();
+
   if (isLoading) return <CarouselSkeleton />;
   if (isError) {
     return (
       <View className="items-center gap-2 px-6 py-6">
         <Muted type="body-sm" className="text-center">
-          加载失败：{error instanceof Error ? error.message : "未知错误"}
+          {t("review.loadFailed", {
+            message:
+              error instanceof ApiError
+                ? error.userMessage
+                : error instanceof Error
+                  ? error.message
+                  : t("common.unknownError"),
+          })}
         </Muted>
         <Pressable onPress={onRetry} className="active:opacity-60" accessibilityRole="button">
           <Muted type="body-sm" className="text-link">
-            重试
+            {t("common.retry")}
           </Muted>
         </Pressable>
       </View>

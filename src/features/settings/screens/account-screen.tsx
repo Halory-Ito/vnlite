@@ -16,21 +16,24 @@ import { H5, Muted } from "@/components/typo";
 import { TOKEN_CREATE_URL } from "@/constants/config";
 import { SettingsShell } from "@/features/settings/components/settings-shell";
 import { useSession } from "@/hooks/use-session";
+import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import { loginWithToken, logout, type Account } from "@/lib/storage/session";
 
 export default function AccountScreen(): JSX.Element {
   const session = useSession();
+  const { t } = useTranslation();
 
   return (
     // 未登录时表单只有一两个控件，顶部对齐看起来很空 —— 整块垂直居中
-    <SettingsShell title="账号" centerContent>
+    <SettingsShell title={t("settings.accountTitle")} centerContent>
       {session.status === "authenticated" ? <SignedIn account={session.account} /> : <SignedOut />}
     </SettingsShell>
   );
 }
 
 function SignedOut(): JSX.Element {
+  const { t } = useTranslation();
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,7 +46,11 @@ function SignedOut(): JSX.Element {
       setToken("");
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.userMessage : err instanceof Error ? err.message : "登录失败"
+        err instanceof ApiError
+          ? err.userMessage
+          : err instanceof Error
+            ? err.message
+            : t("settings.loginFailed")
       );
     } finally {
       setBusy(false);
@@ -61,7 +68,7 @@ function SignedOut(): JSX.Element {
      */
     <View className="w-full max-w-sm flex-1 self-center justify-center gap-3 px-4">
       <TextField>
-        <Label>VNDB Token</Label>
+        <Label>{t("settings.tokenLabel")}</Label>
         <Input
           value={token}
           onChangeText={setToken}
@@ -88,7 +95,7 @@ function SignedOut(): JSX.Element {
           onPress={() => void doLogin()}
           isDisabled={busy || token.trim().length === 0}
         >
-          <Button.Label>{busy ? "验证中…" : "登录"}</Button.Label>
+          <Button.Label>{busy ? t("settings.loggingIn") : t("settings.login")}</Button.Label>
         </Button>
         <Button
           size="sm"
@@ -96,7 +103,7 @@ function SignedOut(): JSX.Element {
           className="flex-1"
           onPress={() => void Linking.openURL(TOKEN_CREATE_URL)}
         >
-          <Button.Label>获取</Button.Label>
+          <Button.Label>{t("settings.getToken")}</Button.Label>
         </Button>
       </View>
     </View>
@@ -104,6 +111,7 @@ function SignedOut(): JSX.Element {
 }
 
 function SignedIn({ account }: { account: Account }): JSX.Element {
+  const { t } = useTranslation();
   return (
     // 与未登录态同一套容器（同样的 max-w-sm + 居中），两个状态切换时不跳版
     <View className="w-full max-w-sm flex-1 self-center justify-center gap-6 px-4">
@@ -118,7 +126,7 @@ function SignedIn({ account }: { account: Account }): JSX.Element {
       </View>
 
       <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
-        <Button.Label>退出登录</Button.Label>
+        <Button.Label>{t("settings.logout")}</Button.Label>
       </Button>
     </View>
   );

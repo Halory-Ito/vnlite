@@ -17,9 +17,11 @@ import type { JSX } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { Muted } from "@/components/muted";
-import { LENGTH, LANGUAGE_LABEL, PLATFORM_LABEL, type DevStatus } from "@/lib/api/enums";
+import { useTranslation } from "@/hooks/use-translation";
+import { LENGTH, type DevStatus } from "@/lib/api/enums";
 import type { VnFilterState } from "@/lib/api/filters";
-import { devStatusLabel } from "@/utils/format";
+import { t as translate } from "@/lib/i18n/translate";
+import { devStatusLabel, languageLabel, platformLabel } from "@/utils/format";
 
 /** 一条生效中的条件。`clear` 返回清掉它之后的新状态 */
 export interface ActiveFilter {
@@ -41,7 +43,7 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
     const [min] = filters.ratingRange;
     out.push({
       key: "rating",
-      label: `评分 ≥ ${min}`,
+      label: translate("browse.summary.rating", { min }),
       clear: (f) => ({ ...f, ratingRange: undefined }),
     });
   }
@@ -57,7 +59,7 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
   for (const lang of filters.olang ?? []) {
     out.push({
       key: `olang:${lang}`,
-      label: `原语言 ${LANGUAGE_LABEL[lang] ?? lang}`,
+      label: translate("browse.summary.olang", { lang: languageLabel(lang) }),
       clear: (f) => ({ ...f, olang: without(f.olang, lang) }),
     });
   }
@@ -65,7 +67,7 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
   for (const lang of filters.lang ?? []) {
     out.push({
       key: `lang:${lang}`,
-      label: `语言 ${LANGUAGE_LABEL[lang] ?? lang}`,
+      label: translate("browse.summary.lang", { lang: languageLabel(lang) }),
       clear: (f) => ({ ...f, lang: without(f.lang, lang) }),
     });
   }
@@ -73,7 +75,7 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
   for (const p of filters.platform ?? []) {
     out.push({
       key: `platform:${p}`,
-      label: PLATFORM_LABEL[p] ?? p,
+      label: platformLabel(p),
       clear: (f) => ({ ...f, platform: without(f.platform, p) }),
     });
   }
@@ -81,7 +83,7 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
   for (const len of filters.length ?? []) {
     out.push({
       key: `length:${len}`,
-      label: LENGTH[len] ?? `${len} 小时`,
+      label: LENGTH[len] ?? translate("browse.summary.lengthFallback", { hours: len }),
       clear: (f) => ({ ...f, length: without(f.length, len) }),
     });
   }
@@ -96,10 +98,10 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
 
   if (filters.releasedFrom || filters.releasedTo) {
     const from = filters.releasedFrom?.slice(0, 4) ?? "…";
-    const to = filters.releasedTo?.slice(0, 4) ?? "今";
+    const to = filters.releasedTo?.slice(0, 4) ?? translate("browse.summary.releasedNow");
     out.push({
       key: "released",
-      label: `${from} – ${to}`,
+      label: translate("browse.summary.releasedRange", { from, to }),
       clear: (f) => ({ ...f, releasedFrom: undefined, releasedTo: undefined }),
     });
   }
@@ -107,16 +109,24 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
   if (filters.minVotecount) {
     out.push({
       key: "votecount",
-      label: `票数 ≥ ${filters.minVotecount}`,
+      label: translate("browse.summary.votecount", { min: filters.minVotecount }),
       clear: (f) => ({ ...f, minVotecount: undefined }),
     });
   }
 
   if (filters.hasDescription) {
-    out.push({ key: "desc", label: "有简介", clear: (f) => ({ ...f, hasDescription: undefined }) });
+    out.push({
+      key: "desc",
+      label: translate("browse.filter.hasDescription"),
+      clear: (f) => ({ ...f, hasDescription: undefined }),
+    });
   }
   if (filters.hasScreenshot) {
-    out.push({ key: "shot", label: "有截图", clear: (f) => ({ ...f, hasScreenshot: undefined }) });
+    out.push({
+      key: "shot",
+      label: translate("browse.filter.hasScreenshot"),
+      clear: (f) => ({ ...f, hasScreenshot: undefined }),
+    });
   }
 
   return out;
@@ -134,22 +144,23 @@ export interface FilterSummaryProps {
 }
 
 export function FilterSummary({ filters, onChange }: FilterSummaryProps): JSX.Element | null {
+  const { t } = useTranslation();
   const active = describeFilters(filters);
   if (active.length === 0) return null;
 
   return (
     <View className="gap-2 border-b border-separator pb-3">
       <View className="flex-row items-center justify-between">
-        <Muted type="body-xs">已选 {active.length} 项</Muted>
+        <Muted type="body-xs">{t("browse.filter.selected", { count: active.length })}</Muted>
         <Pressable
           onPress={() => onChange({})}
           className="rounded-full px-2 py-0.5 active:opacity-70"
           accessibilityRole="button"
-          accessibilityLabel="清空全部筛选条件"
+          accessibilityLabel={t("browse.filter.clearAll")}
           hitSlop={8}
         >
           <Typography type="body-xs" className="font-semibold text-danger">
-            清空
+            {t("common.clear")}
           </Typography>
         </Pressable>
       </View>
@@ -187,6 +198,7 @@ interface FilterChipRowProps {
 
 /** 横向滚动的条件标签行，面板汇总条和列表速览共用 */
 function FilterChipRow({ active, filters, onChange }: FilterChipRowProps): JSX.Element {
+  const { t } = useTranslation();
   return (
     <ScrollView
       horizontal
@@ -199,7 +211,7 @@ function FilterChipRow({ active, filters, onChange }: FilterChipRowProps): JSX.E
           onPress={() => onChange(item.clear(filters))}
           className="flex-row items-center gap-1 rounded-full border border-accent bg-accent-soft px-2.5 py-1 active:opacity-70"
           accessibilityRole="button"
-          accessibilityLabel={`移除筛选条件 ${item.label}`}
+          accessibilityLabel={t("browse.summary.remove", { label: item.label })}
         >
           <Typography type="body-xs" className="text-accent">
             {item.label}

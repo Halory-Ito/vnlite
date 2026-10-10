@@ -19,6 +19,7 @@ import { Pressable, View, useWindowDimensions, type RefreshControlProps } from "
 
 import { CoverImage } from "@/components/cover-image";
 import { imageGate, useNsfwMode } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import type { Image } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
 
@@ -95,6 +96,7 @@ function GridTile({
   nsfwMode: NsfwMode;
   onPress: (id: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const image = entry.image;
   const cover = (
     <CoverImage
@@ -103,7 +105,7 @@ function GridTile({
       height={COVER_RATIO}
       sexual={image?.sexual}
       violence={image?.violence}
-      accessibilityLabel={`${entry.title} 封面`}
+      accessibilityLabel={t("home.coverLabel", { title: entry.title })}
       onPress={() => onPress(entry.id)}
     />
   );
@@ -115,7 +117,7 @@ function GridTile({
         <Pressable
           onPress={() => onPress(entry.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${entry.title} 封面（已按内容偏好隐藏）`}
+          accessibilityLabel={t("home.coverHiddenLabel", { title: entry.title })}
         >
           {cover}
         </Pressable>

@@ -3,7 +3,12 @@
  *
  * client.ts 把 Kana 的 HTTP 状态码统一映射到这里，UI 层只需 `instanceof`
  * 判断即可决定重试 / 提示 / 跳登录。
+ *
+ * ⚠️ 用户可见文案统一走 `apiErrorMessage`（全局 `t`，语言切换后取当前语言）；
+ * 构造函数里的 `message` 是内部信息（日志 / 断言用），不做翻译。
  */
+
+import { t } from "@/lib/i18n/translate";
 
 export type ApiErrorKind =
   /** 400：请求体或过滤器非法 —— 通常是字段名或过滤器写法错了，重试无用 */
@@ -56,26 +61,9 @@ export class ApiError extends Error {
     return this.kind === "unauthorized";
   }
 
-  /** 给用户看的简短中文提示 */
+  /** 给用户看的简短提示（按错误码查当前语言的文案） */
   get userMessage(): string {
-    switch (this.kind) {
-      case "bad_request":
-        return "请求被 VNDB 拒绝，多半是筛选条件写错了";
-      case "unauthorized":
-        return "Token 无效或已失效，请重新登录";
-      case "not_found":
-        return "接口不存在或条目已删除";
-      case "rate_limited":
-        return "请求太频繁，已自动排队，请稍候";
-      case "server_error":
-        return "VNDB 服务器暂时不可用";
-      case "network":
-        return "网络连接失败，请检查网络";
-      case "parse":
-        return "响应解析失败";
-      default:
-        return "出错了";
-    }
+    return apiErrorMessage(this.kind);
   }
 
   static badRequest(detail: string, endpoint?: string): ApiError {
@@ -116,6 +104,33 @@ export class ApiError extends Error {
 
   static parse(cause: unknown, endpoint?: string): ApiError {
     return new ApiError("parse", "响应解析失败", { endpoint, cause });
+  }
+}
+
+/**
+ * 错误码 → 用户可见文案（纯函数，用全局 `t`）。
+ *
+ * 从类里拆出来是为了让「展示文案」只有这一个入口：
+ * UI 想自己分发提示时也可以直接调它，不必构造 ApiError。
+ */
+export function apiErrorMessage(kind: ApiErrorKind): string {
+  switch (kind) {
+    case "bad_request":
+      return t("misc.apiError.badRequest");
+    case "unauthorized":
+      return t("misc.apiError.unauthorized");
+    case "not_found":
+      return t("misc.apiError.notFound");
+    case "rate_limited":
+      return t("misc.apiError.rateLimited");
+    case "server_error":
+      return t("misc.apiError.serverError");
+    case "network":
+      return t("misc.apiError.network");
+    case "parse":
+      return t("misc.apiError.parse");
+    default:
+      return t("misc.apiError.unknown");
   }
 }
 

@@ -22,12 +22,14 @@ import { CollapsibleText, ExpandToggle, useCollapsedList } from "@/components/co
 import { Divider } from "@/components/separator";
 import { Muted } from "@/components/typo";
 import { SectionHeader, TagChip } from "@/components/ui";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail } from "@/lib/api/types";
 
 /** 收起状态下最多显示几个标签 */
 const TAG_LIMIT = 12;
 
 export function VnOverviewTab({ vn }: { vn: VnDetail }): JSX.Element {
+  const { t } = useTranslation();
   // 按评分热度排序：VNDB 的标签是按「多少人打了这个标签」加权的
   const sortedTags = [...(vn.tags ?? [])].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
   const tags = useCollapsedList(sortedTags, TAG_LIMIT);
@@ -36,21 +38,21 @@ export function VnOverviewTab({ vn }: { vn: VnDetail }): JSX.Element {
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       {vn.description ? (
         <>
-          <SectionHeader title="简介" />
+          <SectionHeader title={t("vn.description")} />
           <View className="px-4 pb-4">
             <CollapsibleText text={vn.description} lines={6} />
           </View>
         </>
       ) : (
         <View className="px-4 py-4">
-          <Muted type="body-sm">该作品没有登记简介</Muted>
+          <Muted type="body-sm">{t("vn.noDescription")}</Muted>
         </View>
       )}
 
       {sortedTags.length > 0 ? (
         <>
           <Divider />
-          <SectionHeader title="标签" />
+          <SectionHeader title={t("vn.tags")} />
           <View className="flex-row flex-wrap gap-1.5 px-4 pb-3">
             {tags.shown.map((tag) => (
               <Link key={tag.id} href={`/tag/${tag.id}`} asChild>

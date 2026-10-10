@@ -20,17 +20,26 @@ import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { Separator } from "@/components/separator";
 import { Muted, Paragraph } from "@/components/typo";
+import { useTranslation } from "@/hooks/use-translation";
 
 import { useThreadList } from "../hooks";
 import type { VndbThread } from "../scrape";
 
 export function VnDiscussionsTab({ vnId }: { vnId: string }): JSX.Element {
+  const { t } = useTranslation();
   const { query, threads } = useThreadList(vnId);
 
-  if (query.isLoading) return <LoadingState label="抓取讨论列表…" className="py-12" />;
+  if (query.isLoading) {
+    return <LoadingState label={t("discussion.list.loading")} className="py-12" />;
+  }
   if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   if (threads.length === 0) {
-    return <EmptyState title="该作品暂无讨论" description="VNDB 讨论板上还没有相关话题" />;
+    return (
+      <EmptyState
+        title={t("discussion.list.emptyTitle")}
+        description={t("discussion.list.emptyDescription")}
+      />
+    );
   }
 
   return (
@@ -65,6 +74,7 @@ export function VnDiscussionsTab({ vnId }: { vnId: string }): JSX.Element {
 /** 一条帖子：标题 + 元信息行；整行进去站内帖子页 */
 function ThreadRow({ thread }: { thread: VndbThread }): JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   // 图标只能吃具体色值（不吃 className），所以走主题 muted
   const muted = useThemeColor("muted");
 
@@ -73,7 +83,7 @@ function ThreadRow({ thread }: { thread: VndbThread }): JSX.Element {
       onPress={() => router.push({ pathname: "/thread/[id]", params: { id: thread.id } })}
       className="flex-row items-center gap-3 px-4 py-3 active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel={`打开讨论帖：${thread.title}`}
+      accessibilityLabel={t("discussion.list.openThread", { title: thread.title })}
     >
       <View className="flex-1 gap-1">
         <Paragraph className="line-clamp-2">{thread.title}</Paragraph>
@@ -82,13 +92,13 @@ function ThreadRow({ thread }: { thread: VndbThread }): JSX.Element {
         <View className="flex-row flex-wrap items-center gap-x-3 gap-y-0.5">
           <View className="flex-row items-center gap-1">
             <Muted type="body-xs" className="opacity-70">
-              发起自
+              {t("discussion.list.starter")}
             </Muted>
             <UserName id={thread.starterId} name={thread.starter} />
           </View>
           <View className="flex-row items-center gap-1">
             <Muted type="body-xs" className="opacity-70">
-              最后回复
+              {t("discussion.list.lastPost")}
             </Muted>
             <UserName id={thread.lastPosterId} name={thread.lastPoster} />
           </View>
@@ -105,7 +115,7 @@ function ThreadRow({ thread }: { thread: VndbThread }): JSX.Element {
           {thread.replies}
         </Muted>
         <Muted type="body-xs" className="text-[10px] opacity-70">
-          回复
+          {t("discussion.list.replies")}
         </Muted>
       </View>
 
@@ -120,6 +130,7 @@ function ThreadRow({ thread }: { thread: VndbThread }): JSX.Element {
  */
 function UserName({ id, name }: { id: string | null; name: string | null }): JSX.Element | null {
   const router = useRouter();
+  const { t } = useTranslation();
   if (!name) return null;
   if (!id)
     return (
@@ -133,7 +144,7 @@ function UserName({ id, name }: { id: string | null; name: string | null }): JSX
       onPress={() => router.push({ pathname: "/user/[id]", params: { id } })}
       className="active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel={`打开用户页：${name}`}
+      accessibilityLabel={t("discussion.openUser", { name })}
     >
       <Muted type="body-xs" className="text-link">
         {name}

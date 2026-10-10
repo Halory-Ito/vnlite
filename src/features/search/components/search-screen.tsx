@@ -20,8 +20,9 @@ import { View } from "react-native";
 import { SegmentedControl } from "@/components/segmented-control";
 import { DatabaseStats } from "@/features/stats/database-stats";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslation } from "@/hooks/use-translation";
 
-import { SCOPE_OPTIONS, SEARCH_PLACEHOLDER, type SearchScope } from "../search-logic";
+import { SCOPE_OPTIONS, SEARCH_PLACEHOLDER_KEY, type SearchScope } from "../search-logic";
 
 import { CatalogSearchResults } from "./catalog-search-results";
 import { UserSearchResults } from "./user-search-results";
@@ -30,10 +31,15 @@ import { VnSearchResults } from "./vn-search-results";
 const DEBOUNCE_MS = 350;
 
 export function SearchScreen(): JSX.Element {
+  const { t } = useTranslation();
   // 默认「作品」：绝大多数搜索意图是找作品
   const [scope, setScope] = useState<SearchScope>("vn");
   const [input, setInput] = useState("");
   const keyword = useDebouncedValue(input, DEBOUNCE_MS).trim();
+  const scopeOptions = SCOPE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+  }));
 
   return (
     <View className="flex-1">
@@ -41,11 +47,11 @@ export function SearchScreen(): JSX.Element {
         <SearchField value={input} onChange={setInput}>
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input placeholder={SEARCH_PLACEHOLDER} />
+            <SearchField.Input placeholder={t(SEARCH_PLACEHOLDER_KEY)} />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
-        <SegmentedControl options={SCOPE_OPTIONS} value={scope} onChange={setScope} />
+        <SegmentedControl options={scopeOptions} value={scope} onChange={setScope} />
       </View>
 
       {keyword.length === 0 ? (

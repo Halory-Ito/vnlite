@@ -17,6 +17,7 @@ import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { EmptyState } from "@/components/screen-state";
 import { Muted } from "@/components/typo";
 import { useImageGate } from "@/hooks/use-preferences";
+import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail } from "@/lib/api/types";
 
 /**
@@ -31,11 +32,17 @@ const MAX_RATIO = 2.2;
 const DEFAULT_RATIO = 1.6;
 
 export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
+  const { t } = useTranslation();
   const shots = vn.screenshots ?? [];
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   if (shots.length === 0) {
-    return <EmptyState title="没有截图" description="该作品没有上传截图" />;
+    return (
+      <EmptyState
+        title={t("vn.screenshotsEmptyTitle")}
+        description={t("vn.screenshotsEmptyDescription")}
+      />
+    );
   }
 
   // 查看器里的顺序与列表一致，所以直接用下标当索引
@@ -46,7 +53,7 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
     dims: shot.dims as [number, number] | undefined,
     sexual: shot.sexual,
     violence: shot.violence,
-    label: `截图 ${i + 1}`,
+    label: t("vn.screenshotLabel", { index: i + 1 }),
   }));
 
   return (
@@ -95,6 +102,7 @@ function ScreenshotCard({
   dims?: [number, number];
   onPress: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const gate = useImageGate({ sexual, violence });
 
   // aspectRatio + width:100% 让卡片的盒子自己撑开，不需要算像素
@@ -107,7 +115,7 @@ function ScreenshotCard({
         className="items-center justify-center overflow-hidden rounded-lg bg-default-soft"
         style={{ aspectRatio: ratio, width: "100%" }}
       >
-        <Muted type="body-xs">已隐藏（成人内容）</Muted>
+        <Muted type="body-xs">{t("common.hiddenAdult")}</Muted>
       </View>
     );
   }
@@ -118,7 +126,7 @@ function ScreenshotCard({
       className="overflow-hidden rounded-lg bg-default-soft active:opacity-80"
       style={{ aspectRatio: ratio, width: "100%" }}
       accessibilityRole="imagebutton"
-      accessibilityLabel="作品截图，点击全屏查看"
+      accessibilityLabel={t("vn.screenshotHint")}
     >
       <Image
         source={url}
@@ -138,7 +146,7 @@ function ScreenshotCard({
       {gate.blurred ? (
         <View className="absolute bottom-1.5 right-2 rounded-full bg-background/80 px-2 py-0.5">
           <Muted type="body-xs" className="text-[10px]">
-            已模糊
+            {t("common.blurred")}
           </Muted>
         </View>
       ) : null}

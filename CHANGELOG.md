@@ -7,6 +7,106 @@
 
 ---
 
+## [1.3.0] - 2026-10-10
+
+一句话：一次大版本 —— **全应用国际化（简体中文 / English）**、**收藏**（作品 · 人员 · 用户 · 厂商）、**「记录统计」**（游玩数据 + 收藏分布）、厂商 LOGO 改走**鲲 Galgame 会社库**，并新增**检查更新**；同时把游戏计时的通知换成 `expo-notifications`、移除系统悬浮球。
+
+### 新增
+
+- **国际化（i18n）**：简体中文 + English，跟随系统或在「我的 → 语言」用 **Select** 切换
+  - `expo-localization`（设备语言）+ `i18n-js`（插值 / 回退）；目录**按语言分文件夹** `catalogs/{zh,en}`，英文结构由类型卡住（漏键 / 多键编译报错）
+  - 覆盖全部界面：Tab 栏、设置、首页信息流、浏览 / 搜索、清单、VN 与角色 / 制作者 / staff / 标签 / 用户详情、讨论、攻略、计时、游玩记录、历史、收藏、统计；含无障碍标签、空态、错误文案与 VNDB 枚举（平台 / 性别 / 职位 / 关系 / 配音等）
+  - 英文用词对齐 vndb.org（Visual novels / Releases / Producers / Staff / Characters / Tags / Traits / Reviews / Quotes / Wishlist…）
+- **收藏**（入口「我的 → 我的收藏」）：**作品 / 人员 / 用户 / 厂商** 四类，纯本地（SQLite v6）
+  - 详情页右上角星标一键收藏；收藏页四档分段切换 + 作品档网格 / 列表；清空时可勾选分类
+- **记录统计**（原「收藏统计」扩展并改名）
+  - 上半「**游玩统计**」：总时长 / 游玩次数 / 游玩作品数、**游玩时长排名**、**游戏类型时长分布**、**每月**（近 12 月）与**每周**（近 8 周）图表，当月 / 本周高亮
+  - 下半「**收藏统计**」：发售年代 / 清单标签 / 游戏类型饼图 + 厂商 Top；未登录只显示游玩部分
+- **厂商 LOGO**：改走**鲲 Galgame 会社库**（`kungal.com/galgame/official`）
+  - 构建期静态索引（`bun run sync:kungal`，129 KB，懒加载）：**官网域名优先** + 名称兜底，运行时零请求
+  - 浏览历史 / 收藏里的厂商条目也补 LOGO；**不做 NSFW 处理**，始终原图显示
+- **检查更新**（「关于」页）：GitHub Release → Tags → jsDelivr 三级回退；发现新版本自动弹框引导去发布页
+
+### 改进
+
+- **游戏计时通知改用 `expo-notifications`**（官方库）；**移除 Notifee 与系统悬浮球**及自定义入口 `index.js`（通知栏已够用；耗时按时间戳计算，回前台自动校准）
+- 游玩记录：列表左滑「设置 / 删除」，可改起止时间（时长自动算差值）；图表视图保留四块统计 + 按月按周柱状
+- 浏览历史与收藏**共用**抽取出的 `components/entry-list-item` 与 `components/clear-categories-dialog`
+- 「我的」新增「语言」「记录统计」入口；「关于」页署名改为「厂商 LOGO — 鲲 Galgame」
+- 首页信息流英文档位改用短词 `Reviews / Upcoming / Released`（原词在分段控件里放不下）
+
+### 修复
+
+- 非 `ApiError` 的错误不再把内部 `Error.message` 直接上屏（统一通用文案）；首页随机 / 信息流的失败优先显示 `ApiError.userMessage`
+- 语言初始化在根布局模块加载时执行，设备语言非中文时**首帧即用正确语言**
+
+### 技术与构建（面向开发者）
+
+- 版本 `1.2.1` → `1.3.0`（`app.json` / `constants/config.ts` / `package.json` 三处对齐）
+- 依赖：新增 `expo-localization`、`expo-notifications`、`i18n-js`；移除 `@notifee/react-native`、`react-native-android-overlay`
+- `main` 由自定义 `index.js` 改回 `expo-router/entry`（悬浮球入口一并删除）
+- 移除 `lib/api/igdb.ts` 与 `IGDB_CREDENTIALS`（厂商 LOGO 不再走 IGDB）
+- SQLite 迁移 **v6**：`favorite` 表（v5 为 `play_session`）
+- 构建期静态索引 `features/catalog/kungal-logos.json`（4073 家会社 → 692 域名 + 877 名称）
+- EAS 新增 `preview-arm64` 档；`preview` 仍出**多 ABI 的多个 APK**
+- 冒烟 **60 项**全绿（含 zh / en 键集合一致性、收藏 DAO、记录统计聚合、厂商 LOGO 查表）
+
+### 已知
+
+- 英文为一次性迁移；VNDB 数据里的英文枚举（清单内置标签、发行版持有状态）按原样保留，不翻译
+- 厂商 LOGO 覆盖受数据源限制：KunGal 有上传 LOGO 的会社才有（约 880 家，主流大厂基本覆盖）
+
+---
+
+## [1.2.1] - 2026-10-10
+
+一句话：新增**游戏计时**——详情页点「开始游戏」，计时浮层 / 通知栏 / 系统悬浮球跨页面跨应用常驻，结束后自动记一条游玩数据，详情页「记录」页签可按周看图表、按次看列表；顺带补上了「**浏览历史**」与清空历史的分类勾选。
+
+### 新增
+
+- **浏览历史**（入口在「我的」）。本地 SQLite 记录看过的作品 / 人员 / 用户 / 厂商
+  - 四档分段切换；**自定义开始 / 结束日期**筛选（快捷的「今天 / 近 7 天 / 近 30 天」只是快速填日期的捷径）
+  - 作品档支持网格（纯封面墙）/ 列表两种视图；长按单条删除
+- **游戏计时器**
+  - VN 详情页「开始游戏」按钮；计时浮层**跨页面常驻**（切页 / 返回不丢），圆形显示 `HH:MM:SS`
+  - 点圆形展开「暂停 / 继续」与「结束」；**可拖动**到屏幕任意位置（夹在安全区内）
+  - 按「起点 + 累计」时间戳持久化：**后台 / 杀进程也在走**，冷启动恢复后读数依旧准确
+  - 「结束」写一条游玩记录（墙钟起止 + 实际时长，暂停时段不计）
+- **锁屏 / 通知栏计时条**（Notifee，Android）。一行常驻通知 = **封面大图 + 游戏名 + 计时 + 「暂停 / 结束」按钮**，锁屏可见；计时中每秒刷新
+- **系统悬浮球**（Android，需「显示在其他应用上层」权限）。计时期间圆浮在所有 App 之上——玩游戏时也能瞥见时间；iOS 无此能力，静默跳过
+- **VN 详情页「记录」页签**（游玩记录），图表 / 列表两个视图：
+  - 图表：四块统计（总时长 / 游玩次数 / 平均每次 / 最长一次）+ **按月切换、按周**（1-7 / 8-14 / …，按实际月长切分）的手绘时长条；今天所在的一周满色高亮
+  - 列表：每一次游玩的日期、起止时间与时长
+- **清空历史支持勾选分类**：弹窗里勾选要删除的档位（作品 / 人员 / 用户 / 厂商），默认全选，一项未勾时「清空」置灰
+
+### 改进
+
+- 「我的 · 浏览历史」入口图标由普通时钟换成官方历史图标 `clockArrowRotateLeft`（带回转箭头）；历史页日期筛选换成 `calendar`——「历史 / 时间 / 日期」三种语义各用各的图标，不再互相顶替
+
+### 修复
+
+- **Token 仅在 401 或主动退出时删除**，其它请求失败不再误清登录态
+- **Notifee 在 Expo Go 直接崩**（静态 import 在原生模块缺失时抛错，连带 `_layout` 求值失败、报「route 缺少 default export」）：改为先探测原生模块、再 `require` 懒加载，缺失时静默降级
+- 通知按钮事件 `mod.default` 为 undefined：Metro 对 Notifee 这类 CJS 模块的动态 `import()` 互操作不可靠，改走 `require`
+
+### 技术与构建（面向开发者）
+
+- 版本 `1.2.0` → `1.2.1`（`app.json` / `constants/config.ts` / `package.json` 三处对齐）
+- **新增两个原生依赖**：`@notifee/react-native`（通知）、`react-native-android-overlay`（悬浮球）——**Expo Go 不支持，必须 EAS 构建**；本次产物用 `preview` 档（普通 APK），`development` 档需另装 `expo-dev-client`
+- 自定义入口 `index.js`：注册悬浮球组件 `GameTimerOverlayWindow` 后再引 `expo-router/entry`，`package.json` 的 `main` 指向它
+- SQLite 迁移 v5：`play_session` 表（`vn_id + started_at DESC` 索引）
+- 冒烟新增计时 / 游玩记录用例（状态流转、暂停冻结、脏数据兜底、按周聚合、DAO 写查删），共 47 项
+- 计时 / 游玩记录为两个 feature 目录：`features/game-timer`（store / hooks / persistence / notification / overlay-window / 浮层组件）+ `features/play-records`（统计纯函数 / 格式化 / 页签组件）
+- `.oxlintrc.json` 新增文件级 override：React Compiler 对 reanimated `.value=` 与 `Gesture.Pan()` 属误报
+
+### 已知
+
+- **通知与悬浮球未经真机验证**：Android 13+ 需要通知权限；悬浮球需要「显示在其他应用上层」授权，拒绝后 App 内浮层照常
+- 后台**每秒刷新通知**依赖悬浮球的前台服务保活；未授权时退后台通知会停在最后一次刷新（数据本身按时间戳不丢）
+- 悬浮球库 `react-native-android-overlay` 较新（v0.1.1，仅 Android），稳定性待线上观察
+
+---
+
 ## [1.2.0] - 2026-10-03
 
 一句话：作品详情页多了「**攻略**」页签 —— 走社区维护的独立 JSON 仓库，可以在里面标记进度、通关结局，数据落在本地离线也能看。
