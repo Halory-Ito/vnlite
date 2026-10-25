@@ -13,16 +13,17 @@ import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
+import { DateOtpField } from "@/components/date-otp-field";
 import { Muted, Paragraph } from "@/components/typo";
 import { RatingBadge } from "@/components/ui";
 import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import type { UListItem, UListLabel } from "@/lib/api/types";
+import { dateRangeErrors } from "@/utils/date";
 import { formatReleased } from "@/utils/format";
 
-import { dateErrors, diffPatch, draftFrom, type UlistDraft } from "../entry-logic";
+import { diffPatch, draftFrom, type UlistDraft } from "../entry-logic";
 import { useUlistMutations } from "../hooks";
-import { DateField } from "./date-field";
 import { LabelField } from "./label-field";
 import { VoteField } from "./vote-field";
 
@@ -39,8 +40,8 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
   const [draft, setDraft] = useState<UlistDraft>(() => draftFrom(entry));
   const [confirmRemove, setConfirmRemove] = useState(false);
 
-  const errors = dateErrors(draft.started, draft.finished);
-  const patch = errors.started || errors.finished ? null : diffPatch(entry, draft);
+  const errors = dateRangeErrors(draft.started, draft.finished);
+  const patch = errors.start || errors.end ? null : diffPatch(entry, draft);
   const busy = updateEntry.isPending || removeEntry.isPending;
 
   const save = (): void => {
@@ -86,17 +87,17 @@ export function EntryForm({ entry, labels }: EntryFormProps): JSX.Element {
           labels={labels}
           onChange={(next) => update({ labels: next })}
         />
-        <DateField
+        <DateOtpField
           label={t("ulist.startedDate")}
           value={draft.started}
           onChange={(started) => update({ started })}
-          error={errors.started ? t(errors.started) : null}
+          error={errors.start ? t(errors.start) : null}
         />
-        <DateField
+        <DateOtpField
           label={t("ulist.finishedDate")}
           value={draft.finished}
           onChange={(finished) => update({ finished })}
-          error={errors.finished ? t(errors.finished) : null}
+          error={errors.end ? t(errors.end) : null}
         />
         <View className="gap-1.5">
           <Muted type="body-xs" className="font-medium">

@@ -5,7 +5,7 @@
  * 逐位输入，不用敲 `-`）。上面一排快捷时间段只是把两个日期快速填好的捷径。
  *
  * 面板外壳与选项胶囊复用浏览页那套（`FullScreenPanel` + `FilterGroup` /
- * `FilterChip`）；草稿在面板内部（存 8 位数字），点「应用」才生效，
+ * `FilterChip`）；草稿在面板内部（`YYYY-MM-DD`），点「应用」才生效，
  * 未填满 / 日期无效 / 顺序错误都会挡住。
  */
 
@@ -14,15 +14,13 @@ import type { JSX } from "react";
 import { useState } from "react";
 import { View } from "react-native";
 
+import { DateOtpField } from "@/components/date-otp-field";
 import { FilterChip, FilterGroup } from "@/features/browse/components/filter-group";
 import { FullScreenPanel } from "@/features/browse/components/panel";
 import { useTranslation } from "@/hooks/use-translation";
+import { dateRangeErrors } from "@/utils/date";
 
-import { DateOtpField } from "./date-otp-field";
 import {
-  dateDigitsRangeErrors,
-  digitsToIso,
-  isoToDigits,
   presetDateFilter,
   historyPresetOptions,
   type HistoryDateFilter,
@@ -34,24 +32,15 @@ export interface TimeRangePanelProps {
   onClose: () => void;
 }
 
-/** 面板草稿：两端都是 8 位数字串 */
-interface DateDraft {
-  start: string;
-  end: string;
-}
-
 export function TimeRangePanel({ value, onChange, onClose }: TimeRangePanelProps): JSX.Element {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<DateDraft>(() => ({
-    start: isoToDigits(value.start),
-    end: isoToDigits(value.end),
-  }));
-  const errors = dateDigitsRangeErrors(draft.start, draft.end);
+  const [draft, setDraft] = useState<HistoryDateFilter>(value);
+  const errors = dateRangeErrors(draft.start, draft.end);
   const valid = !errors.start && !errors.end;
 
   const apply = (): void => {
     if (!valid) return;
-    onChange({ start: digitsToIso(draft.start), end: digitsToIso(draft.end) });
+    onChange(draft);
     onClose();
   };
 
@@ -74,19 +63,13 @@ export function TimeRangePanel({ value, onChange, onClose }: TimeRangePanelProps
       <FilterGroup label={t("history.quickSelect")}>
         {historyPresetOptions(t).map((option) => {
           const preset = presetDateFilter(option.value);
-          const active =
-            draft.start === isoToDigits(preset.start) && draft.end === isoToDigits(preset.end);
+          const active = draft.start === preset.start && draft.end === preset.end;
           return (
             <FilterChip
               key={option.value}
               option={option}
               active={active}
-              onPress={() =>
-                setDraft({
-                  start: isoToDigits(preset.start),
-                  end: isoToDigits(preset.end),
-                })
-              }
+              onPress={() => setDraft({ start: preset.start, end: preset.end })}
             />
           );
         })}

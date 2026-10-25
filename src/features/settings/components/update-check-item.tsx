@@ -1,129 +1,98 @@
 /**
  * 「关于」页的「检查更新」行。
  *
- * 点按查询 GitHub（见 `../update-client`）：
- *   - 有更新：行上显示「发现 vX.Y.Z」，并弹出对话框引导去发布页
+ * 点一下查 GitHub（见 `../update-client`）：
+ *   - 有更新：**自动开始下载**安装包（见 `../update-hooks`），行上显示进度
  *   - 已是最新 / 失败：行上给结果，另弹一个轻提示
  *
- * 有更新时再点这一行直接打开发布页（不再重复查询）。
+ * 下载进度、下载完成后的「装不装」都在 `update-card` 里，
+ * 这一行只负责**状态**与**入口**。
  */
 
-import { Button, ListGroup, Spinner, useThemeColor, useToast } from "heroui-native";
+import { ListGroup, Spinner, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
-import { useState } from "react";
 import { Linking, View } from "react-native";
 
-import { AppDialog } from "@/components/dialog";
 import { Icon } from "@/components/icon";
-import { Body, Muted } from "@/components/typo";
+import { Body } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { isNewerVersion } from "../update-check";
-import { fetchLatestRelease, type UpdateInfo } from "../update-client";
+import type { UseUpdateCheck } from "../update-hooks";
 
-type CheckState =
-  | { status: "idle" }
-  | { status: "checking" }
-  | { status: "latest" }
-  | { status: "error" }
-  | { status: "available"; info: UpdateInfo };
+export interface UpdateCheckItemProps {
+  update: UseUpdateCheck;
+}
 
-export function UpdateCheckItem({ currentVersion }: { currentVersion: string }): JSX.Element {
+export function UpdateCheckItem({ update }: UpdateCheckItemProps): JSX.Element {
   const accent = useThemeColor("accent");
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const [state, setState] = useState<CheckState>({ status: "idle" });
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { state, check, retry } = update;
+  const { phase } = state;
 
-  const check = async (): Promise<void> => {
-    if (state.status === "checking") return;
-    setState({ status: "checking" });
-    try {
-      const latest = await fetchLatestRelease();
-      if (latest && isNewerVersion(latest.version, currentVersion)) {
-        setState({ status: "available", info: latest });
-        setDialogOpen(true);
-      } else {
-        setState({ status: "latest" });
-        toast.show(t("update.latestToast"));
-      }
-    } catch {
-      setState({ status: "error" });
-      toast.show(t("update.failedToast"));
+  const busy = phase === "checking" || phase === "preparing" || phase === "downloading";
+  const highlighted = phase === "available" || phase === "ready" || phase === "downloading";
+
+  const value = ((): string => {
+    switch (phase) {
+      case "checking":
+        return t("update.checking");
+      case "latest":
+        return t("update.latest");
+      case "error":
+        return t("update.failed");
+      case "available":
+        return t("update.available", { version: state.info?.version ?? "" });
+      case "preparing":
+        return t("update.preparing");
+      case "downloading":
+        return t("update.downloading", { percent: Math.round(state.progress.ratio * 100) });
+      case "ready":
+        return t("update.downloaded");
+      case "failed":
+        return t("update.downloadFailed");
+      default:
+        return t("update.check");
     }
-  };
+  })();
 
   const onPress = (): void => {
-    if (state.status === "available") {
+    if (busy) return;
+    // 有新版本但拿不到安装包（iOS / Release 没附件）→ 只能去发布页
+    if (phase === "available" && state.info) {
       void Linking.openURL(state.info.url);
       return;
     }
+    // 下载失败 → 重下（别又去查一遍版本）
+    if (phase === "failed") {
+      void retry();
+      return;
+    }
+    // 已下载完 → 装不装由用户点卡片上的按钮决定，这里不再重复下载
+    if (phase === "ready") return;
     void check();
   };
 
-  const available = state.status === "available";
-  const value = available
-    ? t("update.available", { version: state.info.version })
-    : state.status === "checking"
-      ? t("update.checking")
-      : state.status === "latest"
-        ? t("update.latest")
-        : state.status === "error"
-          ? t("update.failed")
-          : t("update.check");
-
   return (
-    <>
-      <ListGroup.Item
-        onPress={onPress}
-        className="active:opacity-60"
-        accessibilityRole="button"
-        accessibilityLabel={t("update.check")}
-      >
-        <ListGroup.ItemPrefix>
-          <Icon name="arrowRotateLeft" size={20} color={accent} />
-        </ListGroup.ItemPrefix>
-        <ListGroup.ItemContent>
-          <ListGroup.ItemTitle>{t("update.check")}</ListGroup.ItemTitle>
-        </ListGroup.ItemContent>
-        <ListGroup.ItemSuffix>
-          <View className="flex-row items-center gap-1.5">
-            {state.status === "checking" ? <Spinner size="sm" /> : null}
-            <Body type="body-sm" className={available ? "text-accent" : "text-muted"}>
-              {value}
-            </Body>
-          </View>
-        </ListGroup.ItemSuffix>
-      </ListGroup.Item>
-
-      <AppDialog
-        isOpen={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        title={t("update.dialogTitle")}
-      >
-        <View className="gap-4">
-          <Muted type="body-sm">
-            {t("update.dialogBody", {
-              current: currentVersion,
-              latest: available ? state.info.version : "",
-            })}
-          </Muted>
-          <View className="flex-row justify-end gap-2">
-            <Button size="sm" variant="ghost" onPress={() => setDialogOpen(false)}>
-              <Button.Label>{t("common.cancel")}</Button.Label>
-            </Button>
-            <Button
-              size="sm"
-              onPress={() => {
-                if (available) void Linking.openURL(state.info.url);
-                setDialogOpen(false);
-              }}
-            >
-              <Button.Label>{t("update.goDownload")}</Button.Label>
-            </Button>
-          </View>
+    <ListGroup.Item
+      onPress={onPress}
+      className="active:opacity-60"
+      accessibilityRole="button"
+      accessibilityLabel={t("update.check")}
+    >
+      <ListGroup.ItemPrefix>
+        <Icon name="arrowRotateLeft" size={20} color={accent} />
+      </ListGroup.ItemPrefix>
+      <ListGroup.ItemContent>
+        <ListGroup.ItemTitle>{t("update.check")}</ListGroup.ItemTitle>
+      </ListGroup.ItemContent>
+      <ListGroup.ItemSuffix>
+        <View className="flex-row items-center gap-1.5">
+          {busy ? <Spinner size="sm" /> : null}
+          <Body type="body-sm" className={highlighted ? "text-accent" : "text-muted"}>
+            {value}
+          </Body>
         </View>
-      </AppDialog>
-    </>
+      </ListGroup.ItemSuffix>
+    </ListGroup.Item>
   );
 }

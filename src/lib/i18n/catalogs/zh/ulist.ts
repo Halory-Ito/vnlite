@@ -34,8 +34,6 @@ export const zhUlist = {
     processing: "处理中…",
     savedToVndb: "已保存到 VNDB",
     saveFailed: "保存失败，请重试",
-    dateFormatError: "格式应为 YYYY-MM-DD",
-    dateRangeError: "完成日期早于开始日期",
 
     /* 加入 / 移出清单 */
     notInListTitle: "还没有加入清单",
@@ -63,11 +61,6 @@ export const zhUlist = {
     voteRange: "打分（10–100）",
     notVoted: "未打分",
     clearVote: "清除打分",
-
-    /* 日期输入 */
-    today: "今天",
-    setToday: "%{label}设为今天",
-    clearField: "清除%{label}",
 
     /* 发行版持有状态 */
     checking: "查询中…",

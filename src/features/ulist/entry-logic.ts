@@ -7,7 +7,6 @@
 
 import type { UListPatch } from "@/lib/api/endpoints/ulist";
 import type { UListItem } from "@/lib/api/types";
-import type { TranslationKey } from "@/lib/i18n/translate";
 
 export interface UlistDraft {
   vote: number | null;
@@ -62,30 +61,4 @@ export function sameLabels(a: readonly number[], b: readonly number[]): boolean 
  */
 export function isVnId(value: string): boolean {
   return /^v\d+$/.test(value);
-}
-
-/** 严格校验 `YYYY-MM-DD`（`2023-02-31` 这类不存在的日期也要挡住） */
-export function isValidDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-}
-
-/** 两个日期的校验错误（字段 → 翻译键；合法时为 null，由调用方翻成文案） */
-export function dateErrors(
-  started: string,
-  finished: string
-): { started: TranslationKey | null; finished: TranslationKey | null } {
-  const startedError = started !== "" && !isValidDate(started) ? "ulist.dateFormatError" : null;
-  const finishedError =
-    finished !== "" && !isValidDate(finished)
-      ? "ulist.dateFormatError"
-      : started !== "" && finished !== "" && isValidDate(started) && finished < started
-        ? "ulist.dateRangeError"
-        : null;
-  return { started: startedError, finished: finishedError };
 }

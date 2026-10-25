@@ -2,7 +2,8 @@
  * 关于页：版本 / 检查更新 / 开发者信息 / 数据与致谢。
  *
  * 版本号取 `app.json`，不手写 —— 免得改了配置忘了这里。
- * 「检查更新」查 GitHub 最新 Release（见 features/settings/update-client）。
+ * 「检查更新」查 GitHub 最新 Release（见 features/settings/update-client），
+ * 发现新版本会**自动下载安装包**（国内走加速代理），下完由用户决定装不装。
  */
 
 import Constants from "expo-constants";
@@ -15,7 +16,9 @@ import { Muted } from "@/components/typo";
 import { DEVELOPER_INFO } from "@/constants/config";
 import { SettingsItem } from "@/features/settings/components/settings-item";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
+import { UpdateCard } from "@/features/settings/components/update-card";
 import { UpdateCheckItem } from "@/features/settings/components/update-check-item";
+import { useUpdateCheck } from "@/features/settings/update-hooks";
 import { useTranslation } from "@/hooks/use-translation";
 
 const VERSION = Constants.expoConfig?.version ?? "1.0.0";
@@ -23,14 +26,17 @@ const REPO_URL = `https://github.com/${DEVELOPER_INFO.repo}`;
 
 export default function AboutScreen(): JSX.Element {
   const { t } = useTranslation();
+  const update = useUpdateCheck(VERSION);
 
   return (
     <SettingsShell title={t("settings.aboutTitle")}>
       <ListGroup className="mx-4">
         <SettingsItem icon="circleInfo" label={t("settings.version")} value={VERSION} />
         <Divider className="mx-4" />
-        <UpdateCheckItem currentVersion={VERSION} />
+        <UpdateCheckItem update={update} />
       </ListGroup>
+
+      <UpdateCard update={update} />
 
       <SettingsSection title={t("settings.developerSection")}>
         <ListGroup>

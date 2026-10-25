@@ -5,8 +5,8 @@
  * 日期格式 `YYYY-MM-DD`，时间格式 `HH:mm`（本地时区）。
  */
 
-import { isValidDate } from "@/features/ulist/entry-logic";
 import { t } from "@/lib/i18n/translate";
+import { isValidDate } from "@/utils/date";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;

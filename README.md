@@ -58,6 +58,11 @@
 - 背景图可自定义，**遮罩不透明度（0–1 连续）与模糊半径可调** —— 保证文字对比度不靠描边
 - 明暗三态（跟随系统 / 亮 / 暗），改完即生效
 - 长按文字全局可选中复制；点得动的一层（列表行、站内链接）走「长按整条复制」
+- **自定义头像**：点头像从相册选图（1:1 裁剪，本地存 512px JPEG），换机后随备份从 WebDAV 拉回
+
+### 平板
+
+封面网格按窗口短边分档：手机 3 列、iPad mini 6 列、10.9" 及更大的平板 8 列；转屏时列数不变。
 
 ---
 
@@ -100,15 +105,21 @@ bun start
 
 ### 脚本
 
-| 命令                              | 作用                                                   |
-| --------------------------------- | ------------------------------------------------------ |
-| `bun run check`                   | **一键质量门禁**：typecheck + lint + format + 三个冒烟 |
-| `bun run typecheck`               | `tsc --noEmit`                                         |
-| `bun run lint` / `bun run format` | oxlint / oxfmt                                         |
-| `bun run smoke:api`               | 打真实接口与真实网页的冒烟（83 项）                    |
-| `bun run smoke:theme`             | 主题色对比度检查（选中态文字不得撞色）                 |
-| `bun run smoke:db`                | 本地库与偏好迁移（28 项）                              |
-| `bun run bundle:check`            | 导出一次产物，确认能打包                               |
+| 命令                              | 作用                                                    |
+| --------------------------------- | ------------------------------------------------------- |
+| `bun run check`                   | **一键质量门禁**：typecheck + lint + format + 四个冒烟  |
+| `bun run typecheck`               | `tsc --noEmit`                                          |
+| `bun run lint` / `bun run format` | oxlint / oxfmt                                          |
+| `bun run smoke:api`               | 打真实接口与真实网页的冒烟（83 项）                     |
+| `bun run smoke:theme`             | 主题色对比度检查（选中态文字不得撞色）                  |
+| `bun run smoke:db`                | 本地库与偏好迁移（28 项）                               |
+| `bun run smoke:layout`            | 封面网格列数分档（手机 3 / 小平板 6 / 平板 8）          |
+| `bun run bundle:check`            | 导出一次产物，确认能打包                                |
+| `bun run build:android`           | EAS 云构建 Android APK（`preview`，4 架构 + universal） |
+| `bun run build:android:arm64`     | 同上，只出 `arm64-v8a` 单架构包                         |
+| `bun run build:android:prod`      | EAS 云构建 Android AAB（`production`，自动递增版本号）  |
+| `bun run build:ios`               | EAS 云构建 iOS 真机包（`preview`，需 Apple 凭据）       |
+| `bun run build:ios:sim`           | EAS 云构建 iOS 模拟器包（无需证书）                     |
 
 > `smoke:api` 会打**真实**的 VNDB 接口与网站，并跑两次真实攻略仓库请求。改解析逻辑后必须跑 —— 编译期类型只能保证「字段名合法」，真正的合法性要打真实数据才知道。
 
@@ -133,10 +144,19 @@ src/
 Android 用 [EAS](https://docs.expo.dev/build/introduction/)，并通过 config plugin `plugins/with-android-abi-splits.js` 做 ABI 分包 —— `eas.json` 的 schema 里**没有** `splits` 字段（实测 `"build.preview.android.splits" is not allowed`），只能在 prebuild 之后往 `app/build.gradle` 注入。
 
 ```bash
-eas build -p android --profile preview     # APK，分 4 个架构包 + universal
+bun run build:android     # APK，分 4 个架构包 + universal
 ```
 
-iOS 真机包需要 Apple 开发者凭据；无证书时只能出模拟器包（`--profile preview-simulator`）。
+等价于 `eas build -p android --profile preview`；脚本里走 `bunx eas-cli`，无需全局安装 eas-cli。
+
+iOS 真机包需要 Apple 开发者凭据；无证书时只能出模拟器包（`bun run build:ios:sim`）。
+
+上传阶段报 `Failed to upload the project tarball` / `write ECONNRESET` 时，是网络到 **Google Cloud Storage** 不通（压缩包传的是 `storage.googleapis.com`，与 `api.expo.dev` 走的不是同一条线）。eas-cli 只读取**小写**的 `https_proxy`（大写 `HTTPS_PROXY` 不生效），API 请求与上传子进程都会用它：
+
+```powershell
+$env:https_proxy = "http://127.0.0.1:7890"   # 换成本机代理端口
+bun run build:android
+```
 
 版本号从 `app.json` 读取，「关于」页不再手写。
 

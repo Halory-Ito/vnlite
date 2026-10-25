@@ -166,3 +166,43 @@ export async function deleteHistoryEntry(type: HistoryType, entryId: string): Pr
   const db = await getDatabase();
   await db.runAsync(`DELETE FROM history WHERE type = ? AND entry_id = ?;`, type, entryId);
 }
+
+/**
+ * 全部浏览历史（备份导出用）。
+ *
+ * 按浏览时间倒序，与列表页的排序一致 —— 恢复时按同样顺序写回，
+ * 行号（`id`）的先后关系才不会乱。
+ */
+export async function getAllHistory(): Promise<HistoryEntry[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<HistoryRow>(
+    `SELECT * FROM history ORDER BY viewed_at DESC, id DESC;`
+  );
+  return rows.map(parseRow);
+}
+
+/**
+ * 用备份**整体替换**本地浏览历史（先清空再写回，单事务）。
+ *
+ * `id` 大于 0 时保留原行号（列表排序以它作次级键，保留下来顺序才不会变）；
+ * 为 0 时交给 SQLite 自己分配。
+ */
+export async function replaceAllHistory(entries: readonly HistoryEntry[]): Promise<void> {
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    await db.execAsync(`DELETE FROM history;`);
+    for (const entry of entries) {
+      await db.runAsync(
+        `INSERT INTO history (id, type, entry_id, title, subtitle, image_url, viewed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?);`,
+        entry.id > 0 ? entry.id : null,
+        entry.type,
+        entry.entryId,
+        entry.title,
+        entry.subtitle ?? null,
+        entry.imageUrl ?? null,
+        entry.viewedAt
+      );
+    }
+  });
+}

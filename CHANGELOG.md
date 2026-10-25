@@ -7,6 +7,75 @@
 
 ---
 
+## [1.4.1] - 2026-10-25
+
+一句话：封面网格**适配平板**（手机 3 列 / iPad mini 6 列 / 大平板 8 列），并新增**自定义头像** —— 相册选图、1:1 裁剪存本地，跟随 WebDAV 备份一起上传与拉取；同时把 EAS 云构建命令收进 `package.json`。
+
+### 新增
+
+- **平板封面网格**（清单 / 收藏 / 历史 / 制作者「作品」页签共用）
+  - 手机 3 列；窗口短边 600–799dp（iPad mini）6 列；≥ 800dp（iPad 10.9" 及更大的板子）8 列
+  - **没按 dpi 判**：iOS 上 `PixelRatio` 对所有 iPad 都是 2，像素密度跟「大板还是 mini」不是一回事；只看宽度又会把横屏手机（844dp）误判成平板
+  - 改看**窗口短边**：手机上始终 < 600dp，平板横竖屏短边不变 —— 转屏时列数不跳、格子不重排
+  - 列数变化时给 FlashList 换 `key`（布局管理器只在挂载时读一次 `numColumns`）
+- **自定义头像**
+  - 「我的」顶部头像可点，从相册选图并 1:1 裁剪，压到 512px JPEG 存本地（几十 KB）
+  - 存 `document` 目录（`cache` 会被系统清掉）；文件名带时间戳，避免 `expo-image` 命中旧缓存
+  - 账号页同样可换头像，有头像时提供「移除头像」
+  - **随 WebDAV 备份同步**：上传备份时顺带 PUT 头像，恢复备份时顺带 GET 回本地；服务器上没有头像则保留本地的
+  - 头像不进备份 JSON（二进制进 JSON 体积翻倍），作为同目录的第二个文件 `vnlite-avatar.jpg`
+  - 头像单项上传 / 下载失败不会推翻整次同步，只记一条警告
+
+### 技术与构建（面向开发者）
+
+- 版本 `1.4.0` → `1.4.1`（`app.json` / `constants/config.ts` / `package.json` 三处对齐）
+- 依赖：新增 `expo-image-picker`、`expo-image-manipulator`；`app.json` 注册相册权限文案
+- `package.json` 新增 EAS 云构建脚本：`build:android` / `build:android:arm64` /
+  `build:android:dev` / `build:android:prod` / `build:ios` / `build:ios:sim`
+  （内部走 `bunx eas-cli`，不依赖全局安装）
+- 冒烟：
+  - 新增 `smoke:layout`（13 项）—— 手机竖 / 横、iPad mini 竖 / 横、大平板竖 / 横、阈值 599 / 600 / 799 / 800
+  - `smoke:db` 新增「WebDAV 头像 GET / 404」（认证头与字节内容）
+  - `bun run check` 现在跑四个冒烟脚本
+- 拆分 `features/sync/webdav-file.ts`（原生上传）与 `webdav.ts`（纯 `fetch`）—— 后者要留给 bun 冒烟直接 import
+- 国际化：zh / en 各新增 `profile` 命名空间
+
+---
+
+## [1.4.0] - 2026-10-21
+
+一句话：「检查更新」从「弹窗让你自己去下载」升级成**应用内自动下载安装包** —— 国内按出口 IP 自动走 **GitHub 加速代理**并挑**延迟最低**的那个，下完**由用户决定装不装**；新增「**同步**」功能（本地数据打包上传到 **WebDAV**，也能下载恢复）；顺带修掉 RN 0.86 的 `InteractionManager` 废弃警告。
+
+### 新增
+
+- **应用内更新**（「关于 → 检查更新」）
+  - 发现新版本**自动下载**对应架构的安装包（`expo-file-system` 原生下载，带进度、可取消）
+  - 下载完成**弹窗问「现在装吗」**：选「稍后」就留在卡片上，随时能点「安装」；系统安装器要用户点确认，**不静默安装**
+  - **按出口 IP 判地区**（ip.sb → ipinfo.io → ipapi.co 三级回退）：**国内一律走加速代理**，海外直连 GitHub
+  - **代理测速**：六个代理并行发 `HEAD`，取往返延迟最低的那个；代理全挂时回退直连，直连也不行再换下一个代理
+  - **按设备架构选包**：通用包 124 MB、arm64 只有 53 MB，挑对能省一半流量；认不出架构时用通用包兜底
+  - Android 8+ 装 APK 需要 `REQUEST_INSTALL_PACKAGES` 权限 —— 新增 config plugin `plugins/with-android-install-packages.js` 写进 AndroidManifest
+  - iOS 没有 APK，只能「打开发布页」
+- **同步**（「我的 → 同步」）：本地数据打包上传到 **WebDAV** 服务器，也能下载恢复
+  - 备份内容：**浏览历史 / 收藏 / 游玩记录 / 攻略标记 / 应用偏好**
+  - **缓存不同步**（攻略正文与索引、每日语录能重新下载）；**登录凭据不同步**（Token 不该躺在服务器上）
+  - WebDAV 走 **HTTP Basic**（坚果云 / Nextcloud / ownCloud / 群晖都支持），地址 / 用户名存本地、**密码存 SecureStore**
+  - 下载后**先给用户看**（有多少条历史 / 收藏 / 游玩记录 / 攻略标记），确认了才**整体替换**本地
+  - 备份是 JSON（不是 zip）：没有压缩库依赖，还能直接用文本编辑器看
+
+### 修复
+
+- 攻略长结局分批挂载改用 `requestIdleCallback`（`InteractionManager` 在 RN 0.86 已废弃，真机会打 deprecation 警告）
+- `lib/storage/key-value` 的 `registerStore` 之前是**空转**的：导出的 `kv` 直接持有 AsyncStorage 实例，注册的新实现根本不会被用到 —— 改成转发到 `currentStore` 的门面
+
+### 技术与构建（面向开发者）
+
+- 版本 `1.3.0` → `1.4.0`（`app.json` / `constants/config.ts` / `package.json` 三处对齐）
+- 依赖：新增 `expo-file-system`、`expo-intent-launcher`、`expo-device`
+- 冒烟新增 13 项（检查更新 8 项：版本比较 / 架构挑选与误配 / 代理测速排序 / 地址拼接 / 归属地判定 / 文件名清洗 / 真实 Release 必须带 APK 附件；同步 5 项：base64 / 地址校正 / 备份包解析容错 / 打包恢复往返 / WebDAV 客户端对本地假服务器）
+
+---
+
 ## [1.3.0] - 2026-10-10
 
 一句话：一次大版本 —— **全应用国际化（简体中文 / English）**、**收藏**（作品 · 人员 · 用户 · 厂商）、**「记录统计」**（游玩数据 + 收藏分布）、厂商 LOGO 改走**鲲 Galgame 会社库**，并新增**检查更新**；同时把游戏计时的通知换成 `expo-notifications`、移除系统悬浮球。

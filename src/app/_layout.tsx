@@ -10,6 +10,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { queryClient } from "@/lib/query/client";
 import { initI18n } from "@/lib/i18n";
 import { restoreSession } from "@/lib/storage/session";
+import { loadAvatar } from "@/features/profile/avatar";
 import { GameTimerOverlay } from "@/features/game-timer/components/game-timer-overlay";
 import { initGameTimerNotification } from "@/features/game-timer/notification";
 import { initGameTimerPersistence } from "@/features/game-timer/persistence";
@@ -28,6 +29,8 @@ export default function RootLayout(): JSX.Element {
   // 清单数据不落库（服务端直读），所以这里没有清单同步要做
   useEffect(() => {
     void restoreSession();
+    // 自定义头像是本地文件，启动时读一次（没有就画用户名首字母）
+    void loadAvatar();
     // 计时相关：持久化（后台运行）、系统通知；统一在卸载时清理
     const cleanups = [initGameTimerPersistence(), initGameTimerNotification()];
     return () => {

@@ -13,9 +13,11 @@ import { enEnums } from "./enums";
 import { enFavorite } from "./favorite";
 import { enHistory } from "./history";
 import { enMisc } from "./misc";
+import { enProfile } from "./profile";
 import { enRecords } from "./records";
 import { enSearch } from "./search";
 import { enStats } from "./stats";
+import { enSync } from "./sync";
 import { enTimer } from "./timer";
 import { enUlist } from "./ulist";
 import { enUser } from "./user";
@@ -37,6 +39,8 @@ export const en = {
   ...enHistory,
   ...enFavorite,
   ...enStats,
+  ...enSync,
+  ...enProfile,
   enums: { ...enEnums },
   ...enMisc,
 };

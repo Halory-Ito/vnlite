@@ -52,6 +52,45 @@ import {
   markProgress,
   maskText,
 } from "@/features/walkthrough/select";
+import { isNewerVersion } from "@/features/settings/update-check";
+import { apkFileName, parseAssetAbi, pickApkAsset } from "@/features/settings/update-asset";
+import { fetchLatestRelease, type ReleaseAsset } from "@/features/settings/update-client";
+import { mirrorUrl, pickFastestMirror, sortByLatency } from "@/features/settings/update-mirror";
+import { regionFromCountryCode } from "@/features/settings/update-region";
+
+/** EAS 分包后的 Release 附件（形状固定，冒烟按真名字测） */
+const RELEASE_ASSETS: ReleaseAsset[] = [
+  {
+    name: "app-arm64-v8a-release.apk",
+    size: 53_224_774,
+    url: "https://github.com/Halory-Ito/vnlite/releases/download/v1.3.0/app-arm64-v8a-release.apk",
+    contentType: "application/vnd.android.package-archive",
+  },
+  {
+    name: "app-armeabi-v7a-release.apk",
+    size: 45_556_080,
+    url: "https://github.com/Halory-Ito/vnlite/releases/download/v1.3.0/app-armeabi-v7a-release.apk",
+    contentType: "application/vnd.android.package-archive",
+  },
+  {
+    name: "app-x86-release.apk",
+    size: 54_775_928,
+    url: "https://github.com/Halory-Ito/vnlite/releases/download/v1.3.0/app-x86-release.apk",
+    contentType: "application/vnd.android.package-archive",
+  },
+  {
+    name: "app-x86_64-release.apk",
+    size: 54_816_717,
+    url: "https://github.com/Halory-Ito/vnlite/releases/download/v1.3.0/app-x86_64-release.apk",
+    contentType: "application/vnd.android.package-archive",
+  },
+  {
+    name: "app-universal-release.apk",
+    size: 124_504_241,
+    url: "https://github.com/Halory-Ito/vnlite/releases/download/v1.3.0/app-universal-release.apk",
+    contentType: "application/vnd.android.package-archive",
+  },
+];
 
 let passed = 0;
 let failed = 0;
@@ -1328,6 +1367,115 @@ async function main(): Promise<void> {
         }
       }
     }
+  });
+
+  /* ---- 9. 检查更新（版本比较 / 安装包挑选 / 代理测速 / IP 归属地） ---- */
+  await section("9. 检查更新（纯逻辑）");
+
+  await check("版本比较：v1.4.0 比 1.3.0 新，同版本与旧版本都不算新", () => {
+    assert(isNewerVersion("v1.4.0", "1.3.0") === true, "1.4.0 应比 1.3.0 新");
+    assert(isNewerVersion("1.3.1", "1.3.0") === true, "补丁号更大也算新");
+    assert(isNewerVersion("v1.3.0", "1.3.0") === false, "同版本不算新");
+    assert(isNewerVersion("v1.2.9", "1.3.0") === false, "旧版本不算新");
+    assert(isNewerVersion("v2.0.0", "1.9.9") === true, "主版本更大也算新");
+    assert(isNewerVersion("abc", "1.3.0") === false, "解析不出来一律不算新");
+  });
+
+  await check("安装包挑选：按设备 ABI 选对应架构的 APK", () => {
+    const picked = pickApkAsset(RELEASE_ASSETS, ["arm64-v8a", "armeabi-v7a", "armeabi"]);
+    assert(picked?.name === "app-arm64-v8a-release.apk", `应选 arm64，实为 ${picked?.name}`);
+
+    const v7 = pickApkAsset(RELEASE_ASSETS, ["armeabi-v7a", "armeabi"]);
+    assert(v7?.name === "app-armeabi-v7a-release.apk", `应选 v7，实为 ${v7?.name}`);
+
+    const x64 = pickApkAsset(RELEASE_ASSETS, ["x86_64"]);
+    assert(x64?.name === "app-x86_64-release.apk", `应选 x86_64，实为 ${x64?.name}`);
+
+    const x86 = pickApkAsset(RELEASE_ASSETS, ["x86"]);
+    assert(x86?.name === "app-x86-release.apk", `应选 x86，实为 ${x86?.name}`);
+
+    // 认不出的架构 → 退回通用包（124 MB，但一定能装）
+    const unknown = pickApkAsset(RELEASE_ASSETS, ["mips64"]);
+    assert(unknown?.name === "app-universal-release.apk", `应退回通用包，实为 ${unknown?.name}`);
+
+    assert(pickApkAsset([], ["arm64-v8a"]) === null, "没有附件时不该硬选");
+  });
+
+  await check("安装包挑选：x86 不能误配到 x86_64（解析后全等）", () => {
+    assert(parseAssetAbi("app-x86_64-release.apk") === "x86_64", "x86_64 应解析成 x86_64");
+    assert(parseAssetAbi("app-x86-release.apk") === "x86", "x86 应解析成 x86");
+    assert(parseAssetAbi("app-arm64-v8a-release.apk") === "arm64-v8a", "arm64-v8a 应解析对");
+    assert(parseAssetAbi("app-universal-release.apk") === "universal", "universal 应解析对");
+    // 前缀不同也能解析出来（EAS 改了命名前缀也不怕）
+    assert(parseAssetAbi("vnlite-arm64-v8a-release.apk") === "arm64-v8a", "前缀不该影响解析");
+
+    // ⚠️ 全等比较：`x86` 不是 `x86_64`，`arm64` 也不是 `arm64-v8a`
+    assert(
+      pickApkAsset(RELEASE_ASSETS, ["x86"])?.name === "app-x86-release.apk",
+      "x86 设备不该拿到 x86_64 的包"
+    );
+    assert(
+      pickApkAsset(RELEASE_ASSETS, ["arm64"])?.name === "app-universal-release.apk",
+      "认不出的架构应退回通用包，不能瞎配"
+    );
+  });
+
+  await check("代理测速：取延迟最低的，不可用（null）的排除", () => {
+    const probes = [
+      { mirror: { id: "a", name: "a", prefix: "https://a/" }, latency: 320 },
+      { mirror: { id: "b", name: "b", prefix: "https://b/" }, latency: null },
+      { mirror: { id: "c", name: "c", prefix: "https://c/" }, latency: 120 },
+    ];
+    assert(pickFastestMirror(probes)?.mirror.id === "c", "应选中延迟 120 的那个");
+
+    const sorted = sortByLatency(probes);
+    assert(sorted[0]?.mirror.id === "c", "排序后第一个应是最快的");
+    assert(sorted[sorted.length - 1]?.latency === null, "不可用的应排最后");
+
+    assert(
+      pickFastestMirror([{ mirror: probes[1].mirror, latency: null }]) === null,
+      "全挂时返回 null"
+    );
+  });
+
+  await check("代理地址拼接：前缀 + 目标 URL", () => {
+    const mirror = { id: "x", name: "x", prefix: "https://x/" };
+    assert(
+      mirrorUrl(mirror, "https://github.com/o/r/releases/download/v1/a.apk") ===
+        "https://x/https://github.com/o/r/releases/download/v1/a.apk",
+      "拼接结果不对"
+    );
+  });
+
+  await check("IP 归属地：CN 判国内，其余判海外，认不出判未知", () => {
+    assert(regionFromCountryCode("CN") === "cn", "CN 应判国内");
+    assert(regionFromCountryCode("cn") === "cn", "大小写不敏感");
+    assert(regionFromCountryCode("US") === "overseas", "US 应判海外");
+    assert(regionFromCountryCode("JP") === "overseas", "JP 应判海外");
+    assert(regionFromCountryCode(null) === "unknown", "读不到应判未知");
+    assert(regionFromCountryCode("") === "unknown", "空串应判未知");
+  });
+
+  await check("安装包文件名：版本号里的非法字符要洗掉", () => {
+    assert(apkFileName("v1.4.0") === "vnlite-update-v1.4.0.apk", "文件名不对");
+    assert(!/[^\w.-]/.test(apkFileName("v1.4.0/../x")), "文件名不能带路径分隔符");
+  });
+
+  await check("拉取真实 Release：版本 + APK 附件都在", async () => {
+    const release = await fetchLatestRelease();
+    assert(release !== null, "应能查到最新 Release");
+    assert(release.version.startsWith("v"), `tag 应带 v 前缀：${release.version}`);
+    const apks = release.assets.filter((asset) => asset.name.endsWith(".apk"));
+    assert(apks.length > 0, "Release 里应有 APK 附件");
+    for (const apk of apks) {
+      assert(apk.url.startsWith("https://github.com/"), `下载地址不对：${apk.url}`);
+      assert(apk.size > 0, "附件大小应为正");
+    }
+    // 附件里必须至少有一个通用包 —— 认不出架构时全靠它兜底
+    assert(
+      apks.some((apk) => apk.name.includes("universal")),
+      "Release 里应有通用包（universal）"
+    );
   });
 
   /* ---- 汇总 ---- */

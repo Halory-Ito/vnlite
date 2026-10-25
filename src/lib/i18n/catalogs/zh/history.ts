@@ -28,11 +28,5 @@ export const zhHistory = {
     presetMonth: "近 30 天",
     startDate: "开始日期",
     endDate: "结束日期",
-    today: "今天",
-    setToday: "%{label}设为今天",
-    clearField: "清除%{label}",
-    dateIncomplete: "请填满 8 位",
-    dateInvalid: "日期无效",
-    dateRangeOrder: "结束日期早于开始日期",
   },
 } as const;

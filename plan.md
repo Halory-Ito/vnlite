@@ -731,7 +731,8 @@
         入口保留为深链兜底（正常路径下进不来 —— 右上角「编辑」只在已加入时出现）
   - [x] 表单 draft + 底部「保存」统一 diff 成一条 `UListPatch` 直写
   - [x] 打分滑杆 10–100；状态标签互斥收敛（`toggleLabel`）+ 自建标签多选
-  - [x] 备注（多行）、开始 / 完成日期（YYYY-MM-DD 严格校验 + 今天/清除）
+  - [x] 备注（多行）、开始 / 完成日期（复用共享的 `components/date-otp-field`，
+        `InputOTP` 逐位输入、不用手敲 `-`；`YYYY-MM-DD` 严格校验 + 今天/清除）
   - [x] 移出清单二次确认（连带删除发行版持有记录，不可撤销）
   - [x] 点头部**标题**进作品详情页（`/vn/[id]`，标题用站内链接色）；
         底部的「查看作品详情」按钮已按 Master 要求移除
@@ -855,7 +856,7 @@
     - [x] 数据源三级回退：GitHub 最新 Release → GitHub Tags → jsDelivr 上的 `package.json`
           （GitHub 直连不稳时的国内镜像）
     - [x] 版本比对为纯函数 `update-check.ts#parseVersion` / `isNewerVersion`（冒烟覆盖）
-    - [x] 有更新 → 行上显示「发现 vX.Y.Z」并弹 `AppDialog` 引导去发布页；再点直接打开
+    - [x] 有更新 → 行上显示「发现 vX.Y.Z」并**自动下载安装包**（详见 Type 4.7）
     - [x] 已是最新 / 失败 → 行上给结果 + `useToast` 轻提示
 - [ ] 设置项搜索 / 分组标题（条目变多之后再说）
 
@@ -892,6 +893,11 @@
         用来验证 iOS 工具链能跑通；真机 .ipa 仍需 Apple 凭据）
     - [x] v1.1.0 模拟器构建 **FINISHED**，产物 31.8 MB —— 说明 prebuild / CocoaPods /
           编译整条 iOS 链路是通的，缺的只是签名凭据
+  - [x] **EAS 云构建命令收进 `package.json`**（2026-10-25，Master 要求）：
+        `build:android`（preview APK）/ `build:android:arm64`（单架构）/
+        `build:android:dev`（dev client）/ `build:android:prod`（production AAB）/
+        `build:ios`（真机）/ `build:ios:sim`（模拟器），
+        脚本内走 `bunx eas-cli`，不依赖全局安装的 eas-cli
   - [ ] **iOS 真机包待办**：EAS 报
         `couldn't find any credentials suitable for internal distribution`
         —— 要 Apple Developer 账号，在**交互模式**下跑
@@ -969,6 +975,58 @@
 - [ ] 真机验证两件事：① `selectable` 文字在 `FlashList` 行内长按是否正常弹选区；
       ② 可选的文字套 `numberOfLines` 截断时，Android 选区范围是否正确
 
+### Type 4.7 · 应用内更新（自动下载 + 代理加速，2026-10-21）
+
+> Master 要求：「关于」页的「检查更新」发现新版本就**自动下载安装包**，
+> 下完**由用户决定装不装**；另外按出口 IP 判地区，**国内的一律走
+> GitHub 加速代理**，并挑**延迟最低**的那个代理下载。
+
+- [x] **发现新版本 → 自动下载**（不再只弹窗引导去发布页）
+  - [x] `features/settings/update-hooks.ts` —— 状态机
+        （`checking` → `preparing` → `downloading` → `ready` / `failed`），
+        状态与动作都收在这一处，界面只管渲染
+  - [x] `update-client.ts` 扩展：Release 解析出**附件列表**（`assets`），
+        只有 GitHub Release 源带得到附件（Tags / jsDelivr 兜底源拿不到）
+  - [x] **下载完成不自动装** —— 弹窗问一句「现在装吗」，
+        选「稍后」就留在卡片上（`update-card.tsx`），随时能点「安装」
+  - [x] 下载中的卡片：进度条 + 百分比 + 「取消」（取消会删掉半截文件）
+- [x] **按 IP 判地区 → 决定走不走代理**（`update-region.ts`）
+  - [x] 三个归属地源依次降级（ip.sb → ipinfo.io → ipapi.co），
+        `CN` 判国内，**国内一律用加速代理**；海外直连 GitHub
+  - [x] 判不出来的按海外处理，但下载失败会回退到代理
+  - [x] ⚠️ 归属地**只缓存在内存**：手机随时换网络（Wi-Fi ↔ 4G），
+        落盘的归属地很快就是错的，反而会误判
+- [x] **代理测速 → 挑延迟最低的**（`update-mirror.ts`）
+  - [x] 六个代理并行发 `HEAD`（不拉正文，省流量），取往返耗时最小的那个；
+        单个超时 5 秒，超时的当不可用
+  - [x] `HEAD` 顺带验证代理确实能拿到这个文件（拿不到会 4xx/5xx），
+        比「先下载再发现是错误页」强
+  - [x] 候选地址**逐个降级**：国内 → 最快代理 → 其余代理 → 直连；
+        海外 → 直连 → 代理
+- [x] **按设备架构选安装包**（`update-asset.ts`）
+  - [x] EAS 按 ABI 分包，通用包 124 MB、arm64 只有 53 MB —— 挑对能省一半流量
+  - [x] 用 `expo-device` 的 `Device.supportedCpuArchitectures`（`Build.SUPPORTED_ABIS`）
+        拿本机架构，按偏好顺序匹配
+  - [x] ⚠️ **架构标识「解析后全等」而不是 `includes`**：
+        `x86` 是 `x86_64` 的前缀、`arm64` 是 `arm64-v8a` 的前缀，
+        用 `includes` 会把 64 位设备配到 32 位包上（装不上，白下 50 MB）
+  - [x] 认不出架构 → 通用包兜底（一定能装，只是大）
+- [x] **下载与安装**（`update-download.ts` / `update-install.ts`）
+  - [x] `expo-file-system` 新 API（`File.createDownloadTask`）：原生下载、
+        带进度、可取消；落在**缓存目录**（装完即弃，系统空间紧张会自己清）
+  - [x] 装 APK 要 `content://` URI（`expo-file-system` 的 FileProvider 授权
+        `cache-path`）+ `ACTION_VIEW` + `application/vnd.android.package-archive`
+  - [x] `plugins/with-android-install-packages.js` —— 给 AndroidManifest 加
+        `REQUEST_INSTALL_PACKAGES`（Android 8 起装 APK 的应用自己必须声明，
+        否则系统安装器直接拒绝）
+  - [x] 拉不起安装器 → 提示去系统设置开「允许安装未知应用」
+- [x] 界面：行上显示状态（检查中 / 准备下载 / 下载中 x% / 已下载），
+      卡片显示版本 + 体积 + 进度 + 动作；iOS 没有 APK，只能「打开发布页」
+- [x] 冒烟新增 8 项（版本比较 / 架构挑选与误配 / 代理测速排序 / 地址拼接 /
+      归属地判定 / 文件名清洗 / **真实 Release 必须带 APK 附件**）
+- [ ] 真机验证：① 国内网络下自动下载 + 装得上；② 「允许安装未知应用」授权链路；
+      ③ 代理全挂时能回退直连
+
 ---
 
 ## Module 5 · 浏览历史
@@ -1007,12 +1065,15 @@
       **自定义开始 / 结束日期**（Master 要求，不能只给固定时间段），
       上面一排「全部 / 今天 / 近 7 天 / 近 30 天」只是快速填日期的捷径；
       草稿在面板内，点「应用」才生效，未填满 / 无效 / 顺序错误挡住
-- [x] `features/history/components/date-otp-field.tsx` —— **`InputOTP` 日期输入**
-      （Master 要求）：8 位数字 `YYYYMMDD` 数字键盘逐位输入，**不用手敲 `-`**；
-      年月日三组用 `InputOTP.Separator` 分隔；槽位用 `style` 收窄以适配手机宽度
+- [x] `components/date-otp-field.tsx` —— **共享的 `InputOTP` 日期输入**
+      （Master 要求，从 history 提升而来，history 的日期筛选面板与 ulist 的清单条目
+      编辑页共用）：8 位数字 `YYYYMMDD` 数字键盘逐位输入，**不用手敲 `-`**；
+      年月日三组用 `InputOTP.Separator` 分隔；槽位用 `style` 收窄以适配手机宽度；
+      对外值统一 `YYYY-MM-DD`，未填满时给部分日期以保留逐位输入的中途状态
+- [x] `utils/date` 日期纯函数：`isValidDate`、`isoToDigits` / `digitsToIso` /
+      `digitsToPartialIso`（OTP 数字串 ↔ ISO）、`dateFieldError` / `dateRangeErrors`
+      （位数 / 有效性 / 顺序校验）
 - [x] `history-constants` 日期筛选纯函数：`presetDateFilter`（快捷 → 具体日期）、
-      `isoToDigits` / `digitsToIso`（OTP 数字串 ↔ ISO）、
-      `dateDigitsRangeErrors`（位数 / 有效性 / 顺序校验）、
       `dateFilterBounds`（→ 时间上下界，**含首尾整天**）
 - [x] `utils/format#formatRelativeTime` —— 刚刚 / 分钟 / 小时 / 天 / 日期（纯函数）
 - [x] 路由 `app/history.tsx`
@@ -1027,8 +1088,9 @@
 ### Type 5.4 · 质量
 
 - [x] 冒烟测试：history DAO 的 CRUD + 分页 + 去重 + 「人员」档聚合 + 空集合短路 +
-      日期上下界过滤；`formatRelativeTime` / `presetDateFilter` / `isoToDigits` /
-      `digitsToIso` / `dateDigitsRangeErrors` / `dateFilterBounds` 的纯逻辑
+      日期上下界过滤；`formatRelativeTime` / `presetDateFilter` / `utils/date`
+      （`isoToDigits` / `digitsToIso` / `digitsToPartialIso` / `dateRangeErrors`）/
+      `dateFilterBounds` 的纯逻辑
 
 ---
 
@@ -1219,14 +1281,15 @@
 
 - [x] 浏览 / 搜索（筛选 / 排序 / 卡片显示面板）—— 2026-10-10 完成
       （`catalogs/zh/browse.ts` + `search.ts`，共 79 键）
-- [x] 清单 Tab 与 `/ulist/[id]` 编辑页（ulist 53 键；校验错误改返回翻译键）
+- [x] 清单 Tab 与 `/ulist/[id]` 编辑页（ulist 48 键；校验错误改返回翻译键；
+      日期输入复用共享的 `date-otp-field`）
 - [x] VN 详情（11 个页签）与作品列表 / 封面墙
 - [x] 角色 / 制作者 / staff / 标签详情（catalog 模块）
 - [x] 用户详情（资料 / 全部投票 / 投票列）
 - [x] 讨论列表与帖子页（discussion 15 键）
 - [x] 攻略页签（walkthrough 24 键；步骤 labelKey、全局 `t` 混用已统一）
 - [x] 游戏计时按钮 / 悬浮层 / 通知 / 游玩记录页签（timer 14 + records 33 键）
-- [x] 浏览历史 / 我的收藏 / 记录统计（history 26 + favorite 18 + stats 39 键）
+- [x] 浏览历史 / 我的收藏 / 记录统计（history 20 + favorite 18 + stats 39 键）
 - [x] 浏览历史与收藏保存/清空、统计图表标题与空态
 - [x] `lib/api/enums.ts` 的中文标签表迁进 `catalogs/*/enums.ts`，旧 `*_LABEL` 表删除
 - [x] VNDB 数据里的英文枚举（清单标签、发行版持有状态）保持英文，不翻译
@@ -1241,3 +1304,129 @@
 - [x] 首页信息流英文档位改短词 `Reviews / Upcoming / Released`（原名在分段控件里放不下）
 - [x] `bun run check` 全绿：typecheck / lint / format / smoke:api / smoke:theme /
       smoke:db（60 项，含 zh / en 键集合一致性）
+
+---
+
+## Module 9 · 同步（WebDAV 备份，2026-10-21）
+
+> Master 要求：「我的」里加一个「同步」—— 本地数据**打包**后上传到 **WebDAV** 服务器，
+> 也能**下载**回来；**缓存不需要同步**。
+
+### Type 9.1 · 备份包（打包什么 / 什么格式）
+
+- [x] `features/sync/backup.ts` —— 备份包格式（**纯逻辑**，冒烟直接测）
+  - [x] JSON（不是 zip）：没有压缩库依赖，备份文件还能直接用文本编辑器看
+  - [x] 顶层带 `format` 版本号，将来格式变了能分辨
+  - [x] **打包**：浏览历史 / 收藏 / 游玩记录（SQLite）+ 攻略标记（AsyncStorage）+ 应用偏好
+  - [x] **不打包**：
+    - 攻略正文 / 索引、每日语录 → **缓存**，能重新下载
+    - 账号行 + VNDB Token → **凭据不该躺在服务器上**
+  - [x] 攻略标记**要打包** —— 它是**用户数据不是缓存**
+        （见 `features/walkthrough/marks` 的注释：标记独立于缓存存放，永不被淘汰）
+  - [x] `parseBackup` 容错：不是 vnlite 的包 / 垃圾数据 → null；
+        半截条目（缺 type / entryId / title）整条丢掉，类型不认识也丢
+
+### Type 9.2 · WebDAV 客户端
+
+- [x] `features/sync/webdav.ts` —— 只用同步需要的那几个动作
+  - [x] 上传 `PUT {目录}/vnlite-backup.json`，下载 `GET {目录}/vnlite-backup.json`
+  - [x] 认证用 **HTTP Basic**（用户名 + 密码）—— 坚果云 / Nextcloud / ownCloud /
+        群辉都支持这一档；没填用户名就不发认证头（允许匿名的服务器）
+  - [x] `features/sync/base64.ts` —— **自带一份 base64**：RN / Hermes 没有 `btoa`，
+        `base64-js` 又是 `react-native` 的传递依赖（依赖树一变就没了）；
+        中文按 UTF-8 编码（冒烟卡了已知向量）
+  - [x] 超时自己实现（`AbortSignal.timeout` 在 Hermes 上不可用，同攻略仓库那套）
+  - [x] 状态码 → 人话：401 / 403 / 404 / 5xx 各有各的文案（走全局 `t`）
+  - [x] 服务器上没有那个文件 → 返回 null（**不是错误**：只是还没上传过）
+- [x] 服务器配置：地址 / 用户名 → AsyncStorage，**密码 → SecureStore**
+      （明文存密码不可接受）；`lib/storage/secure` 补了通用的键值接口
+- [x] `normalizeServerUrl` —— 必须是 http(s)，末尾斜杠去掉；不合法返回 null
+
+### Type 9.3 · 打包 / 恢复
+
+- [x] `features/sync/package.ts` —— 读本地数据 → 备份包 / 备份包 → 写回本地
+- [x] DAO 补三组读写：`getAllHistory` / `replaceAllHistory`、`getAllFavorites` /
+      `replaceAllFavorites`、`replaceAllPlaySessions`
+  - [x] 恢复是**整体替换**（先清空再写回，单事务），不是合并 ——
+        合并会让「恢复」变成「加一堆重复项」，与用户点这个按钮的预期不符
+  - [x] 保留原行号（`id`）：列表排序以它作次级键，不保留顺序会乱
+- [x] 恢复后手动失效 React Query 缓存（收藏 / 历史 / 游玩记录 / 攻略标记）——
+      直接改库不会自动刷新列表
+- [x] `lib/storage/preferences` 补 `replacePreferences`（整体替换，走
+      `migratePreferences` 收敛脏值）
+
+### Type 9.4 · 界面
+
+- [x] 「我的」新增「同步」入口 → `/settings/sync`
+- [x] `features/sync/screens/sync-screen.tsx` —— 服务器设置（地址 / 用户名 / 密码）+ 备份区（上次同步 / 服务器备份 / 上传 / 下载）
+- [x] **下载后不直接写本地** —— 先弹确认框给用户看「有多少条历史 / 收藏 / 游玩记录 /
+      攻略标记」，确认了才恢复（`components/confirm-dialog`）
+- [x] 上传 / 下载前自动存一次配置（免得填完还得再点一次「保存」）
+- [x] 国际化：zh / en 各一份 `sync` 命名空间（`catalogs/{zh,en}/sync.ts`）
+- [x] 图标：Gravity UI `arrows-rotate-right`（内置进 `components/icon-glyphs`）
+
+### Type 9.5 · 质量
+
+- [x] 冒烟新增 5 项（`smoke:db` 第 9 节）：base64 补位与 UTF-8 / 地址校正与 URL 拼接 /
+      备份包解析容错 / **打包 → 恢复往返（真库）** / **WebDAV 客户端对本地假服务器**
+      （`Bun.serve` 起一个只认 PUT / GET 的假服务器，验认证头、大小、Last-Modified、404）
+- [x] ⚠️ **`lib/storage/key-value` 的 `registerStore` 之前是空转的** ——
+      导出的 `kv` 直接持有 AsyncStorage 实例，注册的新实现根本不会被用到。
+      改成**转发到 `currentStore` 的门面**，扩展点才真的生效
+      （bun 冒烟靠它注入内存版 —— AsyncStorage 在 bun 里会摸 `window`）
+- [x] `bun run check` 全绿（smoke:db 65 项）
+- [ ] 真机验证：① 坚果云 / 自建 WebDAV 的上传下载；② 换机后恢复的数据对不对
+
+---
+
+## Module 10 · 平板网格与自定义头像（2026-10-25）
+
+> Master 要求：① 封面网格适配平板 —— 按 dpi 分 6 / 8 列（pad 与 pad mini）；
+> ② 支持自定义头像，图片存本地，并随 WebDAV 备份一起上传 / 拉取。
+
+### Type 10.1 · 平板网格
+
+- [x] `utils/grid.ts#coverGridColumns` —— 列数**纯逻辑**，`smoke:layout` 直接测
+  - [x] 手机（含横屏）3 列 / 短边 600–799dp 6 列（iPad mini 744）/ ≥ 800dp 8 列
+  - [x] ⚠️ 不按 dpi 判：iOS 上 `PixelRatio` 对所有 iPad 都是 2，像素密度跟「大板还是 mini」
+        不是一回事；只看宽度又会把横屏手机（844dp）误判成平板
+  - [x] 改看**窗口短边**：手机上始终 < 600dp，平板横竖屏短边不变 → 转屏列数不跳
+- [x] `features/vn/components/vn-cover-grid.tsx` 按窗口尺寸取列数，
+      列间距 / 外边距沿用 `GAP = 8` / `EDGE = 16`
+- [x] 列数变化时给 FlashList 换 `key`（布局管理器只在挂载时读一次 `numColumns`）
+- [x] 清单 / 收藏 / 历史 / 制作者「作品」页签都走同一个 `VnCoverGrid`，一处改完全生效
+- [x] `scripts/smoke-layout.ts` —— 13 项：手机竖 / 横、mini 竖 / 横、大板竖 / 横、
+      阈值 599 / 600 / 799 / 800
+
+### Type 10.2 · 自定义头像
+
+- [x] 依赖：`expo-image-picker`（相册选图 + 1:1 裁剪）、`expo-image-manipulator`
+      （压到 512px JPEG，几十 KB）；`app.json` 注册 picker 的相册权限文案
+- [x] `features/profile/avatar.ts` —— 本地头像（文件 + 模块级订阅）
+  - [x] 存在 `document` 目录（`cache` 会被系统清掉，头像属于用户数据）
+  - [x] 文件名带时间戳（`avatar-<ms>.jpg`）：固定名覆盖会让 `expo-image` 命中旧缓存
+  - [x] 换头像先删旧文件；上传 / 删除都走同一份「最新文件」查询
+  - [x] 没有头像时界面画**用户名首字母**（游客态画人形图标）
+- [x] `features/profile/use-avatar.ts` —— `useSyncExternalStore` 接到 React 树
+- [x] `features/profile/components/avatar.tsx`（圆形头像，`expo-image` 渲染）
+      与 `avatar-button.tsx`（右下角铅笔标，点一下选图 + toast）
+- [x] 「我的」顶部：头像可点换图，**右侧整行仍进账号页**（并列 Pressable，不嵌套）
+- [x] 账号页：大头像同样可点换；有头像时多一个「移除头像」
+- [x] `_layout` 启动时 `loadAvatar()` 读一次磁盘
+- [x] 国际化：zh / en 各一份 `profile` 命名空间
+
+### Type 10.3 · 头像与 WebDAV
+
+- [x] 头像**不进备份 JSON**：二进制进 JSON 会让体积翻倍；改为目录下第二个文件
+      `vnlite-avatar.jpg`（`AVATAR_FILE_NAME`）
+- [x] `features/sync/webdav-file.ts#putAvatar` —— `File.upload` 原生 PUT（不经 JS 线程），
+      显式带 `Content-Type`
+  - [x] 单独一个文件：`webdav.ts` 保持纯 `fetch`，bun 冒烟脚本才能直接 import
+- [x] `features/sync/webdav.ts#getAvatar` —— 纯 `fetch` 取字节，404 返回 null
+- [x] `features/sync/avatar-sync.ts` —— 上传备份时顺带传头像；恢复备份时顺带拉头像
+  - [x] 头像单项失败**不推翻整次同步**（目录只读 / 空间满都可能只影响头像），
+        只 `console.warn`
+- [x] `use-sync-backup`：上传后 `uploadAvatar`；恢复时用**下载时记住的配置**
+      （`pendingConfig`）拉头像 —— 恢复发生在确认之后，表单可能已经改了
+- [x] 冒烟：`smoke:db` 新增「WebDAV 头像 GET / 404」，覆盖认证头与字节内容
+- [ ] 真机验证：换机后从 WebDAV 恢复，头像是否跟着回来

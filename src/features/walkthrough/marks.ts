@@ -54,7 +54,15 @@ export const EMPTY_MARKS: WalkthroughMarks = {
   updatedAt: 0,
 };
 
-const key = (vid: string): string => `vnlite.walkthrough_marks.${vid}`;
+/**
+ * 标记在存储里的键前缀。
+ *
+ * 导出给同步模块 —— 标记是**用户数据**（不是缓存），
+ * 备份时要单独挑出来，恢复时要单独写回去。
+ */
+export const MARKS_KEY_PREFIX = "vnlite.walkthrough_marks.";
+
+const key = (vid: string): string => `${MARKS_KEY_PREFIX}${vid}`;
 
 /* -------------------------------------------------------------------------- */
 /* 解析（容错）                                                                */

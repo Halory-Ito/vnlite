@@ -1,8 +1,12 @@
 /**
- * 作品封面墙（3 列网格）。
+ * 作品封面墙（手机 3 列 / 平板 6 或 8 列）。
  *
  * 清单 Tab 与制作者详情的「作品」页签共用；条目只画封面（点格子 = 进作品详情页），
  * 敏感封面的「双击放行」仍由 `CoverImage` 处理。
+ *
+ * 列数由 `utils/grid#coverGridColumns` 按窗口短边决定（手机 3 / iPad mini 6 /
+ * 大平板 8）；转屏时短边不变，格子不会跳。列数变化要给 FlashList 换 `key`：
+ * 它的布局管理器只在挂载时按 `numColumns` 建一次，原地改值不生效。
  *
  * ⚠️ FlashList v2 的布局管理器按**列表自身宽度**分列（windowSize / numColumns），
  * 不认 `contentContainerStyle` 的 padding（内容容器 padding 会把整行推出去被裁掉）。
@@ -22,9 +26,9 @@ import { imageGate, useNsfwMode } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { Image } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
+import { coverGridColumns } from "@/utils/grid";
 
-/** 网格布局：3 列，格子间距 8，左右外边距 16 */
-const COLUMNS = 3;
+/** 网格布局：列数随屏幕、格子间距 8、左右外边距 16 */
 const GAP = 8;
 const EDGE = 16;
 /** VNDB 封面缩略图的原生比例（256×362） */
@@ -55,10 +59,11 @@ export function VnCoverGrid({
   refreshControl,
   footer,
 }: VnCoverGridProps): JSX.Element {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   // 一个 NSFW 订阅供整屏格子共用（格子里判断「这张封面会不会被隐藏」）
   const nsfwMode = useNsfwMode();
-  const cellWidth = (width - (EDGE - GAP / 2) * 2) / COLUMNS;
+  const columns = coverGridColumns(width, height);
+  const cellWidth = (width - (EDGE - GAP / 2) * 2) / columns;
   const coverWidth = Math.floor(cellWidth - GAP);
 
   return (
@@ -69,8 +74,10 @@ export function VnCoverGrid({
          * 把 Tab 栏的触摸事件全吃掉（浏览页踩过同一个坑）。
          */
         style={{ flex: 1 }}
+        /* 列数变了要重挂：布局管理器只在挂载时读一次 numColumns */
+        key={`cover-grid-${columns}`}
         data={entries as CoverGridEntry[]}
-        numColumns={COLUMNS}
+        numColumns={columns}
         keyExtractor={(entry) => entry.id}
         renderItem={({ item }) => (
           <GridTile entry={item} width={coverWidth} nsfwMode={nsfwMode} onPress={onPressItem} />

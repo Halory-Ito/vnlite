@@ -293,3 +293,15 @@ export async function resetPreferences(): Promise<void> {
   emit();
   await kv.set(KEY, snapshot);
 }
+
+/**
+ * 用一份外部数据**整体替换**偏好（同步恢复用）。
+ *
+ * 走 `migratePreferences` 收敛一遍 —— 备份文件可能是旧版本存的，
+ * 也可能被手改过，脏值不能让界面崩（越界的遮罩强度、非法的主题 id…）。
+ */
+export async function replacePreferences(next: Record<string, unknown>): Promise<void> {
+  snapshot = migratePreferences(next);
+  emit();
+  await kv.set(KEY, snapshot);
+}

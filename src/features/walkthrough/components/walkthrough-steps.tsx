@@ -11,7 +11,7 @@
  * 所以这里**先挂一小段、把点击的即时反馈立刻还给用户**，剩下的趁动画空闲分批补齐：
  *
  *   1. 首次只挂 \`FIRST_CHUNK\` 行 → 点一下立刻展开
- *   2. \`InteractionManager.runAfterInteractions\` 在动画结束后再加 \`CHUNK\` 行
+ *   2. \`requestIdleCallback\` 在主线程空闲时再加 \`CHUNK\` 行
  *   3. 超过 \`AUTO_CAP\` 就不再自动补，剩下给「显示更多」按钮
  *
  * ## 为什么不用 FlashList 虚拟化
@@ -25,7 +25,7 @@
 
 import type { JSX } from "react";
 import { memo, useEffect, useMemo, useState } from "react";
-import { InteractionManager, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
@@ -59,17 +59,20 @@ function WalkthroughStepsBase({ steps, shield, marks }: WalkthroughStepsProps): 
   const [limit, setLimit] = useState(() => Math.min(steps.length, FIRST_CHUNK));
 
   /*
-   * 趁动画空闲把剩下的分批补齐。
+   * 趁主线程空闲把剩下的分批补齐。
+   *
+   * 用 `requestIdleCallback` 而不是 `InteractionManager.runAfterInteractions` ——
+   * 后者在 RN 0.86 已废弃（会打 deprecation 警告），官方给的替代品就是前者。
    *
    * ⚠️ 必须清理掉未执行的回调：`Accordion.Content` 在收起时整体卸载，
    * 不 cancel 的话会对同一个结局重复排队，展开几次就越挂越多。
    */
   useEffect(() => {
     if (limit >= steps.length || limit >= AUTO_CAP) return;
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = requestIdleCallback(() => {
       setLimit((n) => Math.min(steps.length, AUTO_CAP, n + CHUNK));
     });
-    return () => handle.cancel();
+    return () => cancelIdleCallback(handle);
   }, [limit, steps.length]);
 
   const visible = useMemo(() => groupSteps(steps.slice(0, limit)), [steps, limit]);

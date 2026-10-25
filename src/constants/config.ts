@@ -72,7 +72,7 @@ export const WALKTHROUGH_SOURCES = [
 /** 客户端信息，用于 User-Agent（移动端 fetch 禁止自定义该头，仅存档） */
 export const CLIENT_INFO = {
   name: "vnlite",
-  version: "1.3.0",
+  version: "1.4.1",
 } as const;
 
 /**

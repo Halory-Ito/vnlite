@@ -32,8 +32,6 @@ export const enUlist: CatalogOf<typeof zhUlist> = {
     processing: "Working…",
     savedToVndb: "Saved to VNDB",
     saveFailed: "Save failed, please try again",
-    dateFormatError: "Format must be YYYY-MM-DD",
-    dateRangeError: "Finished date is earlier than the started date",
 
     /* Add / remove */
     notInListTitle: "Not in your list yet",
@@ -64,11 +62,6 @@ export const enUlist: CatalogOf<typeof zhUlist> = {
     voteRange: "Vote (10–100)",
     notVoted: "Not voted",
     clearVote: "Clear vote",
-
-    /* Date fields */
-    today: "Today",
-    setToday: "Set %{label} to today",
-    clearField: "Clear %{label}",
 
     /* Release collection status */
     checking: "Checking…",

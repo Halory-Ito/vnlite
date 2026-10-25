@@ -16,9 +16,11 @@ import { zhEnums } from "./enums";
 import { zhFavorite } from "./favorite";
 import { zhHistory } from "./history";
 import { zhMisc } from "./misc";
+import { zhProfile } from "./profile";
 import { zhRecords } from "./records";
 import { zhSearch } from "./search";
 import { zhStats } from "./stats";
+import { zhSync } from "./sync";
 import { zhTimer } from "./timer";
 import { zhUlist } from "./ulist";
 import { zhUser } from "./user";
@@ -40,6 +42,8 @@ export const zh = {
   ...zhHistory,
   ...zhFavorite,
   ...zhStats,
+  ...zhSync,
+  ...zhProfile,
   enums: { ...zhEnums },
   ...zhMisc,
 };

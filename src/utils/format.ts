@@ -274,5 +274,11 @@ export function toThumbnailUrl(url: string | undefined): string | undefined {
   return url.replace("//t.vndb.org/", "//t.vndb.org/");
 }
 
+/** 字节数 → `53.2 MB`（下载体积用；单位是通用记号，不必翻译） */
+export function formatBytes(bytes: number | null | undefined): string | null {
+  if (bytes == null || bytes <= 0) return null;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 /** 取列表页默认条数（受 Kana 的 100 上限约束） */
 export const SAFE_PAGE_SIZE = 25;

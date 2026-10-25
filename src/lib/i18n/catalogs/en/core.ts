@@ -52,6 +52,15 @@ export const enCore: CatalogOf<typeof zhCore> = {
     themeTileLabel: "%{name}, currently in %{mode} mode",
   },
 
+  dateField: {
+    today: "Today",
+    setToday: "Set %{label} to today",
+    clearField: "Clear %{label}",
+    incomplete: "Enter all 8 digits",
+    invalid: "Invalid date",
+    rangeOrder: "End date is before the start date",
+  },
+
   tabs: {
     home: "Home",
     explore: "Browse",
@@ -90,6 +99,7 @@ export const enCore: CatalogOf<typeof zhCore> = {
     clearCache: "Clear browse cache",
     cacheCleared: "Browse cache cleared",
     about: "About",
+    sync: "Sync",
   },
 
   settings: {
@@ -153,10 +163,20 @@ export const enCore: CatalogOf<typeof zhCore> = {
     available: "v%{version} available",
     latestToast: "You're on the latest version",
     failedToast: "Update check failed",
-    dialogTitle: "New version available",
-    dialogBody:
-      "You have %{current}, the latest is %{latest}. Open the GitHub release page to download?",
-    goDownload: "Download",
+    preparing: "Preparing…",
+    downloading: "Downloading %{percent}%",
+    downloaded: "Downloaded",
+    downloadFailed: "Download failed",
+    downloadDoneTitle: "Download complete",
+    downloadDoneBody: "The package is ready. Install it now?",
+    install: "Install",
+    installNow: "Install now",
+    installLater: "Later",
+    installFailed:
+      "Couldn't start the installer — allow this app to install unknown apps in system settings",
+    releasePage: "Open release page",
+    noPackage: "This release has no installable package",
+    size: "Package %{size}",
   },
 
   review: {

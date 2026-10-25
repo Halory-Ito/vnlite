@@ -27,11 +27,5 @@ export const enHistory: CatalogOf<typeof zhHistory> = {
     presetMonth: "Last 30 days",
     startDate: "Start date",
     endDate: "End date",
-    today: "Today",
-    setToday: "Set %{label} to today",
-    clearField: "Clear %{label}",
-    dateIncomplete: "Enter all 8 digits",
-    dateInvalid: "Invalid date",
-    dateRangeOrder: "End date is before the start date",
   },
 };

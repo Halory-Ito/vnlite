@@ -53,14 +53,32 @@ export class AsyncStorageStore implements KeyValueStore {
   }
 }
 
-export const kv: KeyValueStore = new AsyncStorageStore();
+/** 默认实现（AsyncStorage） */
+const asyncStorageStore = new AsyncStorageStore();
+
+/** 当前生效的存储实现；`registerStore` 换掉它 */
+let currentStore: KeyValueStore = asyncStorageStore;
+
+/**
+ * 全局 KV 门面。
+ *
+ * ⚠️ **转发到 `currentStore`**，而不是直接持有 AsyncStorage 实例 ——
+ * 否则 `registerStore` 注册的实现根本不会被用到（导入方拿到的还是老实例）。
+ * bun 冒烟就靠这一层注入内存版（AsyncStorage 在 bun 里会摸 `window`）。
+ */
+export const kv: KeyValueStore = {
+  get: <T>(key: string): Promise<T | null> => currentStore.get<T>(key),
+  set: <T>(key: string, value: T): Promise<void> => currentStore.set<T>(key, value),
+  remove: (key: string): Promise<void> => currentStore.remove(key),
+  getOr: <T>(key: string, fallback: T): Promise<T> => currentStore.getOr<T>(key, fallback),
+  clear: (): Promise<void> => currentStore.clear(),
+  keys: (): Promise<string[]> => currentStore.keys(),
+};
 
 /** 供将来注册 MMKV：`registerStore(new MmkvStore(mmkv))` */
 export function registerStore(store: KeyValueStore): void {
   currentStore = store;
 }
-
-let currentStore: KeyValueStore = kv;
 
 export function getStore(): KeyValueStore {
   return currentStore;

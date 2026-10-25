@@ -24,13 +24,7 @@ import {
   type SqlDatabase,
   type SqlRunResult,
 } from "@/lib/db/schema";
-import {
-  dateErrors,
-  diffPatch,
-  draftFrom,
-  isValidDate,
-  isVnId,
-} from "@/features/ulist/entry-logic";
+import { diffPatch, draftFrom, isVnId } from "@/features/ulist/entry-logic";
 import {
   byGameType,
   byListLabel,
@@ -39,13 +33,7 @@ import {
   topDevelopers,
 } from "@/features/stats/stats-logic";
 import { filterByLabel, itemHasLabel } from "@/features/ulist/list-filter";
-import {
-  dateDigitsRangeErrors,
-  dateFilterBounds,
-  digitsToIso,
-  isoToDigits,
-  presetDateFilter,
-} from "@/features/history/history-constants";
+import { dateFilterBounds, presetDateFilter } from "@/features/history/history-constants";
 import { formatGameDuration } from "@/features/game-timer/format";
 import {
   elapsedMs,
@@ -82,6 +70,18 @@ import {
   toLocalTimestamp,
 } from "@/features/play-records/session-time";
 import { isNewerVersion, parseVersion } from "@/features/settings/update-check";
+import { base64Encode, basicAuthValue } from "@/features/sync/base64";
+import { buildBackup, parseBackup } from "@/features/sync/backup";
+import { applyBackupData, collectBackupData } from "@/features/sync/package";
+import {
+  getAvatar,
+  getBackup,
+  joinUrl,
+  normalizeServerUrl,
+  putBackup,
+} from "@/features/sync/webdav";
+import { readMarks, writeMarks } from "@/features/walkthrough/marks";
+import { registerStore } from "@/lib/storage/key-value";
 import { diffCatalogKeys, flattenCatalog } from "@/lib/i18n/catalog-utils";
 import { en } from "@/lib/i18n/catalogs/en";
 import { zh } from "@/lib/i18n/catalogs/zh";
@@ -98,6 +98,13 @@ import { imageGate } from "@/hooks/use-preferences";
 import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
 import { migratePreferences } from "@/lib/storage/preferences";
 import { copyPreview, entryCopyText, vnCopyText } from "@/utils/copy-text";
+import {
+  dateRangeErrors,
+  digitsToIso,
+  digitsToPartialIso,
+  isoToDigits,
+  isValidDate,
+} from "@/utils/date";
 import { formatMonthDay, formatRelativeTime } from "@/utils/format";
 
 let passed = 0;
@@ -123,6 +130,57 @@ async function check(name: string, fn: () => Promise<void> | void): Promise<void
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+/**
+ * bun 特有的全局（项目 tsconfig 没装 `@types/bun`，这里手写最小声明）。
+ *
+ * 只用到一个能力：起一个本地 HTTP 服务器当「假 WebDAV」。
+ */
+declare const Bun: {
+  serve(options: { port: number; fetch: (request: Request) => Response | Promise<Response> }): {
+    port: number;
+    stop: (closeActiveConnections?: boolean) => void;
+  };
+};
+
+/**
+ * bun 里没有 AsyncStorage 的原生实现 —— 注入一个**内存版** KV。
+ *
+ * 同步功能要打包「攻略标记」（`features/walkthrough/marks`），标记存在 KV 里，
+ * 没有这层替代的话那段逻辑在冒烟里跑不起来。
+ */
+const memoryStore = new Map<string, string>();
+
+registerStore({
+  get: async <T>(key: string): Promise<T | null> => {
+    const raw = memoryStore.get(key);
+    if (raw === undefined) return null;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  },
+  set: async <T>(key: string, value: T): Promise<void> => {
+    memoryStore.set(key, JSON.stringify(value));
+  },
+  remove: async (key: string): Promise<void> => {
+    memoryStore.delete(key);
+  },
+  getOr: async <T>(key: string, fallback: T): Promise<T> => {
+    const raw = memoryStore.get(key);
+    if (raw === undefined) return fallback;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return fallback;
+    }
+  },
+  clear: async (): Promise<void> => {
+    memoryStore.clear();
+  },
+  keys: async (): Promise<string[]> => [...memoryStore.keys()],
+});
 
 function section(title: string): void {
   console.log(`\n${title}`);
@@ -311,8 +369,8 @@ async function main(): Promise<void> {
     assert(!isValidDate("2024-1-5"), "缺零应被拒");
     assert(!isValidDate("2023-02-31"), "不存在的日期应被拒");
     assert(!isValidDate("2024/01/05"), "斜杠格式应被拒");
-    const errs = dateErrors("2024-05-01", "2024-04-01");
-    assert(errs.finished === "ulist.dateRangeError", `错误键不对：${errs.finished}`);
+    const errs = dateRangeErrors("2024-05-01", "2024-04-01");
+    assert(errs.end === "dateField.rangeOrder", `错误键不对：${errs.end}`);
   });
 
   await check("isVnId：路由参数只认 v+数字（挡住 /ulist/undefined）", () => {
@@ -701,24 +759,21 @@ async function main(): Promise<void> {
     assert(isoToDigits("") === "" && isoToDigits("2026") === "2026", "空 / 残缺原样（去非数字）");
     assert(digitsToIso("20261007") === "2026-10-07", "8 位数字应转成 ISO");
     assert(digitsToIso("2026") === "", "不足 8 位应返回空串");
+    assert(digitsToPartialIso("2026") === "2026", "部分数字应原样保留");
+    assert(digitsToPartialIso("20260") === "2026-0", "第 5 位起补第一个分隔符");
+    assert(digitsToPartialIso("20261007") === "2026-10-07", "填满应等价于 digitsToIso");
   });
 
-  await check("日期筛选：dateDigitsRangeErrors 校验位数 / 有效性 / 顺序", () => {
-    assert(dateDigitsRangeErrors("", "").start === null, "空值应合法");
+  await check("日期筛选：dateRangeErrors 校验位数 / 有效性 / 顺序", () => {
+    assert(dateRangeErrors("", "").start === null, "空值应合法");
+    assert(dateRangeErrors("2026", "").start === "dateField.incomplete", "未填满应提示补位");
+    assert(dateRangeErrors("2026-02-31", "").start === "dateField.invalid", "不存在的日期应报无效");
     assert(
-      dateDigitsRangeErrors("2026", "").start === "history.dateIncomplete",
-      "未填满应提示补位"
-    );
-    assert(
-      dateDigitsRangeErrors("20260231", "").start === "history.dateInvalid",
-      "不存在的日期应报无效"
-    );
-    assert(
-      dateDigitsRangeErrors("20260501", "20260401").end === "history.dateRangeOrder",
+      dateRangeErrors("2026-05-01", "2026-04-01").end === "dateField.rangeOrder",
       "结束早于开始应报错"
     );
-    assert(dateDigitsRangeErrors("20260401", "20260501").end === null, "正常顺序应合法");
-    assert(dateDigitsRangeErrors("20261007", "").end === null, "只填开始应合法");
+    assert(dateRangeErrors("2026-04-01", "2026-05-01").end === null, "正常顺序应合法");
+    assert(dateRangeErrors("2026-10-07", "").end === null, "只填开始应合法");
   });
 
   await check("日期筛选：dateFilterBounds 含首尾整天", () => {
@@ -1141,6 +1196,218 @@ async function main(): Promise<void> {
       lookupKungalLogoByName(index, [null, "ギルティ（不存在）"]) === null,
       "按名称未命中应为 null"
     );
+  });
+
+  /* ---- 同步（WebDAV 备份） ---- */
+  await section("同步：备份包 / base64 / WebDAV 客户端");
+
+  await check("base64 编码：补位与 UTF-8", () => {
+    assert(base64Encode("") === "", "空串应为空");
+    assert(base64Encode("a") === "YQ==", "单字节要补两个 =");
+    assert(base64Encode("ab") === "YWI=", "两字节要补一个 =");
+    assert(base64Encode("abc") === "YWJj", "三字节不补位");
+    assert(base64Encode("user:pass") === "dXNlcjpwYXNz", "Basic 认证的已知向量不对");
+    assert(base64Encode("中") === "5Lit", "中文要按 UTF-8 编码");
+    assert(basicAuthValue("u", "p") === "Basic dTpw", "认证头格式不对");
+  });
+
+  await check("服务器地址校正与 URL 拼接", () => {
+    assert(
+      normalizeServerUrl("https://dav.example.com/dav/") === "https://dav.example.com/dav",
+      "末尾斜杠要去掉"
+    );
+    assert(
+      normalizeServerUrl("  http://192.168.1.2:8080/dav  ") === "http://192.168.1.2:8080/dav",
+      "首尾空格要去掉"
+    );
+    assert(normalizeServerUrl("dav.example.com") === null, "没有协议应判非法");
+    assert(normalizeServerUrl("ftp://dav.example.com") === null, "非 http(s) 应判非法");
+    assert(normalizeServerUrl("") === null, "空串应判非法");
+    assert(
+      joinUrl("https://dav.example.com/dav", "vnlite-backup.json") ===
+        "https://dav.example.com/dav/vnlite-backup.json",
+      "拼接结果不对"
+    );
+  });
+
+  await check("备份包解析：合法包还原，脏数据丢条目", () => {
+    const payload = buildBackup(
+      {
+        history: [
+          {
+            id: 1,
+            type: "vn",
+            entryId: "v1",
+            title: "CLANNAD",
+            subtitle: null,
+            imageUrl: null,
+            viewedAt: 10,
+          },
+        ],
+        favorite: [],
+        playSession: [],
+        preferences: { themeId: "air" },
+        marks: { v1: { endings: [], steps: {} } },
+      },
+      1234
+    );
+    const parsed = parseBackup(JSON.parse(JSON.stringify(payload)) as unknown);
+    assert(parsed !== null, "自己打的包应能解析回来");
+    assert(parsed?.data.history.length === 1, "历史条数不对");
+    assert(parsed?.data.history[0]?.entryId === "v1", "条目 id 不对");
+    assert(parsed?.createdAt === 1234, "打包时间不对");
+
+    // 不是 vnlite 的包 → null
+    assert(parseBackup({ app: "other", format: 1, data: {} }) === null, "别的应用的包应判非法");
+    assert(parseBackup(null) === null, "null 应判非法");
+    assert(parseBackup("nonsense") === null, "字符串应判非法");
+
+    // 半截条目整条丢掉
+    const dirty = parseBackup({
+      app: "vnlite",
+      format: 1,
+      createdAt: 1,
+      data: {
+        history: [
+          { type: "vn", entryId: "v1", title: "好的" },
+          { type: "vn", entryId: "v2" },
+          { type: "???", entryId: "v3", title: "类型不对" },
+        ],
+      },
+    });
+    assert(dirty?.data.history.length === 1, "只该留下完整的那一条");
+  });
+
+  await check("备份往返：打包 → 恢复（整体替换）", async () => {
+    await historyDao.recordView("vn", "v10", "CLANNAD");
+    await favoriteDao.addFavorite("vn", "v10", "CLANNAD");
+    await playSessionDao.insertPlaySession({
+      vnId: "v10",
+      startedAt: 1_000,
+      endedAt: 2_000,
+      durationMs: 1_000,
+    });
+    await writeMarks({ vid: "v10", endings: ["e1"], steps: { s1: { done: true } }, updatedAt: 1 });
+
+    const data = await collectBackupData();
+    assert(
+      data.history.some((e) => e.entryId === "v10"),
+      "应打包进历史"
+    );
+    assert(
+      data.favorite.some((e) => e.entryId === "v10"),
+      "应打包进收藏"
+    );
+    assert(
+      data.playSession.some((s) => s.vnId === "v10"),
+      "应打包进游玩记录"
+    );
+    assert(Object.keys(data.marks).includes("v10"), "攻略标记也要打包（它是用户数据不是缓存）");
+
+    // 只恢复一条历史 → 本地其余历史应被清掉（整体替换，不是合并）
+    await applyBackupData({ ...data, history: data.history.slice(0, 1) });
+    const after = await historyDao.getAllHistory();
+    assert(after.length === 1, `恢复应是整体替换，实际 ${after.length} 条`);
+
+    // 恢复后收藏 / 游玩记录 / 标记都还在
+    assert(
+      (await favoriteDao.getAllFavorites()).some((e) => e.entryId === "v10"),
+      "收藏应恢复"
+    );
+    assert(
+      (await playSessionDao.getAllPlaySessions()).some((s) => s.vnId === "v10"),
+      "游玩记录应恢复"
+    );
+    const marks = await readMarks("v10");
+    assert(marks.endings.includes("e1"), "攻略标记应恢复");
+  });
+
+  await check("WebDAV 客户端：PUT 上传 / GET 下载 / 没有文件返回 null", async () => {
+    const files = new Map<string, string>();
+    let auth: string | null = null;
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const url = new URL(request.url);
+        auth = request.headers.get("Authorization");
+        if (request.method === "PUT") {
+          files.set(url.pathname, await request.text());
+          return new Response(null, { status: 201 });
+        }
+        if (request.method === "GET") {
+          const body = files.get(url.pathname);
+          if (body === undefined) return new Response("not found", { status: 404 });
+          return new Response(body, {
+            headers: {
+              "Content-Length": String(body.length),
+              "Last-Modified": new Date(1_700_000_000_000).toUTCString(),
+            },
+          });
+        }
+        return new Response("method not allowed", { status: 405 });
+      },
+    });
+
+    try {
+      const config = {
+        url: `http://127.0.0.1:${server.port}/dav`,
+        username: "u",
+        password: "p",
+      };
+      await putBackup(config, JSON.stringify({ hello: "world" }));
+      assert(auth === "Basic dTpw", `认证头不对：${auth}`);
+
+      const result = await getBackup(config);
+      assert(result !== null, "应能下载回来");
+      assert(
+        (JSON.parse(result?.body ?? "{}") as { hello?: string }).hello === "world",
+        "内容应一致"
+      );
+      assert((result?.info.size ?? 0) > 0, "大小应大于 0");
+      assert(result?.info.modifiedAt === 1_700_000_000_000, "应解析出 Last-Modified");
+
+      // 服务器上没有那个文件 → null（不是抛错）
+      const missing = await getBackup({ ...config, url: `http://127.0.0.1:${server.port}/empty` });
+      assert(missing === null, "没有文件时应返回 null");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  await check("WebDAV 头像：GET 拿字节 / 没有文件返回 null", async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x01]);
+    let auth: string | null = null;
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        auth = request.headers.get("Authorization");
+        const path = new URL(request.url).pathname;
+        // 只有 /dav/vnlite-avatar.jpg 存在，其余一律 404
+        if (path === "/dav/vnlite-avatar.jpg") return new Response(bytes);
+        return new Response(null, { status: 404 });
+      },
+    });
+
+    try {
+      const config = {
+        url: `http://127.0.0.1:${server.port}/dav`,
+        username: "u",
+        password: "p",
+      };
+      const downloaded = await getAvatar(config);
+      assert(downloaded !== null, "应能下载头像");
+      assert(downloaded.length === bytes.length, "字节数应一致");
+      assert(downloaded[0] === 0xff && downloaded[4] === 0x01, "内容应一致");
+      assert(auth === "Basic dTpw", `认证头不对：${auth}`);
+
+      const missing = await getAvatar({
+        ...config,
+        url: `http://127.0.0.1:${server.port}/empty`,
+      });
+      assert(missing === null, "服务器没有头像时应返回 null");
+    } finally {
+      server.stop(true);
+    }
   });
 
   /* ---- 结果 ---- */

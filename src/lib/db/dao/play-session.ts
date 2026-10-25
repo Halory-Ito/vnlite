@@ -104,3 +104,26 @@ export async function clearPlaySessions(vnId: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(`DELETE FROM play_session WHERE vn_id = ?;`, vnId);
 }
+
+/**
+ * 用备份**整体替换**本地游玩记录（先清空再写回，单事务）。
+ *
+ * `id` 大于 0 时保留原行号；为 0 时交给 SQLite 自己分配。
+ */
+export async function replaceAllPlaySessions(sessions: readonly PlaySession[]): Promise<void> {
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    await db.execAsync(`DELETE FROM play_session;`);
+    for (const session of sessions) {
+      await db.runAsync(
+        `INSERT INTO play_session (id, vn_id, started_at, ended_at, duration_ms)
+         VALUES (?, ?, ?, ?, ?);`,
+        session.id > 0 ? session.id : null,
+        session.vnId,
+        session.startedAt,
+        session.endedAt,
+        session.durationMs
+      );
+    }
+  });
+}

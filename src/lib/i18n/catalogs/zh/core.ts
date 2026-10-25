@@ -51,6 +51,16 @@ export const zhCore = {
     themeTileLabel: "%{name}，当前%{mode}模式",
   },
 
+  /** components/date-otp-field + utils/date 的通用日期输入文案 */
+  dateField: {
+    today: "今天",
+    setToday: "%{label}设为今天",
+    clearField: "清除%{label}",
+    incomplete: "请填满 8 位",
+    invalid: "日期无效",
+    rangeOrder: "结束日期早于开始日期",
+  },
+
   tabs: {
     home: "首页",
     explore: "浏览",
@@ -92,6 +102,7 @@ export const zhCore = {
     clearCache: "清空浏览缓存",
     cacheCleared: "已清空浏览缓存",
     about: "关于",
+    sync: "同步",
   },
 
   /** features/settings/screens/* + components/* */
@@ -146,7 +157,7 @@ export const zhCore = {
     languageEn: "English",
   },
 
-  /** features/settings/components/update-check-item */
+  /** features/settings/components/update-check-item + update-card */
   update: {
     check: "检查更新",
     checking: "检查中",
@@ -155,9 +166,19 @@ export const zhCore = {
     available: "发现 %{version}",
     latestToast: "已是最新版本",
     failedToast: "检查更新失败",
-    dialogTitle: "发现新版本",
-    dialogBody: "当前 %{current}，最新 %{latest}。前往 GitHub 查看发布页并下载？",
-    goDownload: "前往下载",
+    preparing: "准备下载…",
+    downloading: "下载中 %{percent}%",
+    downloaded: "已下载",
+    downloadFailed: "下载失败",
+    downloadDoneTitle: "下载完成",
+    downloadDoneBody: "安装包已下载好，现在安装吗？",
+    install: "安装",
+    installNow: "立即安装",
+    installLater: "稍后",
+    installFailed: "无法启动安装，请在系统设置里允许本应用安装未知应用",
+    releasePage: "打开发布页",
+    noPackage: "该版本没有可用的安装包",
+    size: "安装包 %{size}",
   },
 
   /** features/review（首页「最新评价」信息流与评价对话框） */

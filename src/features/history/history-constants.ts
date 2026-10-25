@@ -7,9 +7,9 @@
  */
 
 import type { SegmentedOption } from "@/components/segmented-control";
-import { isValidDate } from "@/features/ulist/entry-logic";
 import type { HistoryType } from "@/lib/db/dao/history";
 import type { TranslationKey } from "@/lib/i18n/translate";
+import { isValidDate } from "@/utils/date";
 
 /** 展示档位 */
 export type HistoryTab = "vn" | "people" | "user" | "producer";
@@ -68,44 +68,6 @@ export const EMPTY_DATE_FILTER: HistoryDateFilter = { start: "", end: "" };
 
 export function isDateFilterEmpty(filter: HistoryDateFilter): boolean {
   return filter.start === "" && filter.end === "";
-}
-
-/** `YYYY-MM-DD` → 8 位数字 `YYYYMMDD`（非数字字符丢弃，供 InputOTP 用） */
-export function isoToDigits(iso: string): string {
-  return iso.replace(/\D/g, "").slice(0, 8);
-}
-
-/** 8 位数字 `YYYYMMDD` → `YYYY-MM-DD`；不足 8 位返回空串 */
-export function digitsToIso(digits: string): string {
-  if (digits.length !== 8) return "";
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-}
-
-/**
- * 单个日期（8 位数字）的校验错误；合法 / 未填时为 null。
- *
- * 未填满 8 位时提示「请填满 8 位」而不是格式错误 —— OTP 输入本来就在逐位敲，
- * 中途报「格式不对」没有意义。返回翻译键，由调用方翻成文案。
- */
-export function dateDigitsFieldError(digits: string): TranslationKey | null {
-  if (digits === "") return null;
-  if (digits.length < 8) return "history.dateIncomplete";
-  return isValidDate(digitsToIso(digits)) ? null : "history.dateInvalid";
-}
-
-/** 开始 / 结束两个日期（均为 8 位数字）的校验错误（翻译键）；合法时为 null */
-export function dateDigitsRangeErrors(
-  startDigits: string,
-  endDigits: string
-): { start: TranslationKey | null; end: TranslationKey | null } {
-  const startError = dateDigitsFieldError(startDigits);
-  const endError = dateDigitsFieldError(endDigits);
-  if (startError || endError) return { start: startError, end: endError };
-
-  const start = digitsToIso(startDigits);
-  const end = digitsToIso(endDigits);
-  if (start && end && end < start) return { start: null, end: "history.dateRangeOrder" };
-  return { start: null, end: null };
 }
 
 /** 快捷时间段 */

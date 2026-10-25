@@ -7,13 +7,16 @@
  */
 
 import * as Linking from "expo-linking";
-import { Button, Input, Label, TextField, Typography } from "heroui-native";
+import { Button, Input, Label, TextField, useToast } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
 import { View } from "react-native";
 
 import { H5, Muted } from "@/components/typo";
 import { TOKEN_CREATE_URL } from "@/constants/config";
+import { AvatarButton } from "@/features/profile/components/avatar-button";
+import { removeAvatar } from "@/features/profile/avatar";
+import { useAvatar } from "@/features/profile/use-avatar";
 import { SettingsShell } from "@/features/settings/components/settings-shell";
 import { useSession } from "@/hooks/use-session";
 import { useTranslation } from "@/hooks/use-translation";
@@ -112,22 +115,36 @@ function SignedOut(): JSX.Element {
 
 function SignedIn({ account }: { account: Account }): JSX.Element {
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const avatarUri = useAvatar();
+
+  const onRemoveAvatar = (): void => {
+    void removeAvatar().then(() => toast.show(t("profile.avatarRemoved")));
+  };
+
   return (
     // 与未登录态同一套容器（同样的 max-w-sm + 居中），两个状态切换时不跳版
     <View className="w-full max-w-sm flex-1 self-center justify-center gap-6 px-4">
       <View className="items-center gap-1.5">
-        <View className="h-16 w-16 items-center justify-center rounded-full bg-accent-soft">
-          <Typography type="h3" className="text-accent">
-            {account.username.slice(0, 1).toUpperCase()}
-          </Typography>
-        </View>
+        <AvatarButton
+          size={64}
+          uri={avatarUri}
+          initial={account.username.slice(0, 1).toUpperCase()}
+        />
         <H5>{account.username}</H5>
         <Muted type="body-xs">ID {account.userId}</Muted>
       </View>
 
-      <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
-        <Button.Label>{t("settings.logout")}</Button.Label>
-      </Button>
+      <View className="gap-3">
+        {avatarUri ? (
+          <Button size="sm" variant="secondary" onPress={onRemoveAvatar}>
+            <Button.Label>{t("profile.removeAvatar")}</Button.Label>
+          </Button>
+        ) : null}
+        <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
+          <Button.Label>{t("settings.logout")}</Button.Label>
+        </Button>
+      </View>
     </View>
   );
 }

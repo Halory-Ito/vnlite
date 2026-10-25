@@ -8,17 +8,15 @@
  */
 
 import { useRouter } from "expo-router";
-import { ListGroup, Typography, useThemeColor, useToast } from "heroui-native";
+import { ListGroup, useToast } from "heroui-native";
 import type { JSX } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { ScrollView } from "react-native";
 
-import { Icon } from "@/components/icon";
 import { Divider } from "@/components/separator";
-import { H5, Muted } from "@/components/typo";
+import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { SettingsItem } from "@/features/settings/components/settings-item";
 import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
-import { useSession } from "@/hooks/use-session";
 import { useTranslation } from "@/hooks/use-translation";
 import { clearContentCache } from "@/lib/query/client";
 import { clearWalkthroughCache } from "@/features/walkthrough/cache";
@@ -91,6 +89,14 @@ export default function MeScreen(): JSX.Element {
         />
         <Divider className="mx-4" />
 
+        {/* 同步：本地数据打包上传到 WebDAV，或从服务器下载恢复 */}
+        <SettingsItem
+          icon="arrowsRotateRight"
+          label={t("me.sync")}
+          onPress={() => router.push("/settings/sync")}
+        />
+        <Divider className="mx-4" />
+
         <SettingsItem
           icon="trashBin"
           label={t("me.clearCache")}
@@ -106,47 +112,5 @@ export default function MeScreen(): JSX.Element {
         />
       </ListGroup>
     </ScrollView>
-  );
-}
-
-/** 顶部用户信息。未登录时也走同一个入口去账号页登录 */
-function ProfileHeader(): JSX.Element {
-  const router = useRouter();
-  const session = useSession();
-  const { t } = useTranslation();
-  const accent = useThemeColor("accent");
-  const muted = useThemeColor("muted");
-  const account = session.status === "authenticated" ? session.account : null;
-  const canWrite = account?.permissions.includes("listwrite") ?? false;
-
-  return (
-    <Pressable
-      onPress={() => router.push("/settings/account")}
-      className="flex-row items-center gap-3 px-4 py-4 active:opacity-60"
-      accessibilityRole="button"
-      accessibilityLabel={t("settings.accountTitle")}
-    >
-      <View className="h-14 w-14 items-center justify-center rounded-full bg-accent-soft">
-        {account ? (
-          <Typography type="h4" className="text-accent">
-            {account.username.slice(0, 1).toUpperCase()}
-          </Typography>
-        ) : (
-          <Icon name="person" size={26} color={accent} />
-        )}
-      </View>
-
-      <View className="flex-1 gap-0.5">
-        <H5>{account?.username ?? t("me.notLoggedIn")}</H5>
-        <Muted type="body-xs">{account ? `ID ${account.userId}` : t("me.loginHint")}</Muted>
-        {account && !canWrite ? (
-          <Muted type="body-xs" className="text-warning-soft-foreground">
-            {t("me.noListwrite")}
-          </Muted>
-        ) : null}
-      </View>
-
-      <Icon name="chevronRight" size={16} color={muted} />
-    </Pressable>
   );
 }
