@@ -117,6 +117,22 @@ export const zhCore = {
     showBackground: "显示背景图",
     backgroundOpacity: "遮罩透明度",
     backgroundBlur: "背景模糊",
+    backgroundPositionX: "背景水平位置",
+    backgroundPositionY: "背景垂直位置",
+    chooseBackground: "选择背景图",
+    resetBackground: "恢复主题背景",
+    backgroundImageSaved: "背景图已更新",
+    backgroundImageFailed: "没能读取这张图片，换一张试试",
+    backgroundImageRemoved: "已恢复主题自带背景",
+
+    themeCustom: "自定义",
+    customPrimary: "主色",
+    customSecondary: "辅色",
+    customThemeHint: "自定义主题的背景图在上方「背景图」里设置",
+    colorInvalid: "请输入 #rgb 或 #rrggbb",
+
+    cardSection: "卡片",
+    cardOpacity: "卡片透明度",
 
     contentTitle: "内容显示",
     nsfw: "成人内容",

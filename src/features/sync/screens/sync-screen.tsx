@@ -15,6 +15,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { TranslucentPanel } from "@/components/translucent-panel";
 import { Muted } from "@/components/typo";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
 import { useTranslation } from "@/hooks/use-translation";
@@ -113,62 +114,66 @@ export default function SyncScreen(): JSX.Element {
   return (
     <SettingsShell title={t("sync.title")}>
       <SettingsSection title={t("sync.serverSection")}>
-        <SyncServerForm
-          url={url}
-          username={username}
-          password={password}
-          onChangeUrl={setUrl}
-          onChangeUsername={setUsername}
-          onChangePassword={setPassword}
-          onSave={onSave}
-          saving={saving}
-          error={urlError}
-        />
+        <TranslucentPanel>
+          <SyncServerForm
+            url={url}
+            username={username}
+            password={password}
+            onChangeUrl={setUrl}
+            onChangeUsername={setUsername}
+            onChangePassword={setPassword}
+            onSave={onSave}
+            saving={saving}
+            error={urlError}
+          />
+        </TranslucentPanel>
       </SettingsSection>
 
       <SettingsSection title={t("sync.backupSection")}>
-        <View className="gap-1">
-          <Muted type="body-sm">
-            {t("sync.lastSync")}：{lastSyncAt ? formatTime(lastSyncAt) : t("sync.never")}
-          </Muted>
-          <Muted type="body-sm">
-            {t("sync.remoteFile")}：
-            {backup.remote
-              ? `${formatBytes(backup.remote.size) ?? "—"} · ${
-                  backup.remote.modifiedAt ? formatTime(backup.remote.modifiedAt) : "—"
-                }`
-              : t("sync.remoteMissing")}
-          </Muted>
-        </View>
+        <TranslucentPanel>
+          <View className="gap-1">
+            <Muted type="body-sm">
+              {t("sync.lastSync")}：{lastSyncAt ? formatTime(lastSyncAt) : t("sync.never")}
+            </Muted>
+            <Muted type="body-sm">
+              {t("sync.remoteFile")}：
+              {backup.remote
+                ? `${formatBytes(backup.remote.size) ?? "—"} · ${
+                    backup.remote.modifiedAt ? formatTime(backup.remote.modifiedAt) : "—"
+                  }`
+                : t("sync.remoteMissing")}
+            </Muted>
+          </View>
 
-        {backup.error ? (
-          <Muted type="body-xs" className="text-danger-soft-foreground">
-            {backup.error}
-          </Muted>
-        ) : null}
+          {backup.error ? (
+            <Muted type="body-xs" className="text-danger-soft-foreground">
+              {backup.error}
+            </Muted>
+          ) : null}
 
-        <View className="mt-1 flex-row gap-3">
-          <Button size="sm" className="flex-1" onPress={onUpload} isDisabled={busy || loading}>
-            <Button.Label>
-              {backup.phase === "packing"
-                ? t("sync.packing")
-                : backup.phase === "uploading"
-                  ? t("sync.uploading")
-                  : t("sync.upload")}
-            </Button.Label>
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="flex-1"
-            onPress={onDownload}
-            isDisabled={busy || loading}
-          >
-            <Button.Label>
-              {backup.phase === "downloading" ? t("sync.downloading") : t("sync.download")}
-            </Button.Label>
-          </Button>
-        </View>
+          <View className="mt-1 flex-row gap-3">
+            <Button size="sm" className="flex-1" onPress={onUpload} isDisabled={busy || loading}>
+              <Button.Label>
+                {backup.phase === "packing"
+                  ? t("sync.packing")
+                  : backup.phase === "uploading"
+                    ? t("sync.uploading")
+                    : t("sync.upload")}
+              </Button.Label>
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="flex-1"
+              onPress={onDownload}
+              isDisabled={busy || loading}
+            >
+              <Button.Label>
+                {backup.phase === "downloading" ? t("sync.downloading") : t("sync.download")}
+              </Button.Label>
+            </Button>
+          </View>
+        </TranslucentPanel>
       </SettingsSection>
 
       <ConfirmDialog

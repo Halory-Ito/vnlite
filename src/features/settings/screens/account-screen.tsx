@@ -13,6 +13,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { H5, Muted } from "@/components/typo";
+import { TranslucentPanel } from "@/components/translucent-panel";
 import { TOKEN_CREATE_URL } from "@/constants/config";
 import { AvatarButton } from "@/features/profile/components/avatar-button";
 import { removeAvatar } from "@/features/profile/avatar";
@@ -69,46 +70,48 @@ function SignedOut(): JSX.Element {
      *   - `gap-3`：`TextField` 内部已经处理了 Label 与 Input 的间距，
      *     外层只需要把「错误文案 / 按钮」跟输入框分开
      */
-    <View className="w-full max-w-sm flex-1 self-center justify-center gap-3 px-4">
-      <TextField>
-        <Label>{t("settings.tokenLabel")}</Label>
-        <Input
-          value={token}
-          onChangeText={setToken}
-          placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-        />
-      </TextField>
+    <View className="w-full max-w-sm flex-1 self-center justify-center px-4">
+      <TranslucentPanel className="gap-3">
+        <TextField>
+          <Label>{t("settings.tokenLabel")}</Label>
+          <Input
+            value={token}
+            onChangeText={setToken}
+            placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+          />
+        </TextField>
 
-      {/* 错误文案占位固定高度：登录失败时按钮不会跟着往下跳 */}
-      <View className="min-h-4 justify-center">
-        {error ? (
-          <Muted type="body-xs" className="text-danger-soft-foreground">
-            {error}
-          </Muted>
-        ) : null}
-      </View>
+        {/* 错误文案占位固定高度：登录失败时按钮不会跟着往下跳 */}
+        <View className="min-h-4 justify-center">
+          {error ? (
+            <Muted type="body-xs" className="text-danger-soft-foreground">
+              {error}
+            </Muted>
+          ) : null}
+        </View>
 
-      <View className="mt-1 flex-row gap-3">
-        <Button
-          size="sm"
-          className="flex-1"
-          onPress={() => void doLogin()}
-          isDisabled={busy || token.trim().length === 0}
-        >
-          <Button.Label>{busy ? t("settings.loggingIn") : t("settings.login")}</Button.Label>
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          className="flex-1"
-          onPress={() => void Linking.openURL(TOKEN_CREATE_URL)}
-        >
-          <Button.Label>{t("settings.getToken")}</Button.Label>
-        </Button>
-      </View>
+        <View className="mt-1 flex-row gap-3">
+          <Button
+            size="sm"
+            className="flex-1"
+            onPress={() => void doLogin()}
+            isDisabled={busy || token.trim().length === 0}
+          >
+            <Button.Label>{busy ? t("settings.loggingIn") : t("settings.login")}</Button.Label>
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="flex-1"
+            onPress={() => void Linking.openURL(TOKEN_CREATE_URL)}
+          >
+            <Button.Label>{t("settings.getToken")}</Button.Label>
+          </Button>
+        </View>
+      </TranslucentPanel>
     </View>
   );
 }
@@ -124,27 +127,29 @@ function SignedIn({ account }: { account: Account }): JSX.Element {
 
   return (
     // 与未登录态同一套容器（同样的 max-w-sm + 居中），两个状态切换时不跳版
-    <View className="w-full max-w-sm flex-1 self-center justify-center gap-6 px-4">
-      <View className="items-center gap-1.5">
-        <AvatarButton
-          size={64}
-          uri={avatarUri}
-          initial={account.username.slice(0, 1).toUpperCase()}
-        />
-        <H5>{account.username}</H5>
-        <Muted type="body-xs">ID {account.userId}</Muted>
-      </View>
+    <View className="w-full max-w-sm flex-1 self-center justify-center px-4">
+      <TranslucentPanel className="gap-6">
+        <View className="items-center gap-1.5">
+          <AvatarButton
+            size={64}
+            uri={avatarUri}
+            initial={account.username.slice(0, 1).toUpperCase()}
+          />
+          <H5>{account.username}</H5>
+          <Muted type="body-xs">ID {account.userId}</Muted>
+        </View>
 
-      <View className="gap-3">
-        {avatarUri ? (
-          <Button size="sm" variant="secondary" onPress={onRemoveAvatar}>
-            <Button.Label>{t("profile.removeAvatar")}</Button.Label>
+        <View className="gap-3">
+          {avatarUri ? (
+            <Button size="sm" variant="secondary" onPress={onRemoveAvatar}>
+              <Button.Label>{t("profile.removeAvatar")}</Button.Label>
+            </Button>
+          ) : null}
+          <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
+            <Button.Label>{t("settings.logout")}</Button.Label>
           </Button>
-        ) : null}
-        <Button size="sm" variant="danger-soft" onPress={() => void logout()}>
-          <Button.Label>{t("settings.logout")}</Button.Label>
-        </Button>
-      </View>
+        </View>
+      </TranslucentPanel>
     </View>
   );
 }

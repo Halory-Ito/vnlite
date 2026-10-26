@@ -38,3 +38,28 @@ export function coverGridColumns(width: number, height: number): number {
     ? COVER_GRID_COLUMNS_TABLET
     : COVER_GRID_COLUMNS_COMPACT_TABLET;
 }
+
+/* -------------------------------------------------------------------------- */
+/* 作品截图墙                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/** 手机：单列（沿用原来的大图列表） */
+export const SCREENSHOT_COLUMNS_PHONE = 1;
+/** 小平板（iPad mini / 600–799dp）：3 列 */
+export const SCREENSHOT_COLUMNS_COMPACT_TABLET = 3;
+/** 大平板（≥ 800dp）：4 列 */
+export const SCREENSHOT_COLUMNS_TABLET = 4;
+
+/**
+ * 截图墙列数。
+ *
+ * 分档与封面网格一致（`coverGridColumns` 的同一条理由：看短边，不看 dpi / 宽度），
+ * 只是每一档都少几列 —— 截图单张信息量大，4 列已经是「还能看清」的上限。
+ */
+export function screenshotColumns(width: number, height: number): number {
+  const shortSide = Math.min(width, height);
+  if (shortSide < COVER_GRID_TABLET_MIN_SHORT_SIDE) return SCREENSHOT_COLUMNS_PHONE;
+  return shortSide >= COVER_GRID_LARGE_MIN_SHORT_SIDE
+    ? SCREENSHOT_COLUMNS_TABLET
+    : SCREENSHOT_COLUMNS_COMPACT_TABLET;
+}

@@ -28,7 +28,12 @@ import {
   toHex,
   withAlpha,
 } from "@/theme/color";
-import { DEFAULT_BACKGROUND_OPACITY } from "@/theme/background";
+import {
+  DEFAULT_BACKGROUND_OPACITY,
+  DEFAULT_BACKGROUND_POSITION,
+  backgroundContentPosition,
+} from "@/theme/background";
+import { DEFAULT_CUSTOM_THEME, normalizeHexColor } from "@/theme/custom-theme";
 import { MODES, OVERRIDABLE_TOKENS, THEME_SEEDS, deriveTokens } from "@/theme/seeds";
 
 let passed = 0;
@@ -303,6 +308,55 @@ check("遮罩默认值落在合法区间", () => {
   assert(
     DEFAULT_BACKGROUND_OPACITY >= 0 && DEFAULT_BACKGROUND_OPACITY <= 1,
     `默认遮罩 ${DEFAULT_BACKGROUND_OPACITY} 越界`
+  );
+});
+
+/* ---- 3.5 自定义主题 / 背景位置 ---- */
+console.log("\n3.5 自定义主题与背景位置");
+
+check("自定义主题默认配色在明暗两套下都可读", () => {
+  for (const mode of MODES) {
+    const tokens = deriveTokens(DEFAULT_CUSTOM_THEME.primary, DEFAULT_CUSTOM_THEME.secondary, mode);
+    const fg = parseColor(tokens["--foreground"]!);
+    const bg = parseColor(tokens["--background"]!);
+    assert(
+      contrastRatio(fg, bg) >= CONTRAST_AA,
+      `${mode} 前景/背景 ${contrastRatio(fg, bg).toFixed(2)} < ${CONTRAST_AA}`
+    );
+  }
+});
+
+check("normalizeHexColor：三位展开、大小写归一、非法返回 null", () => {
+  assert(normalizeHexColor("#ABC") === "#aabbcc", "三位应展开");
+  assert(normalizeHexColor("#A1B2C3") === "#a1b2c3", "应转小写");
+  assert(normalizeHexColor("aabbcc") === null, "缺 # 应拒绝");
+  assert(normalizeHexColor("#12345") === null, "位数不对应拒绝");
+  assert(normalizeHexColor("") === null, "空串应拒绝");
+});
+
+check("背景位置映射成 CSS object-position 百分比", () => {
+  assert(
+    JSON.stringify(backgroundContentPosition(0.5, 0.5)) ===
+      JSON.stringify({ left: "50%", top: "50%" }),
+    "0.5 应为居中"
+  );
+  assert(
+    JSON.stringify(backgroundContentPosition(0, 1)) === JSON.stringify({ left: "0%", top: "100%" }),
+    "两端应对齐边缘"
+  );
+});
+
+check("背景位置越界 / 非数字都被夹回 0–1", () => {
+  assert(backgroundContentPosition(-1, 2).left === "0%", "负值应夹到 0%");
+  assert(backgroundContentPosition(-1, 2).top === "100%", "超过 1 应夹到 100%");
+  assert(backgroundContentPosition(Number.NaN, Number.NaN).left === "50%", "NaN 应回居中");
+  assert(backgroundContentPosition(0.333, 0.6667).left === "33.3%", "应保留一位小数");
+});
+
+check("背景位置默认值居中", () => {
+  assert(
+    DEFAULT_BACKGROUND_POSITION.x === 0.5 && DEFAULT_BACKGROUND_POSITION.y === 0.5,
+    "默认应为居中"
   );
 });
 

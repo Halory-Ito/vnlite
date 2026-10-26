@@ -24,6 +24,42 @@ export const BACKGROUND_OPACITY_RANGE = { min: 0, max: 1, step: 0.01 } as const;
 /** 背景图模糊半径范围（pt，交给 `expo-image` 的 `blurRadius`） */
 export const BACKGROUND_BLUR_RANGE = { min: 0, max: 40, step: 1 } as const;
 
+/** 背景图位置（0–1，0.5 = 居中） */
+export interface BackgroundPosition {
+  x: number;
+  y: number;
+}
+
+/**
+ * 背景图位置范围（0–1，0.5 = 居中）。
+ *
+ * 只是把 `contentFit="cover"` 裁掉的那部分**挪一挪**，不是缩放：
+ * 0 = 贴左 / 贴上，1 = 贴右 / 贴下。设备比例与图片比例差得越多，可挪的幅度越大。
+ */
+export const BACKGROUND_POSITION_RANGE = { min: 0, max: 1, step: 0.01 } as const;
+
+/** 默认位置：居中（与不设置 `contentPosition` 的观感一致） */
+export const DEFAULT_BACKGROUND_POSITION = { x: 0.5, y: 0.5 } as const;
+
+/**
+ * 位置偏好 → `expo-image` 的 `contentPosition`。
+ *
+ * 百分比语义与 CSS `object-position` 一致（原生侧就是
+ * `(value/100) * (容器尺寸 - 图片尺寸)`），所以 0.5 正好是居中。
+ * 输出保留一位小数：滑杆 step 是 0.01，转成 `%` 后不需要更多精度。
+ */
+export function backgroundContentPosition(
+  x: number,
+  y: number
+): { left: `${number}%`; top: `${number}%` } {
+  return { left: toPercent(x), top: toPercent(y) };
+}
+
+function toPercent(value: number): `${number}%` {
+  const clamped = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0.5));
+  return `${Math.round(clamped * 1000) / 10}%`;
+}
+
 /**
  * 默认遮罩不透明度。
  *

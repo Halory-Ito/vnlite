@@ -429,6 +429,42 @@ async function main(): Promise<void> {
     assert(migratePreferences({ spoilerShield: 1 }).spoilerShield === false, "1 不应被当成开启");
   });
 
+  await check("背景位置：缺省居中、越界夹取、脏值回居中", () => {
+    const def = migratePreferences({}).backgroundPosition;
+    assert(def.x === 0.5 && def.y === 0.5, "老数据应默认居中");
+    const kept = migratePreferences({ backgroundPosition: { x: 0.2, y: 0.9 } }).backgroundPosition;
+    assert(kept.x === 0.2 && kept.y === 0.9, "合法值应保留");
+    const clamped = migratePreferences({ backgroundPosition: { x: -3, y: 8 } }).backgroundPosition;
+    assert(clamped.x === 0 && clamped.y === 1, "越界应夹到 0–1");
+    const dirty = migratePreferences({
+      backgroundPosition: { x: "左", y: null },
+    }).backgroundPosition;
+    assert(dirty.x === 0.5 && dirty.y === 0.5, "非数字应回居中");
+  });
+
+  await check("自定义主题：缺省配色、非法色值回默认、三位简写不动", () => {
+    const def = migratePreferences({}).customTheme;
+    assert(def.primary === "#6EC8D2" && def.secondary === "#F0AA64", "老数据应补默认配色");
+    const kept = migratePreferences({
+      customTheme: { primary: "#123ABC", secondary: "#fff" },
+    }).customTheme;
+    assert(kept.primary === "#123ABC", "合法六位应保留（大小写不强制处理）");
+    assert(kept.secondary === "#fff", "合法三位应保留");
+    const dirty = migratePreferences({
+      customTheme: { primary: "red", secondary: 42 },
+    }).customTheme;
+    assert(dirty.primary === "#6EC8D2", "非法主色应回默认");
+    assert(dirty.secondary === "#F0AA64", "非法辅色应回默认");
+  });
+
+  await check("卡片透明度：缺省 0.72、合法保留、越界夹取、脏值回默认", () => {
+    assert(migratePreferences({}).cardOpacity === 0.72, "老数据应补默认 0.72");
+    assert(migratePreferences({ cardOpacity: 0.4 }).cardOpacity === 0.4, "合法值应保留");
+    assert(migratePreferences({ cardOpacity: 2 }).cardOpacity === 1, "超过 1 应夹到 1");
+    assert(migratePreferences({ cardOpacity: -1 }).cardOpacity === 0, "负值应夹到 0");
+    assert(migratePreferences({ cardOpacity: "半透明" }).cardOpacity === 0.72, "非数字回默认");
+  });
+
   await check("清单标签本地筛选：filterByLabel（切标签不再重新请求）", () => {
     const items = [
       makeItem("v1", { labels: [{ id: 1, label: "Playing" }] }),

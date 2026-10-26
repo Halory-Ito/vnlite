@@ -113,6 +113,23 @@ export const enCore: CatalogOf<typeof zhCore> = {
     showBackground: "Show background image",
     backgroundOpacity: "Overlay opacity",
     backgroundBlur: "Background blur",
+    backgroundPositionX: "Horizontal position",
+    backgroundPositionY: "Vertical position",
+    chooseBackground: "Choose image",
+    resetBackground: "Use theme background",
+    backgroundImageSaved: "Background updated",
+    backgroundImageFailed: "Could not read that image, try another one",
+    backgroundImageRemoved: "Theme background restored",
+
+    themeCustom: "Custom",
+    customPrimary: "Primary color",
+    customSecondary: "Secondary color",
+    customThemeHint:
+      "Set the background image for the custom theme in the Background section above",
+    colorInvalid: "Use #rgb or #rrggbb",
+
+    cardSection: "Cards",
+    cardOpacity: "Card opacity",
 
     contentTitle: "Content",
     nsfw: "Adult content",

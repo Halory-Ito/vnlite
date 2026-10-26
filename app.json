@@ -2,7 +2,7 @@
   "expo": {
     "name": "vnlite",
     "slug": "vnlite",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "heroui-native-app",

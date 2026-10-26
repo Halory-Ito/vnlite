@@ -7,9 +7,11 @@ import type { JSX } from "react";
 
 import { Icon } from "@/components/icon";
 import { SegmentedControl } from "@/components/segmented-control";
+import { TranslucentPanel } from "@/components/translucent-panel";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
 import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS, translateOptions } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { setPreference } from "@/lib/storage/preferences";
 
@@ -17,15 +19,18 @@ export default function ContentScreen(): JSX.Element {
   const preferences = usePreferences();
   const { t } = useTranslation();
   const accent = useThemeColor("accent");
+  const groupSurface = useTranslucentSurface();
 
   return (
     <SettingsShell title={t("settings.contentTitle")}>
       <SettingsSection title={t("settings.nsfw")}>
-        <SegmentedControl
-          options={translateOptions(NSFW_OPTIONS, t)}
-          value={preferences.nsfwMode}
-          onChange={(value) => void setPreference("nsfwMode", value)}
-        />
+        <TranslucentPanel>
+          <SegmentedControl
+            options={translateOptions(NSFW_OPTIONS, t)}
+            value={preferences.nsfwMode}
+            onChange={(value) => void setPreference("nsfwMode", value)}
+          />
+        </TranslucentPanel>
       </SettingsSection>
 
       <SettingsSection title={t("settings.spoiler")} hint={t("settings.spoilerHint")}>
@@ -34,7 +39,7 @@ export default function ContentScreen(): JSX.Element {
          * 画的是「读数 + 箭头」，给 Switch 就得整体换掉 `suffix`，
          * 与其绕一层不如直接用 ListGroup 的原语（外观 / 关于等页仍用 SettingsItem）。
          */}
-        <ListGroup>
+        <ListGroup style={groupSurface}>
           <ListGroup.Item>
             <ListGroup.ItemPrefix>
               <Icon name="eye" size={20} color={accent} />
@@ -53,11 +58,13 @@ export default function ContentScreen(): JSX.Element {
       </SettingsSection>
 
       <SettingsSection title={t("settings.pageSize")}>
-        <SegmentedControl
-          options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: size }))}
-          value={String(preferences.pageSize)}
-          onChange={(value) => void setPreference("pageSize", Number(value))}
-        />
+        <TranslucentPanel>
+          <SegmentedControl
+            options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: size }))}
+            value={String(preferences.pageSize)}
+            onChange={(value) => void setPreference("pageSize", Number(value))}
+          />
+        </TranslucentPanel>
       </SettingsSection>
     </SettingsShell>
   );

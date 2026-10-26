@@ -1430,3 +1430,76 @@
       （`pendingConfig`）拉头像 —— 恢复发生在确认之后，表单可能已经改了
 - [x] 冒烟：`smoke:db` 新增「WebDAV 头像 GET / 404」，覆盖认证头与字节内容
 - [ ] 真机验证：换机后从 WebDAV 恢复，头像是否跟着回来
+
+---
+
+## Module 11 · 截图墙 / 半透明卡片 / 背景微调 / 自定义主题（2026-10-26）
+
+> Master 要求：① 截图列表适配平板（pad 4 列 / pad mini 3 列）；
+> ② 卡片与 item 尽量用半透明底，让背景图透出来；③ 背景图支持调 X / Y 位置；
+> ④ 支持自定义主题（背景图 + 颜色）；⑤ 搜索页统计图表垂直居中。
+
+### Type 11.1 · 截图墙分列
+
+- [x] `utils/grid.ts#screenshotColumns` —— 手机 1 列 / 短边 600–799dp 3 列 / ≥ 800dp 4 列
+  - [x] 分档与封面网格共用阈值（600 / 800），同样看**短边**：转屏列数不跳，
+        也不会把横屏手机当成平板
+- [x] `vn-screenshots-tab.tsx`：`flex-row flex-wrap` + 计算格子宽度（不再是单列大图），
+      保留原始宽高比钳制（1:1 ~ 2.2:1）与全屏查看器
+- [x] `smoke:layout` 补 7 项截图墙断言（手机竖 / 横、mini 竖 / 横、大板、Pro、阈值 600 / 799 / 800）
+
+### Type 11.2 · 半透明卡片 / item
+
+- [x] `hooks/use-translucent-surface.ts` —— `surface` token + `cardOpacity`（默认 72%）
+  - [x] 用 `style` 而不是 `bg-surface/70`：HeroUI `Surface` 的底色写在组件 CSS 类里，
+        和工具类的合并顺序依赖 uniwind 的编译结果；`style` 一定是最后应用（HOC 是
+        `[classNameStyle, style]`）
+  - [x] **透明度可调**：「外观 → 卡片」里的滑杆（0–100%，`theme/surface.ts` 管范围与默认值），
+        拖动时面板自身的底色就在变，等于实时预览
+- [x] `components/translucent-panel.tsx` —— 没有 ListGroup 的分段控件 / 表单用它包一层
+  - [x] 圆角 24px（对齐 HeroUI `--radius-3xl`）与底色一起写进 `style`：
+        不依赖 utility class 是否被 uniwind 编出来
+- [x] 已应用：首页「每日语录」「随机一部」（含骨架屏）、「我的」整个 ListGroup、
+      关于页三个 ListGroup + 更新卡片、内容页的 ListGroup 与分段控件、
+      外观页的「卡片」「背景图」两块（明暗模式与主题平铺，不套卡片）、
+      语言页、同步页两块、账号页表单、统计页图表卡片、搜索页的搜索框
+
+### Type 11.3 · 背景图位置
+
+- [x] `theme/background.ts`：`BACKGROUND_POSITION_RANGE`（0–1）、
+      `DEFAULT_BACKGROUND_POSITION`（居中）、`backgroundContentPosition`
+  - [x] 映射成 `expo-image` 的 `contentPosition`（百分比语义 = CSS `object-position`），
+        **不缩放**，只挪动被 `cover` 裁掉的部分
+- [x] 偏好新增 `backgroundPosition: { x, y }`（迁移里夹到 0–1，脏值回居中）
+- [x] `AppBackground` 接收 `position`；`BackgroundSettings` 加 X / Y 两个滑杆（0–100%）
+
+### Type 11.4 · 自定义主题
+
+- [x] `theme/custom-theme.ts`（纯逻辑）：`CUSTOM_THEME_ID` / `DEFAULT_CUSTOM_THEME` /
+      `isHexColor` / `normalizeHexColor`（三位展开、大小写归一）
+- [x] 偏好新增 `customTheme: { primary, secondary }`（脏值回默认配色）
+- [x] `themes.ts#resolveTheme` —— `themeId === "custom"` 用用户配色；
+      `getTokens` 改成按**颜色 + 模式**缓存（自定义主题的 id 固定，按 id 缓存会拿到旧色）
+- [x] 外观页主题网格末尾加「自定义」格；选中后展开主 / 辅色编辑
+  - [x] `components/color-field.tsx`：12 个预设色块 + `#rrggbb` 输入，
+        非法输入不覆盖当前色只标红（输到一半的 `#12` 不算数）
+- [x] 背景图沿用全局 `backgroundUrl`：`features/settings/background-image.ts`
+  - [x] 相册选图 → 压到 1440px JPEG → 存 `document/background-<ms>.jpg`，
+        写成功后再删旧图
+  - [x] 「恢复主题背景」清空文件并置空偏好
+  - [x] `theme-provider` 兜底：`file://` 背景在换机 / 文件被删后自动回落到主题自带图
+        （偏好会随备份同步，图片文件不会）
+
+### Type 11.5 · 搜索页图表居中
+
+- [x] `search-screen`：空输入时的统计图改成 `ScrollView` +
+      `contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}`，
+      在剩余空间里**垂直居中**；屏幕太矮仍可滚动，不裁图
+
+### Type 11.6 · 质量
+
+- [x] `smoke:theme` 新增 5 项：自定义默认配色两模式可读 / `normalizeHexColor` /
+      位置映射与夹取 / 默认居中
+- [x] `bun run check` 全绿（`smoke:db` 66 项、`smoke:layout` 20 项）
+- [ ] 真机验证：平板截图 4 列观感、半透明卡片在浅色主题下的对比度、
+      自定义主题换色后各页可读性、背景图偏移手感

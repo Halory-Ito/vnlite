@@ -9,7 +9,14 @@
 
 import { kv } from "./key-value";
 import type { Language } from "@/lib/i18n/translate";
-import { BACKGROUND_BLUR_RANGE, DEFAULT_BACKGROUND_OPACITY } from "@/theme/background";
+import {
+  BACKGROUND_BLUR_RANGE,
+  DEFAULT_BACKGROUND_OPACITY,
+  DEFAULT_BACKGROUND_POSITION,
+  type BackgroundPosition,
+} from "@/theme/background";
+import { DEFAULT_CUSTOM_THEME, isHexColor, type CustomThemeColors } from "@/theme/custom-theme";
+import { DEFAULT_CARD_OPACITY } from "@/theme/surface";
 
 /** NSFW 内容展示档位（Q6） */
 export type NsfwMode = "hide" | "blur" | "show";
@@ -47,7 +54,14 @@ const LEGACY_DIM_OPACITY: Record<BackgroundDim, number> = {
 
 // 范围与默认值都住在 theme/background.ts（纯逻辑，冒烟测试可直接 import），
 // 这里只是转出去，设置页与滑杆统一从一处取。
-export { BACKGROUND_BLUR_RANGE, BACKGROUND_OPACITY_RANGE } from "@/theme/background";
+export {
+  BACKGROUND_BLUR_RANGE,
+  BACKGROUND_OPACITY_RANGE,
+  BACKGROUND_POSITION_RANGE,
+  type BackgroundPosition,
+} from "@/theme/background";
+export { CARD_OPACITY_RANGE } from "@/theme/surface";
+export { CUSTOM_THEME_ID } from "@/theme/custom-theme";
 
 /** 浏览页可用的排序字段（与 `features/sort/sortOptions` 的选项一一对应） */
 export type BrowseSortField = "votecount" | "rating" | "released" | "id";
@@ -127,9 +141,19 @@ export interface Preferences {
   backgroundOpacity: number;
   /** 背景图**模糊半径**（pt），0–40。给 `expo-image` 的 `blurRadius` */
   backgroundBlur: number;
+  /** 背景图位置（0–1）。只挪动被 `cover` 裁掉的部分，不缩放 */
+  backgroundPosition: BackgroundPosition;
   /**
-   * 自定义背景图 URL。
-   * M1 不用（主题包自带背景图），M4 开放用户自定义时启用。
+   * 卡片 / item 底色的透明度（0 = 全透明，1 = 不透明）。
+   *
+   * 只影响「卡片」这类自带 surface 的容器，不影响文字与图片本身；
+   * 让用户自己在「背景图透出来」和「文字靠得住」之间找平衡。
+   */
+  cardOpacity: number;
+  /** 自定义主题的品牌色（`themeId === "custom"` 时生效） */
+  customTheme: CustomThemeColors;
+  /**
+   * 自定义背景图 URL（本地 `file://` 或远程地址）。
    * 存 URL 而非图片数据 —— 避免往 AsyncStorage 里塞几 MB 的 base64。
    */
   backgroundUrl: string | null;
@@ -149,6 +173,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   showBackground: true,
   backgroundOpacity: DEFAULT_BACKGROUND_OPACITY,
   backgroundBlur: 0,
+  backgroundPosition: { ...DEFAULT_BACKGROUND_POSITION },
+  cardOpacity: DEFAULT_CARD_OPACITY,
+  customTheme: { ...DEFAULT_CUSTOM_THEME },
   backgroundUrl: null,
 };
 
@@ -222,6 +249,28 @@ export function migratePreferences(stored: Record<string, unknown>): Preferences
   next.backgroundOpacity = clamp(next.backgroundOpacity, 0, 1);
   next.backgroundBlur = clamp(next.backgroundBlur, 0, BACKGROUND_BLUR_RANGE.max);
 
+  // 背景图位置：两个轴都 0–1，缺项 / 脏值回居中
+  const position = stored.backgroundPosition as { x?: unknown; y?: unknown } | undefined;
+  next.backgroundPosition = {
+    x: clampNumber(position?.x, 0, 1, DEFAULT_BACKGROUND_POSITION.x),
+    y: clampNumber(position?.y, 0, 1, DEFAULT_BACKGROUND_POSITION.y),
+  };
+
+  // 自定义主题：只认 #rgb / #rrggbb，脏值回默认配色
+  const custom = stored.customTheme as { primary?: unknown; secondary?: unknown } | undefined;
+  next.customTheme = {
+    primary: isHexColor(custom?.primary) ? custom.primary : DEFAULT_PREFERENCES.customTheme.primary,
+    secondary: isHexColor(custom?.secondary)
+      ? custom.secondary
+      : DEFAULT_PREFERENCES.customTheme.secondary,
+  };
+
+  // 背景图地址只接受字符串；文件在不在由 `theme-provider` 兜底（换机后可能已失效）
+  next.backgroundUrl = typeof next.backgroundUrl === "string" ? next.backgroundUrl : null;
+
+  // 卡片透明度：0–1；老数据没有这一项 → 默认值
+  next.cardOpacity = clampNumber(next.cardOpacity, 0, 1, DEFAULT_CARD_OPACITY);
+
   // 卡片字段：旧数据没有这一项 → 全开；手改过的脏数据丢掉（空数组是合法的：只留标题+封面）
   next.cardFields = Array.isArray(next.cardFields)
     ? next.cardFields.filter(isCardField)
@@ -247,6 +296,12 @@ function clampDim(value: number): BackgroundDim {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/** 数字夹取，非数字回 `fallback` */
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return clamp(value, min, max);
 }
 
 export function getPreferences(): Preferences {

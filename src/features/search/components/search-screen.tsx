@@ -15,11 +15,12 @@
 import { SearchField } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import { SegmentedControl } from "@/components/segmented-control";
 import { DatabaseStats } from "@/features/stats/database-stats";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 
 import { SCOPE_OPTIONS, SEARCH_PLACEHOLDER_KEY, type SearchScope } from "../search-logic";
@@ -32,6 +33,8 @@ const DEBOUNCE_MS = 350;
 
 export function SearchScreen(): JSX.Element {
   const { t } = useTranslation();
+  // 搜索框的底色跟卡片用同一个透明度，输入框也能透出背景图
+  const fieldSurface = useTranslucentSurface();
   // 默认「作品」：绝大多数搜索意图是找作品
   const [scope, setScope] = useState<SearchScope>("vn");
   const [input, setInput] = useState("");
@@ -47,7 +50,7 @@ export function SearchScreen(): JSX.Element {
         <SearchField value={input} onChange={setInput}>
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input placeholder={t(SEARCH_PLACEHOLDER_KEY)} />
+            <SearchField.Input placeholder={t(SEARCH_PLACEHOLDER_KEY)} style={fieldSurface} />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
@@ -55,9 +58,20 @@ export function SearchScreen(): JSX.Element {
       </View>
 
       {keyword.length === 0 ? (
-        <View className="flex-1">
+        /*
+         * 空输入时下半屏只有一张统计图 —— 让它在**剩余空间里垂直居中**，
+         * 而不是贴着搜索框往下堆。`contentContainerStyle.flexGrow = 1` 是
+         * `justifyContent` 生效的前提（ScrollView 的容器默认按内容高度撑开）。
+         * 屏幕太矮时仍然可以滚，不会把图表裁掉。
+         */
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <DatabaseStats />
-        </View>
+        </ScrollView>
       ) : (
         <View className="flex-1 pt-2">
           {scope === "vn" ? (

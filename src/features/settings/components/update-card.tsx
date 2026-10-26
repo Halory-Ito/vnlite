@@ -19,6 +19,7 @@ import { Linking, View } from "react-native";
 import { AppDialog } from "@/components/dialog";
 import { Icon } from "@/components/icon";
 import { Muted } from "@/components/typo";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatBytes } from "@/utils/format";
 
@@ -34,6 +35,7 @@ export function UpdateCard({ update }: UpdateCardProps): JSX.Element | null {
   const { t } = useTranslation();
   const accent = useThemeColor("accent");
   const danger = useThemeColor("danger");
+  const surface = useTranslucentSurface();
   const { state, install, cancel, retry, dismiss } = update;
   const { phase } = state;
   /**
@@ -64,7 +66,7 @@ export function UpdateCard({ update }: UpdateCardProps): JSX.Element | null {
   return (
     <>
       <View className="mx-4 mt-2">
-        <Card>
+        <Card style={surface}>
           <Card.Header className="flex-row items-center gap-2">
             <Icon
               name={phase === "failed" ? "triangleExclamation" : "box"}

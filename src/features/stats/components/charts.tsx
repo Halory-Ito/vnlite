@@ -16,6 +16,7 @@ import { View } from "react-native";
 import { PieChart } from "react-native-chart-kit";
 
 import { Body, H5, Muted } from "@/components/typo";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { withAlpha } from "@/theme/color";
 
@@ -32,10 +33,11 @@ export const SLICE_PALETTE = [
   "#56ccf2",
 ] as const;
 
-/** 图表卡片：统一的标题 + 白底容器 */
+/** 图表卡片：统一的标题 + 半透明容器（透出全局背景图） */
 export function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
+  const surface = useTranslucentSurface();
   return (
-    <Card className="mx-4 my-2">
+    <Card className="mx-4 my-2" style={surface}>
       <Card.Body className="gap-3">
         <H5>{title}</H5>
         <View className="items-center">{children}</View>

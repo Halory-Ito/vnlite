@@ -13,6 +13,7 @@ import {
   COVER_GRID_COLUMNS_PHONE,
   COVER_GRID_COLUMNS_TABLET,
   coverGridColumns,
+  screenshotColumns,
 } from "@/utils/grid";
 
 let passed = 0;
@@ -80,6 +81,31 @@ check("799 → 6 列", () => {
 });
 check("极端窄屏 320 → 3 列", () => {
   assert(coverGridColumns(320, 480) === 3, "不应崩成负数或 0 列");
+});
+
+console.log("\n5. 截图墙（手机单列 / mini 3 列 / 大平板 4 列）");
+check("iPhone 竖屏 1 列", () => {
+  assert(screenshotColumns(393, 852) === 1, "手机应单列大图");
+});
+check("iPhone 横屏 852×393 仍是 1 列", () => {
+  assert(screenshotColumns(852, 393) === 1, "横屏不能被判成平板");
+});
+check("iPad mini 744×1133 → 3 列", () => {
+  assert(screenshotColumns(744, 1133) === 3, "应 3 列");
+});
+check("iPad mini 横屏 1133×744 → 3 列", () => {
+  assert(screenshotColumns(1133, 744) === 3, "转屏列数不变");
+});
+check("iPad 10.9 820×1180 → 4 列", () => {
+  assert(screenshotColumns(820, 1180) === 4, "应 4 列");
+});
+check("iPad Pro 12.9 → 4 列", () => {
+  assert(screenshotColumns(1024, 1366) === 4, "应 4 列");
+});
+check("阈值与封面网格一致（600 / 800）", () => {
+  assert(screenshotColumns(600, 960) === 3, "600 起算平板");
+  assert(screenshotColumns(799, 960) === 3, "799 仍是小平板");
+  assert(screenshotColumns(800, 960) === 4, "800 起算大平板");
 });
 
 console.log(`\n${"=".repeat(60)}`);

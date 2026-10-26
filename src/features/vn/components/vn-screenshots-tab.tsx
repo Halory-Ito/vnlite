@@ -4,14 +4,15 @@
  * 拆成独立页签的原因：截图是**列表型内容**，一屏能放好几张，
  * 塞在概览里只能横向滚一条窄带，而且会把概览拉到很长。
  *
- * 独立页签后改成**纵向列表**，用整屏宽度展示，并按原始宽高比（`dims`）出图。
- * 点任意一张进全屏查看器（左右滑切换、双指缩放）。
+ * 布局按屏幕分档（`utils/grid#screenshotColumns`）：手机单列大图，
+ * iPad mini 3 列、大平板 4 列 —— 平板上单列会浪费掉大半屏宽度。
+ * 每张图仍按原始宽高比（`dims`）出图，点任意一张进全屏查看器。
  */
 
 import { Image } from "expo-image";
 import type { JSX } from "react";
 import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { EmptyState } from "@/components/screen-state";
@@ -19,6 +20,7 @@ import { Muted } from "@/components/typo";
 import { useImageGate } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail } from "@/lib/api/types";
+import { screenshotColumns } from "@/utils/grid";
 
 /**
  * 宽高比的允许区间。
@@ -31,8 +33,15 @@ const MIN_RATIO = 1;
 const MAX_RATIO = 2.2;
 const DEFAULT_RATIO = 1.6;
 
+/** 与页面左右内边距一致（`px-4`） */
+const EDGE = 16;
+/** 列间距：单列时宽一点，多列时收窄 */
+const GAP_SINGLE = 12;
+const GAP_GRID = 8;
+
 export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
   const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
   const shots = vn.screenshots ?? [];
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -56,24 +65,28 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
     label: t("vn.screenshotLabel", { index: i + 1 }),
   }));
 
+  const columns = screenshotColumns(width, height);
+  const gap = columns === 1 ? GAP_SINGLE : GAP_GRID;
+  // 与封面网格同一个算法：可用宽度减掉列间距后均分
+  const tileWidth = Math.floor((width - EDGE * 2 - gap * (columns - 1)) / columns);
+
   return (
     <View className="flex-1">
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
-        <View className="px-4 pt-2">
-          <View style={{ gap: 12 }}>
-            {shots.map((shot, i) => (
-              <ScreenshotCard
-                key={shot.id}
-                url={shot.url}
-                thumbnail={shot.thumbnail}
-                sexual={shot.sexual}
-                violence={shot.violence}
-                /* VNDB 的截图尺寸字段叫 `dims`（[宽, 高]），没有 width/height */
-                dims={shot.dims as [number, number] | undefined}
-                onPress={() => setViewerIndex(i)}
-              />
-            ))}
-          </View>
+        <View className="flex-row flex-wrap px-4 pt-2" style={{ gap }}>
+          {shots.map((shot, i) => (
+            <ScreenshotCard
+              key={shot.id}
+              width={tileWidth}
+              url={shot.url}
+              thumbnail={shot.thumbnail}
+              sexual={shot.sexual}
+              violence={shot.violence}
+              /* VNDB 的截图尺寸字段叫 `dims`（[宽, 高]），没有 width/height */
+              dims={shot.dims as [number, number] | undefined}
+              onPress={() => setViewerIndex(i)}
+            />
+          ))}
         </View>
       </ScrollView>
 
@@ -88,6 +101,7 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
 }
 
 function ScreenshotCard({
+  width,
   url,
   thumbnail,
   sexual,
@@ -95,6 +109,8 @@ function ScreenshotCard({
   dims,
   onPress,
 }: {
+  /** 格子宽度（像素），由列数算出 */
+  width: number;
   url: string;
   thumbnail?: string;
   sexual?: number;
@@ -105,7 +121,7 @@ function ScreenshotCard({
   const { t } = useTranslation();
   const gate = useImageGate({ sexual, violence });
 
-  // aspectRatio + width:100% 让卡片的盒子自己撑开，不需要算像素
+  // aspectRatio + 固定宽度让卡片的盒子自己撑开，高度不需要算
   const raw = dims && dims[0] > 0 && dims[1] > 0 ? dims[0] / dims[1] : DEFAULT_RATIO;
   const ratio = Math.min(MAX_RATIO, Math.max(MIN_RATIO, raw));
 
@@ -113,7 +129,7 @@ function ScreenshotCard({
     return (
       <View
         className="items-center justify-center overflow-hidden rounded-lg bg-default-soft"
-        style={{ aspectRatio: ratio, width: "100%" }}
+        style={{ aspectRatio: ratio, width }}
       >
         <Muted type="body-xs">{t("common.hiddenAdult")}</Muted>
       </View>
@@ -124,7 +140,7 @@ function ScreenshotCard({
     <Pressable
       onPress={onPress}
       className="overflow-hidden rounded-lg bg-default-soft active:opacity-80"
-      style={{ aspectRatio: ratio, width: "100%" }}
+      style={{ aspectRatio: ratio, width }}
       accessibilityRole="imagebutton"
       accessibilityLabel={t("vn.screenshotHint")}
     >

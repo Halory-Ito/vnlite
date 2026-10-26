@@ -19,6 +19,7 @@ import { SettingsSection, SettingsShell } from "@/features/settings/components/s
 import { UpdateCard } from "@/features/settings/components/update-card";
 import { UpdateCheckItem } from "@/features/settings/components/update-check-item";
 import { useUpdateCheck } from "@/features/settings/update-hooks";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 
 const VERSION = Constants.expoConfig?.version ?? "1.0.0";
@@ -27,10 +28,11 @@ const REPO_URL = `https://github.com/${DEVELOPER_INFO.repo}`;
 export default function AboutScreen(): JSX.Element {
   const { t } = useTranslation();
   const update = useUpdateCheck(VERSION);
+  const groupSurface = useTranslucentSurface();
 
   return (
     <SettingsShell title={t("settings.aboutTitle")}>
-      <ListGroup className="mx-4">
+      <ListGroup className="mx-4" style={groupSurface}>
         <SettingsItem icon="circleInfo" label={t("settings.version")} value={VERSION} />
         <Divider className="mx-4" />
         <UpdateCheckItem update={update} />
@@ -39,7 +41,7 @@ export default function AboutScreen(): JSX.Element {
       <UpdateCard update={update} />
 
       <SettingsSection title={t("settings.developerSection")}>
-        <ListGroup>
+        <ListGroup style={groupSurface}>
           <SettingsItem
             icon="person"
             label={t("settings.developer")}
@@ -65,7 +67,7 @@ export default function AboutScreen(): JSX.Element {
       </SettingsSection>
 
       <SettingsSection title={t("settings.dataSection")}>
-        <ListGroup>
+        <ListGroup style={groupSurface}>
           <SettingsItem icon="star" label={t("settings.dataSource")} value="VNDB Kana API" />
           <Divider className="mx-4" />
           <SettingsItem

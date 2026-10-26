@@ -17,18 +17,24 @@ import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { SettingsItem } from "@/features/settings/components/settings-item";
 import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { clearContentCache } from "@/lib/query/client";
 import { clearWalkthroughCache } from "@/features/walkthrough/cache";
-import { getTheme } from "@/theme/themes";
+import { resolveTheme } from "@/theme/themes";
 
 export default function MeScreen(): JSX.Element {
   const router = useRouter();
   const preferences = usePreferences();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const groupSurface = useTranslucentSurface();
   // 「外观」那行的读数是主题名，同步算出来即可，不用另存状态
-  const theme = getTheme(preferences.themeId);
+  const theme = resolveTheme(
+    preferences.themeId,
+    preferences.customTheme,
+    t("settings.themeCustom")
+  );
 
   const clearCache = () => {
     // 内存缓存（所有业务数据）+ 攻略的落盘缓存一起清：
@@ -42,7 +48,7 @@ export default function MeScreen(): JSX.Element {
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       <ProfileHeader />
 
-      <ListGroup className="mx-4">
+      <ListGroup className="mx-4" style={groupSurface}>
         <SettingsItem
           icon="palette"
           label={t("me.appearance")}

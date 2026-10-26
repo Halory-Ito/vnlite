@@ -25,6 +25,12 @@ import { Image } from "expo-image";
 import type { JSX } from "react";
 import { StyleSheet, View, type ImageSourcePropType } from "react-native";
 
+import {
+  DEFAULT_BACKGROUND_POSITION,
+  backgroundContentPosition,
+  type BackgroundPosition,
+} from "@/theme/background";
+
 export interface AppBackgroundProps {
   /** 本地 asset（require 的结果）或远程 URL；null = 不渲染图片层 */
   source: ImageSourcePropType | string | null;
@@ -32,12 +38,22 @@ export interface AppBackgroundProps {
   opacity: number;
   /** 图片模糊半径（pt），0 = 不模糊 */
   blur: number;
+  /**
+   * 图片位置（0–1）。只挪动被 `cover` 裁掉的部分，不缩放 ——
+   * 设备比例和图片比例差得多时，用户能手动把主体挪进画面。
+   */
+  position?: BackgroundPosition;
 }
 
 /** 铺满父容器。三个图层共用，省掉重复的内联样式 */
 const FILL = StyleSheet.absoluteFill;
 
-export function AppBackground({ source, opacity, blur }: AppBackgroundProps): JSX.Element {
+export function AppBackground({
+  source,
+  opacity,
+  blur,
+  position = DEFAULT_BACKGROUND_POSITION,
+}: AppBackgroundProps): JSX.Element {
   const background = useThemeColor("background");
   const blurRadius = blur > 0 ? blur : undefined;
 
@@ -53,6 +69,8 @@ export function AppBackground({ source, opacity, blur }: AppBackgroundProps): JS
           source={source}
           style={FILL}
           contentFit="cover"
+          // 百分比语义同 CSS `object-position`（0.5 居中）
+          contentPosition={backgroundContentPosition(position.x, position.y)}
           blurRadius={blurRadius}
           cachePolicy="memory-disk"
           priority="low"

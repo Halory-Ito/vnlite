@@ -30,6 +30,7 @@ import { Muted, Paragraph } from "@/components/typo";
 import { HomeFeed } from "@/features/home/components/home-feed";
 import { useCopyProps } from "@/hooks/use-copy";
 import { useShake } from "@/hooks/use-shake";
+import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import { queryRandomQuote, queryRandomVn } from "@/lib/api/endpoints/vn";
@@ -57,6 +58,7 @@ export default function HomeTab(): JSX.Element {
 function QuoteCard(): JSX.Element | null {
   const router = useRouter();
   const { t } = useTranslation();
+  const surface = useTranslucentSurface();
   const dateKey = todayIso();
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.quote.ofTheDay(dateKey),
@@ -88,7 +90,7 @@ function QuoteCard(): JSX.Element | null {
   // 骨架屏：以前这里直接返回一个 h-2 的空白，首屏会「什么都没有 → 突然出现一张卡」
   if (isLoading) {
     return (
-      <Card className="mx-4 my-3">
+      <Card className="mx-4 my-3" style={surface}>
         <Card.Body className="gap-2.5">
           <Skeleton variant="pulse" className="h-4 w-full rounded-md" />
           <Skeleton variant="pulse" className="h-4 w-3/5 rounded-md" />
@@ -101,7 +103,7 @@ function QuoteCard(): JSX.Element | null {
   if (!data?.quote) return null;
 
   return (
-    <Card className="mx-4 my-3">
+    <Card className="mx-4 my-3" style={surface}>
       <Card.Body>
         <Paragraph>「{data.quote}」</Paragraph>
         {data.vn ? (
@@ -129,6 +131,7 @@ function QuoteCard(): JSX.Element | null {
 function RandomVnCard(): JSX.Element {
   const router = useRouter();
   const { t } = useTranslation();
+  const surface = useTranslucentSurface();
   // round 进 queryKey：点一次「换一部」= 一次新查询，随机逻辑放在 queryFn 里
   const [round, setRound] = useState(0);
 
@@ -149,7 +152,7 @@ function RandomVnCard(): JSX.Element {
   useShake(reshuffle);
 
   return (
-    <Card className="mx-4 my-3">
+    <Card className="mx-4 my-3" style={surface}>
       <Card.Body>
         {pick.data ? (
           <RandomVnRow vn={pick.data} onPress={() => router.push(`/vn/${pick.data?.id}`)} />

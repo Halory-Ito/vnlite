@@ -18,6 +18,9 @@
  *      后者在 `@theme inline` 里会被内联进工具类，运行时改无效。
  *   3. **背景图层** —— 绝对定位的三层结构（底色 / 图片 / 遮罩），见 `AppBackground`。
  *
+ * 自定义主题只替换「主 / 辅色」这一层输入，其余派生与可读性钳制完全复用内置主题
+ * 那套（`deriveTokens` + 冒烟里的对比度断言）。
+ *
  * 刻意做成「即使换肤失败，App 仍完全可用」：
  * 变量注入失败只是配色不生效，不会崩。
  */
@@ -26,15 +29,21 @@ import type { JSX, ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { useColorScheme, View } from "react-native";
 import { ScopedVariables, Uniwind } from "uniwind";
+import { File } from "expo-file-system";
 
 import { AppBackground } from "@/components/app-background";
 import { usePreferences } from "@/hooks/use-preferences";
-
-import { getTheme, getTokens, resolveMode } from "./themes";
+import { useTranslation } from "@/hooks/use-translation";
+import { resolveTheme, getTokens, resolveMode } from "./themes";
 
 export function ThemeProvider({ children }: { children: ReactNode }): JSX.Element {
   const preferences = usePreferences();
-  const theme = getTheme(preferences.themeId);
+  const { t } = useTranslation();
+  const theme = resolveTheme(
+    preferences.themeId,
+    preferences.customTheme,
+    t("settings.themeCustom")
+  );
   const systemScheme = useColorScheme();
 
   /* ---- 明暗模式 ---- */
@@ -48,8 +57,10 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   const mode = resolveMode(colorScheme, systemScheme);
 
   /* ---- 配色覆盖 ---- */
-  // getTokens 对同一 (主题, 模式) 返回同一引用，所以这个 useMemo 依赖是稳的
-  const tokens = useMemo(() => getTokens(theme, mode), [theme, mode]);
+  // 按「两个颜色 + 模式」做依赖：自定义主题每次渲染都会新建对象，
+  // 用对象本身当依赖会每帧重算；`getTokens` 内部还有一份按这三项做的缓存。
+  const { primary, secondary } = theme;
+  const tokens = useMemo(() => getTokens(primary, secondary, mode), [primary, secondary, mode]);
 
   const content = (
     <ThemeShell
@@ -57,6 +68,8 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
       backgroundUrl={preferences.backgroundUrl}
       opacity={preferences.backgroundOpacity}
       blur={preferences.backgroundBlur}
+      position={preferences.backgroundPosition}
+      showBackground={preferences.showBackground}
     >
       {children}
     </ThemeShell>
@@ -77,23 +90,50 @@ function ThemeShell({
   backgroundUrl,
   opacity,
   blur,
+  position,
+  showBackground,
   children,
 }: {
   themeId: string;
-  /** 用户自定义背景图（M4 开放后可用），优先级高于主题自带 */
+  /** 用户自定义背景图，优先级高于主题自带 */
   backgroundUrl: string | null;
   opacity: number;
   blur: number;
+  /** 背景图位置（0–1），只挪动被 cover 裁掉的部分 */
+  position: { x: number; y: number };
+  /** 是否显示背景图 */
+  showBackground: boolean;
   children: ReactNode;
 }): JSX.Element {
-  const theme = getTheme(themeId);
-  const showBackground = usePreferences().showBackground;
-  const source = showBackground ? (backgroundUrl ?? theme.background) : null;
+  const theme = resolveTheme(themeId);
+  // 同步的文件存在性检查只做一次：每次渲染都问一次原生层没必要
+  const custom = useMemo(
+    () => (showBackground ? usableBackgroundUrl(backgroundUrl) : null),
+    [showBackground, backgroundUrl]
+  );
+  const source = showBackground ? (custom ?? theme.background) : null;
 
   return (
     <View style={{ flex: 1 }}>
-      <AppBackground source={source} opacity={opacity} blur={blur} />
+      <AppBackground source={source} opacity={opacity} blur={blur} position={position} />
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
+}
+
+/**
+ * 本地背景图还在不在。
+ *
+ * 偏好会随 WebDAV 备份同步到新设备，但图片文件本身不会 —— 那份
+ * `file://` 地址在新机上指向一个不存在的文件，直接渲染就是「背景全黑」。
+ * 这里做一次存在性检查，不在就回落到主题自带背景。
+ */
+function usableBackgroundUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (!url.startsWith("file://")) return url;
+  try {
+    return new File(url).exists ? url : null;
+  } catch {
+    return null;
+  }
 }

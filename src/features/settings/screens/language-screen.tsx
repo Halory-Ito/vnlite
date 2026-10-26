@@ -7,6 +7,7 @@
 import { Select } from "heroui-native";
 import type { JSX } from "react";
 
+import { TranslucentPanel } from "@/components/translucent-panel";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
 import { LANGUAGE_OPTIONS, translateOptions } from "@/features/settings/options";
 import { usePreferences } from "@/hooks/use-preferences";
@@ -23,29 +24,31 @@ export default function LanguageScreen(): JSX.Element {
   return (
     <SettingsShell title={t("settings.languageTitle")}>
       <SettingsSection title={t("settings.languageSection")} hint={t("settings.languageHint")}>
-        <Select
-          value={selected}
-          onValueChange={(option) => {
-            // 单选：值一定是单个 SelectOption；按选项表校验后再写入偏好
-            const first = Array.isArray(option) ? option[0] : option;
-            const picked = first?.value;
-            const language = LANGUAGE_OPTIONS.find((item) => item.value === picked)?.value;
-            if (language) void setPreference("language", language as Language);
-          }}
-        >
-          <Select.Trigger className="w-full">
-            <Select.Value placeholder={selected.label} />
-            <Select.TriggerIndicator />
-          </Select.Trigger>
-          <Select.Portal>
-            <Select.Overlay />
-            <Select.Content presentation="popover" width="trigger">
-              {options.map((option) => (
-                <Select.Item key={option.value} value={option.value} label={option.label} />
-              ))}
-            </Select.Content>
-          </Select.Portal>
-        </Select>
+        <TranslucentPanel>
+          <Select
+            value={selected}
+            onValueChange={(option) => {
+              // 单选：值一定是单个 SelectOption；按选项表校验后再写入偏好
+              const first = Array.isArray(option) ? option[0] : option;
+              const picked = first?.value;
+              const language = LANGUAGE_OPTIONS.find((item) => item.value === picked)?.value;
+              if (language) void setPreference("language", language as Language);
+            }}
+          >
+            <Select.Trigger className="w-full">
+              <Select.Value placeholder={selected.label} />
+              <Select.TriggerIndicator />
+            </Select.Trigger>
+            <Select.Portal>
+              <Select.Overlay />
+              <Select.Content presentation="popover" width="trigger">
+                {options.map((option) => (
+                  <Select.Item key={option.value} value={option.value} label={option.label} />
+                ))}
+              </Select.Content>
+            </Select.Portal>
+          </Select>
+        </TranslucentPanel>
       </SettingsSection>
     </SettingsShell>
   );

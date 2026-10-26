@@ -18,6 +18,7 @@ import type { ColorSchemePreference } from "@/lib/storage/preferences";
 import type { ImageSourcePropType } from "react-native";
 
 import { parseColor, shade, toHex } from "./color";
+import { CUSTOM_THEME_ID, DEFAULT_CUSTOM_THEME, type CustomThemeColors } from "./custom-theme";
 import { THEME_SEEDS, deriveTokens, type ThemeMode } from "./seeds";
 
 export interface ThemeDefinition {
@@ -65,6 +66,33 @@ export function getTheme(id: string | undefined): ThemeDefinition {
 }
 
 /**
+ * 解析「当前生效的主题」。
+ *
+ * `themeId === "custom"` 时用用户自己的主 / 辅色；其余情况等同 `getTheme`。
+ * 自定义主题的背景图**不在这里决定** —— 背景图是全局的 `backgroundUrl`，
+ * 与主题无关（见 `theme-provider` 的 `ThemeShell`），所以这里给一张兜底图，
+ * 保证 tile 预览与「没设背景图时」都有东西可画。
+ *
+ * @param id 偏好里的 `themeId`
+ * @param custom 自定义主题的配色（只在 `id === "custom"` 时用）
+ * @param name 自定义主题的显示名（走 i18n，由调用方传）
+ */
+export function resolveTheme(
+  id: string | undefined,
+  custom: CustomThemeColors = DEFAULT_CUSTOM_THEME,
+  name?: string
+): ThemeDefinition {
+  if (id !== CUSTOM_THEME_ID) return getTheme(id);
+  return {
+    id: CUSTOM_THEME_ID,
+    name: name ?? "Custom",
+    primary: custom.primary,
+    secondary: custom.secondary,
+    background: IMAGES[DEFAULT_THEME_ID]!,
+  };
+}
+
+/**
  * 把用户偏好解析成**实际生效的**明暗模式。
  *
  * `system` 时要看系统当前是什么；另外两个直接就是结果。
@@ -92,17 +120,25 @@ export function resolveMode(
 const tokenCache = new Map<string, Record<string, string>>();
 
 /**
- * 取某套主题在某模式下的 token 表。
+ * 取某组品牌色在某模式下的 token 表。
  *
- * 同一 (主题, 模式) 返回**同一个对象引用**，这样把它交给
- * `ScopedVariables` 时 `useMemo` 不会因为引用变化而白白重渲染。
+ * 直接收**两个颜色**而不是 `ThemeDefinition`：自定义主题每次渲染都会新建对象，
+ * 同一个 (主色, 辅色, 模式) 必须命中同一份缓存 —— 否则拖颜色 / 遮罩滑杆时
+ * 每帧都要重跑一遍颜色混合 + 对比度反解。
+ *
+ * 同一组入参返回**同一个对象引用**，这样把它交给 `ScopedVariables` 时
+ * `useMemo` 不会因为引用变化而白白重渲染。
  */
-export function getTokens(theme: ThemeDefinition, mode: ThemeMode): Record<string, string> {
-  const key = `${theme.id}:${mode}`;
+export function getTokens(
+  primary: string,
+  secondary: string,
+  mode: ThemeMode
+): Record<string, string> {
+  const key = `${primary}:${secondary}:${mode}`;
   const cached = tokenCache.get(key);
   if (cached) return cached;
 
-  const tokens = deriveTokens(theme.primary, theme.secondary, mode);
+  const tokens = deriveTokens(primary, secondary, mode);
   tokenCache.set(key, tokens);
   return tokens;
 }
