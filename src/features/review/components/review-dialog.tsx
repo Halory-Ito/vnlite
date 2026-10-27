@@ -26,7 +26,7 @@ import { Muted } from "@/components/typo";
 import { PostContent } from "@/features/discussion/components/post-content";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useReview } from "../hooks";
+import { useReview } from "@/features/review/hooks";
 
 export interface ReviewDialogProps {
   /** 要看的评价 id（`w18526`）；null = 关着 */

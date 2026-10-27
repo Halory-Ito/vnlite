@@ -1,1 +1,1 @@
-export { default } from "@/features/favorite/favorite-screen";
+export { default } from "@/features/favorite/screens/favorite-screen";

@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhEnums } from "../zh/enums";
+import type { zhEnums } from "@/lib/i18n/catalogs/zh/enums";
 
 export const enEnums: CatalogOf<typeof zhEnums> = {
   platform: {

@@ -9,7 +9,7 @@ import { Icon } from "@/components/icon";
 import { SegmentedControl } from "@/components/segmented-control";
 import { TranslucentPanel } from "@/components/translucent-panel";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
-import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS, translateOptions } from "@/features/settings/options";
+import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS, translateOptions } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";

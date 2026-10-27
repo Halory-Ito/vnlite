@@ -20,7 +20,12 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { ReviewList } from "@/features/review/components/review-list";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { FEED_COUNT, FEED_TAB_LABEL_KEY, FEED_TABS, type FeedTab } from "../feed-config";
+import {
+  FEED_COUNT,
+  FEED_TAB_LABEL_KEY,
+  FEED_TABS,
+  type FeedTab,
+} from "@/features/home/lib/feed-config";
 
 import { JustReleasedCarousel, UpcomingCarousel } from "./releases-feed";
 

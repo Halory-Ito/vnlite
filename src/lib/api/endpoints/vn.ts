@@ -8,13 +8,13 @@
 import { MAX_RESULTS_PER_PAGE } from "@/constants/config";
 import { t } from "@/lib/i18n/translate";
 
-import { api } from "../client";
+import { api } from "@/lib/api/client";
 import {
   VN_COVER_CARD_FIELDS,
   VN_DETAIL_FIELDS,
   VN_LIST_FIELDS,
   VN_PLAY_INFO_FIELDS,
-} from "../fields";
+} from "@/lib/api/fields";
 import {
   byTag,
   byVn,
@@ -22,7 +22,7 @@ import {
   quoteFromCharacter,
   quoteFromVn,
   withSeiyuu,
-} from "../filters";
+} from "@/lib/api/filters";
 import {
   toFieldsString,
   type Predicate,
@@ -30,7 +30,7 @@ import {
   type Quote,
   type VnDetail,
   type VnSummary,
-} from "../types";
+} from "@/lib/api/types";
 
 export interface VnQueryOptions {
   filters?: Predicate | Predicate[];

@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhFavorite } from "../zh/favorite";
+import type { zhFavorite } from "@/lib/i18n/catalogs/zh/favorite";
 
 export const enFavorite: CatalogOf<typeof zhFavorite> = {
   favorite: {

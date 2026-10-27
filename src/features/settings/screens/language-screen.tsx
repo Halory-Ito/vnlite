@@ -9,7 +9,7 @@ import type { JSX } from "react";
 
 import { TranslucentPanel } from "@/components/translucent-panel";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
-import { LANGUAGE_OPTIONS, translateOptions } from "@/features/settings/options";
+import { LANGUAGE_OPTIONS, translateOptions } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { Language } from "@/lib/i18n/translate";

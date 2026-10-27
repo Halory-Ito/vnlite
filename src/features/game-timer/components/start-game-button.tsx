@@ -17,9 +17,9 @@ import { View } from "react-native";
 import { Icon } from "@/components/icon";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { finishGameTimer } from "../actions";
-import { useGameTimer } from "../hooks";
-import { startGameTimer, toggleGameTimerPause } from "../store";
+import { finishGameTimer } from "@/features/game-timer/lib/actions";
+import { useGameTimer } from "@/features/game-timer/hooks";
+import { startGameTimer, toggleGameTimerPause } from "@/features/game-timer/lib/store";
 
 export interface StartGameButtonProps {
   vnId: string;

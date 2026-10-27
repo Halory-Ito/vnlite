@@ -2,7 +2,7 @@
  * 简体中文文案 · search 模块（搜索页的四档范围与结果状态）。
  *
  * 接入点：
- *   - `features/search/search-logic.ts`（档位名 / 集合名 / 结果标题等纯函数文案；
+ *   - `features/search/lib/search-logic.ts`（档位名 / 集合名 / 结果标题等纯函数文案；
  *     模块级表里存 `TranslationKey`，渲染时 `t(key)`）
  *   - `features/search/components/*`（搜索框 / 结果列表 / 空态）
  *

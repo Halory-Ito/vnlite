@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhVn } from "../zh/vn";
+import type { zhVn } from "@/lib/i18n/catalogs/zh/vn";
 
 export const enVn: CatalogOf<typeof zhVn> = {
   vn: {

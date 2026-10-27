@@ -19,7 +19,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { UListRelease } from "@/lib/api/types";
 import { listStatusLabel } from "@/utils/format";
 
-import { useUlistItem, useUlistReleaseHold } from "../hooks";
+import { useUlistItem, useUlistReleaseHold } from "@/features/ulist/hooks";
 import { Pill } from "./pill";
 
 /** 常用三档（0 Unknown / 4 Deleted 不给选），英文名来自 VNDB 的 list_status */

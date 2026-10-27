@@ -37,8 +37,8 @@ import { View } from "react-native";
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { stepMeta } from "../select";
-import type { WalkthroughStep } from "../types";
+import { stepMeta } from "@/features/walkthrough/lib/select";
+import type { WalkthroughStep } from "@/features/walkthrough/lib/types";
 import { SpoilerText } from "./spoiler-text";
 
 export interface WalkthroughStepRowProps {

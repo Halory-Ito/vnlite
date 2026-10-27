@@ -8,7 +8,7 @@
  * 同一条目再次浏览时**更新** `viewed_at` 而不是插入新行（唯一索引兜住）。
  */
 
-import { getDatabase } from "../schema";
+import { getDatabase } from "@/lib/db/schema";
 
 /** 历史条目类型（存储层） */
 export type HistoryType = "vn" | "character" | "staff" | "producer" | "user";

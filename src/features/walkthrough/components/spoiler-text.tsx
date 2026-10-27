@@ -15,7 +15,7 @@ import { Pressable } from "react-native";
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { maskText } from "../select";
+import { maskText } from "@/features/walkthrough/lib/select";
 
 export interface SpoilerTextProps {
   text: string;

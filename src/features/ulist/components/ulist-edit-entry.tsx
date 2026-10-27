@@ -16,7 +16,7 @@ import { Muted } from "@/components/typo";
 import { usePermission } from "@/hooks/use-session";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useUlistItem } from "../hooks";
+import { useUlistItem } from "@/features/ulist/hooks";
 
 export function UlistEditEntry({ vnId }: { vnId: string }): JSX.Element | null {
   const router = useRouter();

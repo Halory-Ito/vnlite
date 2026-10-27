@@ -104,6 +104,16 @@ export function formatUnixDate(timestamp: number | null | undefined): string | n
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+/** unix 毫秒 → `2026-10-21 15:30`（同步时间用：要看清「哪天几点」光有日期不够） */
+export function formatDateTime(timestamp: number | null | undefined): string {
+  if (!timestamp) return "—";
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(
+    d.getHours()
+  )}:${pad2(d.getMinutes())}`;
+}
+
 /** 今天（本地时区）→ `2024-01-05`，清单日期输入的「今天」快捷键用 */
 export function todayIso(): string {
   const d = new Date();

@@ -7,7 +7,7 @@
 
 export { getDatabase, setDatabaseProvider, wipeDatabase, SCHEMA_VERSION } from "./schema";
 export type { SqlDatabase, SqlRunResult } from "./schema";
-export * as accountDao from "./dao/account";
-export * as favoriteDao from "./dao/favorite";
-export * as historyDao from "./dao/history";
-export * as playSessionDao from "./dao/play-session";
+export * as accountDao from "@/lib/db/dao/account";
+export * as favoriteDao from "@/lib/db/dao/favorite";
+export * as historyDao from "@/lib/db/dao/history";
+export * as playSessionDao from "@/lib/db/dao/play-session";

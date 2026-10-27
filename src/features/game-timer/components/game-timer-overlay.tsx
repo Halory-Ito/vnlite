@@ -27,10 +27,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/icon";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { finishGameTimer } from "../actions";
-import { formatGameDuration } from "../format";
-import { useElapsedMs, useGameTimer } from "../hooks";
-import { toggleGameTimerPause } from "../store";
+import { finishGameTimer } from "@/features/game-timer/lib/actions";
+import { formatGameDuration } from "@/features/game-timer/lib/format";
+import { useElapsedMs, useGameTimer } from "@/features/game-timer/hooks";
+import { toggleGameTimerPause } from "@/features/game-timer/lib/store";
 
 /** 圆形直径 / 操作按钮直径 / 间距，以及可容纳「按钮行 + 圆形」的包裹尺寸 */
 const CIRCLE = 72;

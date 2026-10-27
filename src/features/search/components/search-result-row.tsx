@@ -13,7 +13,7 @@ import { Icon } from "@/components/icon";
 import { Separator } from "@/components/separator";
 import { Muted, Paragraph } from "@/components/typo";
 
-import type { SearchEntry } from "../search-logic";
+import type { SearchEntry } from "@/features/search/lib/search-logic";
 
 export interface SearchResultRowProps {
   entry: SearchEntry;

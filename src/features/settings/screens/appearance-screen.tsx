@@ -18,7 +18,7 @@ import { BackgroundSettings } from "@/features/settings/components/background-se
 import { ColorField } from "@/features/settings/components/color-field";
 import { LabeledSlider } from "@/features/settings/components/labeled-slider";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
-import { SCHEME_OPTIONS, translateOptions } from "@/features/settings/options";
+import { SCHEME_OPTIONS, translateOptions } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import {

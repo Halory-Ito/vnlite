@@ -16,7 +16,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { SegmentedControl, type SegmentedOption } from "@/components/segmented-control";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { usePlaySessions } from "../hooks";
+import { usePlaySessions } from "@/features/play-records/hooks";
 import { PlayRecordsChart } from "./play-records-chart";
 import { PlayRecordsList } from "./play-records-list";
 

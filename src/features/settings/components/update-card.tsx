@@ -23,7 +23,7 @@ import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatBytes } from "@/utils/format";
 
-import type { UseUpdateCheck } from "../update-hooks";
+import type { UseUpdateCheck } from "@/features/settings/hooks/update-hooks";
 
 export interface UpdateCardProps {
   update: UseUpdateCheck;

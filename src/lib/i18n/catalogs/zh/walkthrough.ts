@@ -1,7 +1,7 @@
 /**
  * 简体中文 · walkthrough 模块（攻略页签）。
  *
- * 接入点：`features/walkthrough/select`（结局 / 步骤类型映射）与
+ * 接入点：`features/walkthrough/lib/select`（结局 / 步骤类型映射）与
  * `features/walkthrough/components/*`。
  * 线路名 / 结局名 / 章节名 / 步骤内容来自攻略仓库，是**数据**，不在这里翻译。
  */

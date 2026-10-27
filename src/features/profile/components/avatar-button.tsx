@@ -11,7 +11,7 @@ import { Pressable, View } from "react-native";
 import { Icon } from "@/components/icon";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { pickAvatar } from "../avatar";
+import { pickAvatar } from "@/features/profile/lib/avatar";
 import { Avatar } from "./avatar";
 
 export interface AvatarButtonProps {

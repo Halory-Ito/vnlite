@@ -11,7 +11,7 @@
  * 同一条目重复收藏时**保留首次收藏时间**（`favorited_at` 不更新），只刷新元数据。
  */
 
-import { getDatabase } from "../schema";
+import { getDatabase } from "@/lib/db/schema";
 
 /** 收藏条目类型（存储层） */
 export type FavoriteType = "vn" | "character" | "staff" | "producer" | "user";

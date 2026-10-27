@@ -32,8 +32,8 @@ import { Icon } from "@/components/icon";
 import { Muted, Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import type { Walkthrough, WalkthroughRoute } from "../types";
-import type { WalkthroughMarkApi } from "../use-marks";
+import type { Walkthrough, WalkthroughRoute } from "@/features/walkthrough/lib/types";
+import type { WalkthroughMarkApi } from "@/features/walkthrough/hooks/use-marks";
 import { EndingCard } from "./walkthrough-ending-card";
 
 export interface WalkthroughRoutesProps {

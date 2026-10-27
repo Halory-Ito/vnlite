@@ -24,7 +24,7 @@
  * 只存文件名能省掉每条约 60 字节的重复前缀。
  */
 
-import { normalizeCompanyName } from "../src/features/catalog/kungal-logo";
+import { normalizeCompanyName } from "@/features/catalog/lib/kungal-logo";
 
 const BASE = "https://www.kungal.com/galgame/official";
 const OUT_PATH = "src/features/catalog/kungal-logos.json";

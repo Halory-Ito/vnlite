@@ -22,7 +22,11 @@ import { useTranslation } from "@/hooks/use-translation";
 import type { PlaySession } from "@/lib/db/dao/play-session";
 import { withAlpha } from "@/theme/color";
 
-import { formatPlayDuration, formatPlayDurationShort, formatYearMonth } from "../format";
+import {
+  formatPlayDuration,
+  formatPlayDurationShort,
+  formatYearMonth,
+} from "@/features/play-records/lib/format";
 import {
   currentWeekIndex,
   currentYearMonth,
@@ -31,7 +35,7 @@ import {
   summarizeSessions,
   weeklyBuckets,
   type WeeklyBucket,
-} from "../play-stats";
+} from "@/features/play-records/lib/play-stats";
 
 /** 柱体可用高度（pt）与柱宽 */
 const BAR_AREA_HEIGHT = 112;

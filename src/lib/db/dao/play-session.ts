@@ -4,11 +4,11 @@
  * 游戏计时器每「结束」一次写一条：记录了会话的墙钟起止与**实际游玩时长**
  * （`duration_ms` 不含暂停，由计时器累计）。
  *
- * 归属某作品，按开始时间倒序查询；统计聚合在 `features/play-records/play-stats`
+ * 归属某作品，按开始时间倒序查询；统计聚合在 `features/play-records/lib/play-stats`
  * 里纯函数完成（数据量小，直接全量取回本地算）。
  */
 
-import { getDatabase } from "../schema";
+import { getDatabase } from "@/lib/db/schema";
 
 export interface PlaySession {
   id: number;

@@ -24,7 +24,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import type { Quote } from "@/lib/api/types";
 import { entryCopyText } from "@/utils/copy-text";
 
-import { useVnQuotes } from "../hooks";
+import { useVnQuotes } from "@/features/vn/hooks";
 
 export function VnQuotesTab({ vnId }: { vnId: string }): JSX.Element {
   const { t } = useTranslation();

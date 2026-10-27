@@ -24,7 +24,7 @@ import type { CharacterRole } from "@/lib/api/enums";
 import type { Character } from "@/lib/api/types";
 import { characterRoleLabel } from "@/utils/format";
 
-import { useVnCharacters } from "../hooks";
+import { useVnCharacters } from "@/features/vn/hooks";
 
 /** 分档顺序 = 重要程度，页签也按这个顺序排 */
 const ROLE_ORDER: readonly CharacterRole[] = ["main", "primary", "side", "appears"];

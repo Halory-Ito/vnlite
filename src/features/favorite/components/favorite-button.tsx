@@ -18,7 +18,7 @@ import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { FavoriteType } from "@/lib/db/dao/favorite";
 
-import { useToggleFavorite } from "../hooks";
+import { useToggleFavorite } from "@/features/favorite/hooks";
 
 export interface FavoriteButtonProps {
   type: FavoriteType;

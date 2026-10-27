@@ -15,10 +15,10 @@
  *    移出清单前必须二次确认。
  */
 
-import { EXCLUSIVE_STATUS_LABELS, UNSETTABLE_LABELS } from "../enums";
-import { api } from "../client";
-import { ULIST_FIELDS, USER_VOTE_FIELDS } from "../fields";
-import { pred } from "../filters";
+import { EXCLUSIVE_STATUS_LABELS, UNSETTABLE_LABELS } from "@/lib/api/enums";
+import { api } from "@/lib/api/client";
+import { ULIST_FIELDS, USER_VOTE_FIELDS } from "@/lib/api/fields";
+import { pred } from "@/lib/api/filters";
 import {
   toFieldsString,
   type AuthInfo,
@@ -28,7 +28,7 @@ import {
   type UListItem,
   type UListLabel,
   type UserInfo,
-} from "../types";
+} from "@/lib/api/types";
 
 /* -------------------------------------------------------------------------- */
 /* 读                                                                         */
@@ -181,7 +181,7 @@ export function getUser(
  *   `?q=Yorhel` → 命中；`?q=yor` → `{"yor": null}`。
  * 用户名匹配不区分大小写，但必须写全；形如 `u123` 的串按 id 处理
  * （不会拿去当用户名比）。所以搜索页的「用户」档最多只能给出一条结果，
- * 限制也必须在 UI 上说明 —— 见 `features/search/search-logic.ts`。
+ * 限制也必须在 UI 上说明 —— 见 `features/search/lib/search-logic.ts`。
  */
 export async function findUser(idOrName: string, signal?: AbortSignal): Promise<UserInfo | null> {
   const response = await getUser(idOrName, signal);

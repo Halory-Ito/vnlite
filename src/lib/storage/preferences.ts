@@ -63,7 +63,7 @@ export {
 export { CARD_OPACITY_RANGE } from "@/theme/surface";
 export { CUSTOM_THEME_ID } from "@/theme/custom-theme";
 
-/** 浏览页可用的排序字段（与 `features/sort/sortOptions` 的选项一一对应） */
+/** 浏览页可用的排序字段（与 `features/sort/lib/sort-options` 的选项一一对应） */
 export type BrowseSortField = "votecount" | "rating" | "released" | "id";
 
 /** 浏览页的排序偏好（字段 + 方向） */

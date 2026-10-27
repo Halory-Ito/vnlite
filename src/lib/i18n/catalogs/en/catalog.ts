@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhCatalog } from "../zh/catalog";
+import type { zhCatalog } from "@/lib/i18n/catalogs/zh/catalog";
 
 export const enCatalog: CatalogOf<typeof zhCatalog> = {
   catalog: {

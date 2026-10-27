@@ -16,7 +16,7 @@ import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { PlaySession } from "@/lib/db/dao/play-session";
 
-import { useUpdatePlaySession } from "../hooks";
+import { useUpdatePlaySession } from "@/features/play-records/hooks";
 import {
   dateTimeFieldError,
   durationBetween,
@@ -24,7 +24,7 @@ import {
   formatLocalTime,
   sessionRangeError,
   toLocalTimestamp,
-} from "../session-time";
+} from "@/features/play-records/lib/session-time";
 
 export interface SessionEditDialogProps {
   session: PlaySession;

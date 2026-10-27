@@ -21,8 +21,8 @@ import { Icon } from "@/components/icon";
 import { Muted, Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import type { MarkProgress } from "../select";
-import type { Walkthrough } from "../types";
+import type { MarkProgress } from "@/features/walkthrough/lib/select";
+import type { Walkthrough } from "@/features/walkthrough/lib/types";
 
 export interface WalkthroughMetaProps {
   walkthrough: Walkthrough;

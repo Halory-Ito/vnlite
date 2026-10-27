@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhMisc } from "../zh/misc";
+import type { zhMisc } from "@/lib/i18n/catalogs/zh/misc";
 
 /** English catalog · misc namespace（API error messages, clipboard hints）. */
 export const enMisc: CatalogOf<typeof zhMisc> = {

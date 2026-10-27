@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhDiscussion } from "../zh/discussion";
+import type { zhDiscussion } from "@/lib/i18n/catalogs/zh/discussion";
 
 /**
  * English catalog · discussion namespace（VNDB thread list / thread page）.

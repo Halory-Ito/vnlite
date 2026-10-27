@@ -14,7 +14,7 @@
 
 import { useThemeColor } from "heroui-native";
 
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreferences } from "./use-preferences";
 import { withAlpha } from "@/theme/color";
 
 export function useTranslucentSurface(alpha?: number): { backgroundColor: string } {

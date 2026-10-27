@@ -4,7 +4,7 @@
 
 import { MAX_RESULTS_PER_PAGE } from "@/constants/config";
 
-import { api } from "../client";
+import { api } from "@/lib/api/client";
 import {
   CHARACTER_DETAIL_FIELDS,
   CHARACTER_LIST_FIELDS,
@@ -16,8 +16,8 @@ import {
   TAG_LIST_FIELDS,
   TRAIT_DETAIL_FIELDS,
   TRAIT_LIST_FIELDS,
-} from "../fields";
-import { and, byTag, pred, vnWithCharacter, vnWithDeveloper, vnWithStaff } from "../filters";
+} from "@/lib/api/fields";
+import { and, byTag, pred, vnWithCharacter, vnWithDeveloper, vnWithStaff } from "@/lib/api/filters";
 import {
   toFieldsString,
   type Character,
@@ -27,7 +27,7 @@ import {
   type Staff,
   type Tag,
   type Trait,
-} from "../types";
+} from "@/lib/api/types";
 
 /* -------------------------------------------------------------------------- */
 /* Character                                                                  */
@@ -205,7 +205,7 @@ export function queryStaff(
        * 官网能搜到「sukaji」，本项目搜不到）。
        *
        * 正确做法与官网一致：**不过滤**，按 `id` 在客户端去重
-       * （见 `features/search/search-logic#toStaffEntries`）。
+       * （见 `features/search/lib/search-logic#toStaffEntries`）。
        */
       filters: options.search ? and(pred("search", "=", options.search)) : options.filters,
       fields: toFieldsString(STAFF_LIST_FIELDS),

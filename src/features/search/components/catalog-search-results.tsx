@@ -10,8 +10,8 @@ import { useRouter } from "expo-router";
 import type { JSX } from "react";
 import { useMemo } from "react";
 
-import { useProducerSearch, useStaffSearch } from "../hooks";
-import { toProducerEntries, toStaffEntries } from "../search-logic";
+import { useProducerSearch, useStaffSearch } from "@/features/search/hooks";
+import { toProducerEntries, toStaffEntries } from "@/features/search/lib/search-logic";
 
 import { CatalogResultList } from "./catalog-result-list";
 

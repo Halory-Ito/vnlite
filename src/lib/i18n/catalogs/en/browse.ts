@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhBrowse } from "../zh/browse";
+import type { zhBrowse } from "@/lib/i18n/catalogs/zh/browse";
 
 /** English catalog · browse. 用词对齐 vndb.org（Popularity / Rating / Release date / Platforms…） */
 export const enBrowse: CatalogOf<typeof zhBrowse> = {

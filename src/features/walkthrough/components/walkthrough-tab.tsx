@@ -1,7 +1,7 @@
 /**
  * VN 详情 · 攻略页签。
  *
- * 入口在 `features/vn/vn-detail-screen`。数据来自独立的静态 JSON 仓库
+ * 入口在 `features/vn/screens/vn-detail-screen`。数据来自独立的静态 JSON 仓库
  * （Kana API 没有攻略端点），所以整条链路是：
  *
  *   索引（判断有没有攻略） → 单篇正文 → 线路 / 结局 / 步骤
@@ -37,8 +37,12 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useWalkthrough, useWalkthroughIndex, useWalkthroughMarks } from "../hooks";
-import { findEntry, markProgress } from "../select";
+import {
+  useWalkthrough,
+  useWalkthroughIndex,
+  useWalkthroughMarks,
+} from "@/features/walkthrough/hooks";
+import { findEntry, markProgress } from "@/features/walkthrough/lib/select";
 import { WalkthroughMeta } from "./walkthrough-meta";
 import { WalkthroughRoutes } from "./walkthrough-routes";
 

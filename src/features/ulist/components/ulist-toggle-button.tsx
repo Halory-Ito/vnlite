@@ -21,7 +21,7 @@ import { usePermission } from "@/hooks/use-session";
 import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 
-import { useUlistItem, useUlistMutations } from "../hooks";
+import { useUlistItem, useUlistMutations } from "@/features/ulist/hooks";
 
 export function UlistToggleButton({ vnId }: { vnId: string }): JSX.Element | null {
   const canWrite = usePermission("listwrite");

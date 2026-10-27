@@ -16,7 +16,7 @@ import { H5, Muted } from "@/components/typo";
 import { useSession } from "@/hooks/use-session";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useAvatar } from "../use-avatar";
+import { useAvatar } from "@/features/profile/hooks/use-avatar";
 import { AvatarButton } from "./avatar-button";
 
 export function ProfileHeader(): JSX.Element {

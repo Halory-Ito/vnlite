@@ -22,8 +22,8 @@ import type { UListItem, UListLabel } from "@/lib/api/types";
 import { dateRangeErrors } from "@/utils/date";
 import { formatReleased } from "@/utils/format";
 
-import { diffPatch, draftFrom, type UlistDraft } from "../entry-logic";
-import { useUlistMutations } from "../hooks";
+import { diffPatch, draftFrom, type UlistDraft } from "@/features/ulist/lib/entry-logic";
+import { useUlistMutations } from "@/features/ulist/hooks";
 import { LabelField } from "./label-field";
 import { VoteField } from "./vote-field";
 

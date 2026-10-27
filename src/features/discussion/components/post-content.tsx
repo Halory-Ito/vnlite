@@ -15,7 +15,7 @@ import { Text, View } from "react-native";
 
 import { useTranslation } from "@/hooks/use-translation";
 
-import type { PostNode } from "../scrape";
+import type { PostNode } from "@/features/discussion/lib/scrape";
 
 /** 顶层节点切成「行内段 / 引用块」；key 取该段第一个节点的 id */
 type Block = { key: number; type: "inline" | "quote"; nodes: PostNode[] };

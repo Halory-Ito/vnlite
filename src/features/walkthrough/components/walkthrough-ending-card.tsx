@@ -28,9 +28,9 @@ import { View } from "react-native";
 
 import { useTranslation } from "@/hooks/use-translation";
 
-import { endingMeta } from "../select";
-import type { WalkthroughEnding } from "../types";
-import type { WalkthroughMarkApi } from "../use-marks";
+import { endingMeta } from "@/features/walkthrough/lib/select";
+import type { WalkthroughEnding } from "@/features/walkthrough/lib/types";
+import type { WalkthroughMarkApi } from "@/features/walkthrough/hooks/use-marks";
 import { SpoilerText } from "./spoiler-text";
 import { WalkthroughSteps } from "./walkthrough-steps";
 

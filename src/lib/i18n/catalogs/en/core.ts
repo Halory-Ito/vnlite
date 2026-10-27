@@ -7,9 +7,9 @@
  * 专有名词（VNDB / Kana API / Token / 鲲 Galgame / GitHub）保持原样。
  */
 
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhCore } from "../zh/core";
+import type { zhCore } from "@/lib/i18n/catalogs/zh/core";
 
 export const enCore: CatalogOf<typeof zhCore> = {
   common: {

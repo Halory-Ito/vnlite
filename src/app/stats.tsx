@@ -1,1 +1,1 @@
-export { default } from "@/features/stats/stats-screen";
+export { default } from "@/features/stats/screens/stats-screen";

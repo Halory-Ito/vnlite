@@ -13,8 +13,8 @@ import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import { Pressable } from "react-native";
 
-import { Icon, type IconName } from "@/components/icon";
-import { Muted } from "@/components/typo";
+import { Icon, type IconName } from "./icon";
+import { Muted } from "./typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import type { VnViewMode } from "@/lib/storage/preferences";

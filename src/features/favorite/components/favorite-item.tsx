@@ -10,12 +10,12 @@ import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 
 import { EntryListItem } from "@/components/entry-list-item";
-import { useKungalNameLogo } from "@/features/catalog/use-kungal-logo";
+import { useKungalNameLogo } from "@/features/catalog/hooks/use-kungal-logo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { FavoriteEntry } from "@/lib/db/dao/favorite";
 import { formatRelativeTime } from "@/utils/format";
 
-import { FAVORITE_TYPE_ROUTE } from "../favorite-constants";
+import { FAVORITE_TYPE_ROUTE } from "@/features/favorite/lib/favorite-constants";
 
 export interface FavoriteItemProps {
   entry: FavoriteEntry;

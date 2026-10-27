@@ -22,8 +22,8 @@ import { Separator } from "@/components/separator";
 import { Muted, Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useThreadList } from "../hooks";
-import type { VndbThread } from "../scrape";
+import { useThreadList } from "@/features/discussion/hooks";
+import type { VndbThread } from "@/features/discussion/lib/scrape";
 
 export function VnDiscussionsTab({ vnId }: { vnId: string }): JSX.Element {
   const { t } = useTranslation();

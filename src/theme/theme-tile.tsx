@@ -13,8 +13,8 @@ import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
 import { useTranslation } from "@/hooks/use-translation";
-import type { ThemeMode } from "@/theme/seeds";
-import { themeSwatch, themeSwatchAlt, type ThemeDefinition } from "@/theme/themes";
+import type { ThemeMode } from "./seeds";
+import { themeSwatch, themeSwatchAlt, type ThemeDefinition } from "./themes";
 export interface ThemeTileProps {
   theme: ThemeDefinition;
   active: boolean;

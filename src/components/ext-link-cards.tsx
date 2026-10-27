@@ -6,7 +6,7 @@
  * 因为外链是「出口」性质的内容、数量不多（3–8 条），给足点击区域更好按。
  *
  * 原先外链塞在概览页最底部，几乎没人会滚到那里，所以制作者 / staff 详情
- * 也把它单独放进页签（见 `features/catalog/detail-screens`）。
+ * 也把它单独放进页签（见 `features/catalog/screens/detail-screens`）。
  */
 
 import { useThemeColor } from "heroui-native";

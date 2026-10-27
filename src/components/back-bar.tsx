@@ -12,8 +12,8 @@ import { Pressable, View } from "react-native";
 
 import { useTranslation } from "@/hooks/use-translation";
 
-import { Icon } from "@/components/icon";
-import { H5 } from "@/components/typo";
+import { Icon } from "./icon";
+import { H5 } from "./typo";
 
 export interface BackBarProps {
   title?: string;

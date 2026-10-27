@@ -15,7 +15,7 @@ import { ReleaseHoldChips } from "@/features/ulist/components/release-hold-chips
 import { useTranslation } from "@/hooks/use-translation";
 import { formatReleased } from "@/utils/format";
 
-import { useVnReleases } from "../hooks";
+import { useVnReleases } from "@/features/vn/hooks";
 
 export function VnReleasesTab({ vnId }: { vnId: string }): JSX.Element {
   const { t } = useTranslation();

@@ -4,7 +4,7 @@
  * 接入点：
  *   - `app/(tabs)/explore.tsx`（顶部工具栏与空态）
  *   - `features/browse/components/*`（筛选面板 / 汇总条 / 排序面板 / 显示面板 / 分组）
- *   - `features/sort/sort-options.ts`（排序字段名，存 `TranslationKey`）
+ *   - `features/sort/lib/sort-options.ts`（排序字段名，存 `TranslationKey`）
  *
  * 约定见 `zh.core.ts` 顶部；枚举文案（语言 / 平台 / 开发状态）走
  * `utils/format` 的 `languageLabel()` / `platformLabel()` / `devStatusLabel()`。

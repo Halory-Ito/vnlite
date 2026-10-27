@@ -34,8 +34,8 @@ import { Modal, Pressable, useWindowDimensions, View } from "react-native";
 import { Gallery, fitContainer } from "react-native-zoom-toolkit";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Icon } from "@/components/icon";
-import { Muted } from "@/components/typo";
+import { Icon } from "./icon";
+import { Muted } from "./typo";
 import { useImageGate } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 

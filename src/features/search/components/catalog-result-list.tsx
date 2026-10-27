@@ -19,7 +19,7 @@ import {
   resultHeadline,
   type SearchEntry,
   type SearchScope,
-} from "../search-logic";
+} from "@/features/search/lib/search-logic";
 
 import { SearchResultRow } from "./search-result-row";
 

@@ -3,8 +3,8 @@
  *
  * 接入点：`features/profile/*`（"Me" header avatar, account screen）。
  */
-import type { CatalogOf } from "../catalog-types";
-import { zhProfile } from "../zh/profile";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
+import { zhProfile } from "@/lib/i18n/catalogs/zh/profile";
 
 export const enProfile: CatalogOf<typeof zhProfile> = {
   profile: {

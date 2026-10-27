@@ -19,7 +19,7 @@ import type { BrowseSortPreference } from "@/lib/storage/preferences";
 
 import { FilterChip, FilterGroup } from "./filter-group";
 import { FullScreenPanel } from "./panel";
-import { BROWSE_SORT_OPTIONS, DEFAULT_BROWSE_SORT } from "@/features/sort/sort-options";
+import { BROWSE_SORT_OPTIONS, DEFAULT_BROWSE_SORT } from "@/features/sort/lib/sort-options";
 
 export interface SortPanelProps {
   value: BrowseSortPreference;

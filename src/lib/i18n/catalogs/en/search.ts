@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhSearch } from "../zh/search";
+import type { zhSearch } from "@/lib/i18n/catalogs/zh/search";
 
 /** English catalog · search. 用词对齐 vndb.org（Visual novels / Staff / Producers…） */
 export const enSearch: CatalogOf<typeof zhSearch> = {

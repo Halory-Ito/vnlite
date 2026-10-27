@@ -14,7 +14,7 @@ import { flattenPages, useVnList } from "@/features/vn/hooks";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 
-import { emptyDescription, resultHeadline } from "../search-logic";
+import { emptyDescription, resultHeadline } from "@/features/search/lib/search-logic";
 
 export function VnSearchResults({ keyword }: { keyword: string }): JSX.Element {
   const router = useRouter();

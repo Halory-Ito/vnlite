@@ -31,7 +31,10 @@ import {
   type Preferences,
 } from "@/lib/storage/preferences";
 
-import { clearBackgroundImages, pickBackgroundImage } from "../background-image";
+import {
+  clearBackgroundImages,
+  pickBackgroundImage,
+} from "@/features/settings/lib/background-image";
 
 import { LabeledSlider } from "./labeled-slider";
 

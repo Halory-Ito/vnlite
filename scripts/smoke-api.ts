@@ -30,9 +30,9 @@ import {
 } from "@/lib/api/endpoints/ulist";
 import { toFieldsString, type Predicate } from "@/lib/api/types";
 import { RateLimiter } from "@/lib/api/rate-limiter";
-import { GAME_TYPE_TAGS } from "@/features/stats/stats-logic";
-import { overflowVids } from "@/features/walkthrough/cache";
-import { fetchWalkthrough, fetchWalkthroughIndex } from "@/features/walkthrough/client";
+import { GAME_TYPE_TAGS } from "@/features/stats/lib/stats-logic";
+import { overflowVids } from "@/features/walkthrough/lib/cache";
+import { fetchWalkthrough, fetchWalkthroughIndex } from "@/features/walkthrough/lib/client";
 import {
   EMPTY_MARKS,
   hasAnyMark,
@@ -42,8 +42,8 @@ import {
   parseMarks,
   toggleEnding,
   toggleStepMark,
-} from "@/features/walkthrough/marks";
-import { parseWalkthrough, parseWalkthroughIndex } from "@/features/walkthrough/parse";
+} from "@/features/walkthrough/lib/marks";
+import { parseWalkthrough, parseWalkthroughIndex } from "@/features/walkthrough/lib/parse";
 import {
   countStats,
   endingMeta,
@@ -51,12 +51,12 @@ import {
   groupSteps,
   markProgress,
   maskText,
-} from "@/features/walkthrough/select";
-import { isNewerVersion } from "@/features/settings/update-check";
-import { apkFileName, parseAssetAbi, pickApkAsset } from "@/features/settings/update-asset";
-import { fetchLatestRelease, type ReleaseAsset } from "@/features/settings/update-client";
-import { mirrorUrl, pickFastestMirror, sortByLatency } from "@/features/settings/update-mirror";
-import { regionFromCountryCode } from "@/features/settings/update-region";
+} from "@/features/walkthrough/lib/select";
+import { isNewerVersion } from "@/features/settings/lib/update-check";
+import { apkFileName, parseAssetAbi, pickApkAsset } from "@/features/settings/lib/update-asset";
+import { fetchLatestRelease, type ReleaseAsset } from "@/features/settings/lib/update-client";
+import { mirrorUrl, pickFastestMirror, sortByLatency } from "@/features/settings/lib/update-mirror";
+import { regionFromCountryCode } from "@/features/settings/lib/update-region";
 
 /** EAS 分包后的 Release 附件（形状固定，冒烟按真名字测） */
 const RELEASE_ASSETS: ReleaseAsset[] = [
@@ -517,7 +517,7 @@ async function main(): Promise<void> {
       toProducerEntries,
       toStaffEntries,
       userMissDescription,
-    } = await import("@/features/search/search-logic");
+    } = await import("@/features/search/lib/search-logic");
     const { t } = await import("@/lib/i18n/translate");
 
     // 分段控件顺序：作品（默认）在最左
@@ -563,7 +563,7 @@ async function main(): Promise<void> {
   });
 
   await check("toStaffEntries 按 id 去重、优先主名行（s208 的两行只出一行）", async () => {
-    const { toStaffEntries } = await import("@/features/search/search-logic");
+    const { toStaffEntries } = await import("@/features/search/lib/search-logic");
     // 只有别名行命中（搜「sukaji」）：显示命中的那个名字，与官网一致
     const aliasOnly = toStaffEntries([
       { results: [{ id: "s208", name: "Sukaji", original: "すかぢ", ismain: false }] },
@@ -670,7 +670,7 @@ async function main(): Promise<void> {
 
   await check("首页信息流条数与官网首页一致（各 10 条）", async () => {
     const { FEED_COUNT, FEED_TAB_LABEL_KEY, FEED_TABS } =
-      await import("@/features/home/feed-config");
+      await import("@/features/home/lib/feed-config");
     assert(FEED_COUNT === 10, "官网首页三栏都是 10 条");
     assert(FEED_TABS.length === 3, "应有 3 档");
     for (const tab of FEED_TABS) {
@@ -679,8 +679,8 @@ async function main(): Promise<void> {
   });
 
   await check("抓取并解析最新评价列表（首页「最新评价」依赖）", async () => {
-    const { fetchLatestReviews } = await import("@/features/review/client");
-    const { FEED_COUNT } = await import("@/features/home/feed-config");
+    const { fetchLatestReviews } = await import("@/features/review/lib/client");
+    const { FEED_COUNT } = await import("@/features/home/lib/feed-config");
     const page = await fetchLatestReviews();
     assert(page.reviews.length >= FEED_COUNT, `至少应有 ${FEED_COUNT} 条`);
     assert(page.hasMore, "官网有 rel=next（说明这页是列表页而不是截断的首页）");
@@ -695,7 +695,7 @@ async function main(): Promise<void> {
   });
 
   await check("抓取并解析单条评价（站内评价页依赖）", async () => {
-    const { fetchLatestReviews, fetchReview } = await import("@/features/review/client");
+    const { fetchLatestReviews, fetchReview } = await import("@/features/review/lib/client");
     const list = await fetchLatestReviews();
     const id = list.reviews[0]!.id;
     const review = await fetchReview(id);
@@ -726,9 +726,9 @@ async function main(): Promise<void> {
    * `Windows` / `Japanese` / `complete` 的写法）才会红，那才是真正的回归信号。
    */
   await check("评价的 abbr 白名单仍能认出平台 / 语言 / 通关状态", async () => {
-    const { fetchLatestReviews } = await import("@/features/review/client");
+    const { fetchLatestReviews } = await import("@/features/review/lib/client");
     const { fetchVndbHtml } = await import("@/lib/scrape/client");
-    const { parseReviewPage } = await import("@/features/review/scrape");
+    const { parseReviewPage } = await import("@/features/review/lib/scrape");
 
     const list = await fetchLatestReviews();
     // 6 条足够：留空率约 6 成，扫 6 条还一条都没填上的概率很低
@@ -824,7 +824,7 @@ async function main(): Promise<void> {
    * 官网改版导致解析失效时，这里会先红。
    */
   await check("抓取并解析 VNDB 讨论板（discussion module 依赖）", async () => {
-    const { fetchVnDiscussions } = await import("@/features/discussion/client");
+    const { fetchVnDiscussions } = await import("@/features/discussion/lib/client");
     const page = await fetchVnDiscussions("v17", 1);
     assert(page.threads.length > 0, "v17 应有讨论帖");
     const first = page.threads[0];
@@ -838,7 +838,7 @@ async function main(): Promise<void> {
    * t950 是官方建议贴，正文里有引用块、链接、粗体，正好覆盖解析分支。
    */
   await check("抓取并解析讨论帖正文（站内帖子页依赖）", async () => {
-    const { fetchThread } = await import("@/features/discussion/client");
+    const { fetchThread } = await import("@/features/discussion/lib/client");
     const page = await fetchThread("t950", 1);
     assert(page.posts.length > 0, "t950 应有楼层");
     assert(Boolean(page.title), "应解析出帖子标题");
@@ -858,7 +858,7 @@ async function main(): Promise<void> {
    * 注册时间 / 投票分布 / 清单规模 / 论坛统计全靠抓 HTML。
    */
   await check("抓取并解析用户资料页（用户详情页依赖）", async () => {
-    const { fetchUserProfile } = await import("@/features/user/client");
+    const { fetchUserProfile } = await import("@/features/user/lib/client");
     const profile = await fetchUserProfile("u2");
     assert(profile !== null, "u2 应能解析出资料");
     assert(profile?.username === "Yorhel", `用户名应为 Yorhel，实际 ${profile?.username}`);
@@ -870,7 +870,7 @@ async function main(): Promise<void> {
   });
 
   await check("讨论列表能取到发起人 / 最后回复者的用户 id", async () => {
-    const { fetchVnDiscussions } = await import("@/features/discussion/client");
+    const { fetchVnDiscussions } = await import("@/features/discussion/lib/client");
     const page = await fetchVnDiscussions("v17", 1);
     const withStarter = page.threads.find((thread) => thread.starterId);
     assert(Boolean(withStarter), "至少一条帖子应带出发起人 id");
@@ -890,7 +890,7 @@ async function main(): Promise<void> {
 
   // 游玩时长：`/ulist` 没有这个字段，只能抓 `/u…/lengthvotes`
   await check("抓取并解析用户游玩时长（/ulist 没有该字段）", async () => {
-    const { fetchUserLengthVotes } = await import("@/features/user/client");
+    const { fetchUserLengthVotes } = await import("@/features/user/lib/client");
     const page = await fetchUserLengthVotes("u2", 1);
     assert(page.entries.length > 0, "u2 应有游玩时长记录");
     const first = page.entries[0];

@@ -1503,3 +1503,127 @@
 - [x] `bun run check` 全绿（`smoke:db` 66 项、`smoke:layout` 20 项）
 - [ ] 真机验证：平板截图 4 列观感、半透明卡片在浅色主题下的对比度、
       自定义主题换色后各页可读性、背景图偏移手感
+
+---
+
+## Module 12 · 多份同步配置 + OneDrive（2026-10-27）
+
+> Master 要求：① 每台服务器的认证信息当成**一份配置**，支持多份并可以切换；
+> ② 新建配置时用 `Select` 从服务里挑一家（WebDAV / OneDrive / GoogleDrive / 夸克网盘…），
+> 目前只有 WebDAV，这次补上 **OneDrive**；③ 每份配置做成一张**卡片**：
+> 配置名称 / 服务器名 / 同步状态，右上角 icon-only 编辑按钮，底部上传 / 下载按钮。
+
+### Type 12.1 · 配置模型（多份 + 密钥隔离）
+
+- [x] `features/sync/lib/configs/types.ts` — `SyncConfig`（id / 名称 / 供应商 / 选项 /
+      上次同步时间 / 创建时间）+ `createConfigId`（只出字母数字：SecureStore 的 key 不能带点）+ `serverLabel` / `hostOf`（卡片上的「服务器名」，纯逻辑）
+- [x] `lib/configs/storage.ts` — 配置本体进 AsyncStorage（`vnlite.sync.configs` +
+      `vnlite.sync.active`），逐条容错：不认识的供应商 / 缺 id 只丢那一条
+- [x] `lib/configs/secrets.ts` + `lib/configs/secret-key.ts` — 密钥进 SecureStore，
+      key = `vnlite_sync_<配置id>_<键名>`：**不同配置的密码 / 刷新令牌互不串**
+- [x] `lib/configs/migrate.ts` — 1.4.x 的单份 WebDAV 配置自动搬成一份配置
+      （地址 / 用户名 / 密码 / 上次同步时间），搬完删掉旧键（避免「删光了又自己长回来」）
+- [x] `lib/configs/store.ts` — 模块级共享状态 + 订阅：列表页与「新建 / 编辑」页是两个路由，
+      必须看到同一份数据（`useSyncExternalStore`，同 `lib/storage/preferences`）- [x] `loadConfigs` 单飞（并发挂载只读一次）；增删改后写盘并广播 - [x] 删除配置时连密钥一起清（`clearConfigSecrets`）并忘掉内存里的访问令牌
+
+### Type 12.2 · 供应商抽象
+
+- [x] `lib/providers/types.ts` — `SyncProvider`（validate / putBackup / getBackup / getAvatar）+ `ProviderContext`（供应商 / 配置 id / 选项 / 密钥存取）
+- [x] `lib/providers/registry.ts` — 服务清单：WebDAV、OneDrive（已实现）+ Google Drive、
+      夸克网盘（占位，选了会提示「还没接上」）；`providerLabel` / `isProviderReady`
+- [x] `lib/providers/http.ts` — 带超时的 `request`（`AbortSignal.timeout` 在 Hermes 上没有）
+- [x] `lib/providers/webdav/*` — 原 `webdav.ts` / `webdav-file.ts` 拆进
+      `client.ts`（纯 fetch，冒烟可跑）/ `provider.ts`（统一接口）/ `file.ts`（原生头像上传）
+- [x] `lib/providers/avatar.ts` — 头像上传按供应商分流（原生模块集中在这一个文件）
+
+### Type 12.3 · OneDrive
+
+- [x] `lib/providers/onedrive/oauth.ts` — **设备码流程**（RFC 8628）：
+      申请设备码 → 打开验证页面 → 轮询换 token
+  - [x] 不新增原生依赖：纯 fetch + `Linking`，Expo Go 里能跑；授权码流程要回调地址 + 装
+        `expo-web-browser`，这次不选它
+  - [x] `authorization_pending` 继续等 / `slow_down` 拉长间隔 / `expired_token` 与
+        `access_denied` 给各自的话术；用户取消时轮询返回 null（不算失败）
+  - [x] 刷新令牌长期保存；访问令牌**只留内存**（几分钟就过期，没必要进 Keystore）
+  - [x] 「授权码过期」类错误映射成人话（`invalid_grant` → 重新连一次）
+- [x] `lib/providers/onedrive/client.ts` — Microsoft Graph 简单上传 / 下载
+      （`/me/drive/root:/vnlite-backup.json:/content`），404 → null；令牌自动刷新并回写
+- [x] `lib/providers/onedrive/file.ts` — 头像走原生 PUT（`File.upload`）
+- [x] `lib/providers/onedrive/endpoints.ts` — Graph / 登录端点做成**可改对象**
+      （国内版 21Vianet 要换地址；冒烟用本地假服务器）
+- [x] `lib/providers/onedrive/provider.ts` — 校验：应用 ID 必填、必须已连账号
+- [x] 界面：`provider-forms/onedrive-connect.tsx` 显示设备码 + 「打开验证页面」+
+      「取消」；连上后显示账号名 / 邮箱，可断开或换账号
+
+### Type 12.4 · 界面
+
+- [x] `screens/sync-screen.tsx` — 配置卡片列表 + 「添加配置」
+  - [x] `components/sync-config-card.tsx`：标题行 = 配置名称（点一下设为当前）+
+        「当前」标签 + **icon-only** 编辑按钮；底部行 = 左边**上次同步时间**、
+        右边**icon-only** 上传 / 下载按钮；状态行只在同步中 / 失败时出现
+  - [x] 服务类型与服务器地址不上卡片（配置名称本身就够区分）
+  - [x] 上传 / 下载用 Gravity UI `arrowUpFromLine` / `arrowDownToLine`，
+        按钮带 `accessibilityLabel`（图标按钮也要能被读屏念出来）
+  - [x] 底部「上传备份 / 下载备份」：**每份配置各传各的**
+  - [x] 点卡片主体 = 切换「当前配置」（卡片上有「当前」标签，切换后记住）
+  - [x] 同一时间只跑一个同步任务：有任务时所有卡片按钮禁用（避免阶段 / 错误归属串台）
+- [x] `screens/sync-config-screen.tsx`（路由 `/settings/sync-config`）— 新建 / 编辑
+  - [x] **为什么是独立页面而不是弹窗**：RN 的 `Modal` 是另一个原生窗口，而 `Select`
+        的下拉渲染在全局 Portal 里 —— 弹窗里点开只会看到「没反应」（下拉被挡在后面）
+  - [x] 服务选择用 HeroUI `Select`；未实现的服务带「即将推出」后缀，选了会提示
+  - [x] WebDAV 字段：地址 / 用户名 / 密码（密码改动过才写，空 = 清掉，允许匿名）；
+        编辑时把已存的密码读出来填上
+  - [x] 删除配置：二次确认，删完回列表
+  - [x] 配置被删 / 从旧链接进来：提示「这份配置不存在」，不会默默变成新建
+- [x] `hooks/use-sync-backup.ts` 改成**供应商无关**：按配置分发，状态里带
+      「正在同步哪一份 / 出错的是哪一份」；下载仍先弹确认再覆盖本地
+- [x] 国际化：zh / en `sync` 命名空间补齐（配置列表、供应商、状态、OneDrive 全套文案）
+
+### Type 12.5 · 质量
+
+- [x] `smoke:db` 新增 4 项（同步段共 10 项）：
+      多份配置写入 / 读取 / 当前配置 / 坏数据丢弃、
+      服务清单与校验（WebDAV 地址规范化、OneDrive 未连账号拦截）、
+      密钥 key 按配置隔离、**OneDrive 客户端对本地假 Graph 服务器**
+      （PUT / GET / 404 / 认证头 / 刷新令牌换访问令牌）
+- [x] `bun run bundle:check` 通过（Android hbc 8 MB，新增路由已被 typed routes 收录）
+- [x] `bun run check` 全绿（`smoke:db` 73 项）
+- [ ] 真机验证：① 坚果云 / 自建 WebDAV 的多配置并行备份；② OneDrive 设备码授权
+      （需要在 Azure 应用注册里打开「允许公共客户端流」）；③ 换机后恢复数据与头像
+- [ ] 未接的服务：Google Drive / 夸克网盘只占了位，接的时候只要加一个 `provider.ts`
+
+---
+
+## Module 13 · 目录结构统一（hooks / lib / screens，2026-10-27）
+
+> Master 要求：`features` 下**每个 module** 都要有 `hooks/` 与 `lib/` 两个文件夹，
+> 把「钩子」和「纯逻辑 / 网络层」从模块根目录收进去；界面组件进 `components/`、
+> 整页进 `screens/`。
+
+### Type 13.1 · 结构约定
+
+```
+features/<module>/
+  components/   纯 UI 组件（页签、行、对话框…）
+  screens/      整页（路由 `app/**` 只做 re-export）
+  hooks/        use* 钩子（多个钩子合一个入口时用 index.ts）
+  lib/          网络层 / 解析 / 存储 / 常量 / 纯逻辑（含 providers、configs 这类子域）
+```
+
+- [x] 每个 module 都建了 `hooks/` 与 `lib/`；暂时没有文件的放 `.gitkeep`
+      （browse 两个都空、sort 只有 lib、vn 只有 hooks）
+- [x] 所有 `use-*.ts` / `hooks.ts` / `update-hooks.ts` 进 `hooks/`
+      （`hooks.ts` 改成 `hooks/index.ts`，导入写成 `@/features/x/hooks`）
+- [x] 所有网络层 / 解析 / 存储 / 常量进 `lib/`；`sync` 的 `providers/` 与 `configs/`
+      一起收到 `lib/` 下（内部相对结构不变）
+- [x] 散在模块根的 `*-screen.tsx` 与 `components/*-screen.tsx` 统一进 `screens/`
+      （favorite / history / search / user / thread / ulist / vn / catalog / stats / sync）
+- [x] 跨目录的 import 一律走 `@/features/...` 别名（同目录保留 `./x`），
+      以后挪文件不会再改一堆相对路径
+- [x] 顺带修正 17 处注释里过期的路径引用
+
+### Type 13.2 · 质量
+
+- [x] `bun run typecheck` / `lint` / `format:check` 全绿
+- [x] `smoke:db` 73 项、`smoke:theme`、`smoke:layout` 全绿
+- [x] `bun run bundle:check` 通过（3470 modules，与重构前一致）

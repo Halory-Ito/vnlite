@@ -13,13 +13,13 @@ import { Muted, Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { UListItem } from "@/lib/api/types";
 
-import type { VndbLengthVote } from "../scrape";
+import type { VndbLengthVote } from "@/features/user/lib/scrape";
 import {
   isAccentColumn,
   VOTE_FIELD_LABEL_KEY,
   voteColumnValue,
   type VoteColumn,
-} from "../vote-columns";
+} from "@/features/user/lib/vote-columns";
 
 export function VoteRow({
   item,

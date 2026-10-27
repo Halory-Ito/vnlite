@@ -62,7 +62,7 @@ export const WALKTHROUGH_INDEX_PATH = "index.json";
  *
  * 两者内容同源（都指向 main 分支），所以谁先通用谁；全失败才算请求失败。
  * 攻略页签本身对延迟敏感 —— 单个源挂住时不该让用户干等，客户端超时要短（见
- * `features/walkthrough/client.ts`）。
+ * `features/walkthrough/lib/client.ts`）。
  */
 export const WALKTHROUGH_SOURCES = [
   "https://raw.githubusercontent.com/Halory-Ito/vnlite-walkthrough-and-guide/main",

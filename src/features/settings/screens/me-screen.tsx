@@ -15,12 +15,12 @@ import { ScrollView } from "react-native";
 import { Divider } from "@/components/separator";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { SettingsItem } from "@/features/settings/components/settings-item";
-import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/options";
+import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
 import { clearContentCache } from "@/lib/query/client";
-import { clearWalkthroughCache } from "@/features/walkthrough/cache";
+import { clearWalkthroughCache } from "@/features/walkthrough/lib/cache";
 import { resolveTheme } from "@/theme/themes";
 
 export default function MeScreen(): JSX.Element {

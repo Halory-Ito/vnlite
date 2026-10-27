@@ -7,6 +7,55 @@
 
 ---
 
+## [Unreleased] - 2026-10-27
+
+一句话：**同步支持多份配置** —— 每台服务器的认证信息是一份配置，列表里一张卡片（配置名称 / 服务器 / 同步状态，右上角编辑、底部上传下载），新建配置时用下拉选服务；服务从只有 WebDAV 扩到 **WebDAV + OneDrive**。
+
+### 新增
+
+- **多份同步配置**
+  - 每份配置独立保存凭据（密码 / 刷新令牌进 SecureStore）与备份文件，互不影响
+  - 「同步」页改成卡片列表：标题 = 配置名称 + 「当前」标签 + icon-only 编辑按钮；
+    底部左侧是上次同步时间、右侧是 **icon-only** 的上传 / 下载按钮
+  - 同步中 / 失败时卡片多一行状态（失败带原因），平时保持一行标题一行按钮
+  - 点卡片主体切换「当前配置」，切换结果会记住
+  - 同一时间只跑一个同步任务：有任务在跑时所有卡片按钮禁用，避免状态串台
+- **新建 / 编辑配置页**（`/settings/sync-config`）
+  - 服务用 HeroUI `Select` 选择：WebDAV、OneDrive（已实现）、Google Drive、夸克网盘（占位）
+  - 未实现的服务带「即将推出」后缀，选中会提示，保存会被拦下
+  - 独立页面而不是弹窗：RN `Modal` 是另一个原生窗口，`Select` 的下拉在全局 Portal 里，
+    放弹窗里会被挡住（点开像「没反应」）
+  - 删除配置二次确认；带 id 却找不到时提示「配置不存在」，不会默默变成新建
+- **OneDrive 同步**
+  - 授权走**设备码流程**（RFC 8628）：应用里显示设备码 → 浏览器输码登录 → 应用轮询拿令牌，
+    不新增原生依赖，Expo Go 里可用
+  - 备份文件放 `OneDrive/应用文件夹/vnlite-backup.json`，头像 `vnlite-avatar.jpg`，与 WebDAV 同名同结构
+  - 访问令牌只留内存，刷新令牌进 SecureStore 并自动续期
+  - 支持断开 / 换账号；授权失效（改密码、撤销授权）会提示重新连接
+- **旧配置自动迁移**：1.4.x 的单份 WebDAV 配置（地址 / 用户名 / 密码 / 上次同步时间）
+  升级后第一次进「同步」页会变成一份配置，不用重填
+
+### 技术与构建（面向开发者）
+
+- 「同步」页卡片只显示配置名称与瞬时状态；上次同步时间放在卡片底部左侧
+- 版本号本次**未改动**（仍 1.4.2）—— 发布 / 推送时再统一升
+- 同步层按**供应商**分层：`features/sync/lib/providers/{webdav,onedrive}/` 各自
+  `client.ts`（纯 fetch，bun 冒烟能跑）/ `provider.ts`（统一接口）/ `file.ts`（原生上传）
+- `features/sync/lib/providers/types.ts` 定义 `SyncProvider`（validate / putBackup / getBackup / getAvatar）；
+  `use-sync-backup` 与界面全部改成供应商无关
+- OneDrive 端点做成可改对象（`features/sync/lib/providers/onedrive/endpoints.ts`）：
+  国内版 21Vianet 要换地址，冒烟也用它指向本地假 Graph 服务器
+- 配置状态放模块级（`features/sync/lib/configs/store.ts` + `useSyncExternalStore`）：
+  列表页与新建页是两个路由，必须看到同一份数据
+- 密钥 key = `vnlite_sync_<配置id>_<键名>`（SecureStore 在 Android Keystore 里不能带点）
+- 冒烟：`smoke:db` 69 → 73 项，新增多份配置读写 / 服务校验 /
+  密钥隔离 / **OneDrive 客户端对本地假 Graph 服务器**（PUT / GET / 404 / 认证头 / 令牌刷新）
+- **目录结构统一**：`features/<module>/` 固定为 `components` / `screens` / `hooks` / `lib`；
+  网络层、解析、存储、常量全部收进 `lib/`，钩子收进 `hooks/`（`hooks.ts` 改名 `hooks/index.ts`），
+  整页统一到 `screens/`；跨目录 import 一律走 `@/features/...`，以后挪文件不用改相对路径
+
+---
+
 ## [1.4.2] - 2026-10-26
 
 一句话：作品**截图墙**按平板分列（mini 3 列 / pad 4 列），卡片与列表项改成**半透明底**（透明度可自己调），背景图支持**调 X / Y 位置**，新增**自定义主题**（主 / 辅色 + 背景图）；顺带让搜索页的统计图垂直居中、搜索框也半透明。

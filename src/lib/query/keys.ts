@@ -185,7 +185,7 @@ export const queryKeys = {
     playedVns: (idsKey: string) => ["stats", "playedVns", idsKey] as const,
   },
 
-  /* ---- 厂商 LOGO（鲲 Galgame 静态索引，见 features/catalog/kungal-logo） ---- */
+  /* ---- 厂商 LOGO（鲲 Galgame 静态索引，见 features/catalog/lib/kungal-logo） ---- */
   catalog: {
     all: ["catalog"] as const,
     /** 整份厂商 LOGO 索引（懒加载，缓存不过期） */

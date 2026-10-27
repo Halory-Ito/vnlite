@@ -17,7 +17,7 @@ import { Icon } from "@/components/icon";
 import { Body } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import type { UseUpdateCheck } from "../update-hooks";
+import type { UseUpdateCheck } from "@/features/settings/hooks/update-hooks";
 
 export interface UpdateCheckItemProps {
   update: UseUpdateCheck;

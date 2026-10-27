@@ -24,7 +24,7 @@ import {
   presetDateFilter,
   historyPresetOptions,
   type HistoryDateFilter,
-} from "../history-constants";
+} from "@/features/history/lib/history-constants";
 
 export interface TimeRangePanelProps {
   value: HistoryDateFilter;

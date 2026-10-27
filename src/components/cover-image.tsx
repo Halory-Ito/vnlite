@@ -20,7 +20,7 @@ import type { JSX } from "react";
 import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 
-import { Muted } from "@/components/muted";
+import { Muted } from "./muted";
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useImageGate, useNsfwMode } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";

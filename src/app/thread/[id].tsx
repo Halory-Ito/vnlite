@@ -1,1 +1,1 @@
-export { ThreadScreen as default } from "@/features/discussion/components/thread-screen";
+export { ThreadScreen as default } from "@/features/discussion/screens/thread-screen";

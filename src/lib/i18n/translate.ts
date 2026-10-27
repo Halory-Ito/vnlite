@@ -11,8 +11,8 @@
 
 import { I18n } from "i18n-js";
 
-import { en } from "./catalogs/en";
-import { zh } from "./catalogs/zh";
+import { en } from "@/lib/i18n/catalogs/en";
+import { zh } from "@/lib/i18n/catalogs/zh";
 
 /** 界面语言偏好值（`system` 跟随设备） */
 export type Language = "system" | "zh" | "en";

@@ -15,7 +15,7 @@ import type { TranslationKey, TranslationParams } from "@/lib/i18n/translate";
 
 import { formatRelativeDays } from "@/utils/format";
 
-import type { VndbReview } from "../scrape";
+import type { VndbReview } from "@/features/review/lib/scrape";
 
 export interface ReviewRowProps {
   review: VndbReview;

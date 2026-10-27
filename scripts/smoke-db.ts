@@ -24,17 +24,17 @@ import {
   type SqlDatabase,
   type SqlRunResult,
 } from "@/lib/db/schema";
-import { diffPatch, draftFrom, isVnId } from "@/features/ulist/entry-logic";
+import { diffPatch, draftFrom, isVnId } from "@/features/ulist/lib/entry-logic";
 import {
   byGameType,
   byListLabel,
   byReleaseDecade,
   summarizeCollection,
   topDevelopers,
-} from "@/features/stats/stats-logic";
-import { filterByLabel, itemHasLabel } from "@/features/ulist/list-filter";
-import { dateFilterBounds, presetDateFilter } from "@/features/history/history-constants";
-import { formatGameDuration } from "@/features/game-timer/format";
+} from "@/features/stats/lib/stats-logic";
+import { filterByLabel, itemHasLabel } from "@/features/ulist/lib/list-filter";
+import { dateFilterBounds, presetDateFilter } from "@/features/history/lib/history-constants";
+import { formatGameDuration } from "@/features/game-timer/lib/format";
 import {
   elapsedMs,
   getGameTimer,
@@ -43,7 +43,7 @@ import {
   sanitizeGameTimer,
   startGameTimer,
   stopGameTimer,
-} from "@/features/game-timer/store";
+} from "@/features/game-timer/lib/store";
 import {
   currentWeekIndex,
   monthSessionCount,
@@ -51,8 +51,8 @@ import {
   summarizeSessions,
   weeklyBuckets,
   weeksOfMonth,
-} from "@/features/play-records/play-stats";
-import { formatPlayDuration, formatPlayDurationShort } from "@/features/play-records/format";
+} from "@/features/play-records/lib/play-stats";
+import { formatPlayDuration, formatPlayDurationShort } from "@/features/play-records/lib/format";
 import {
   domainOf,
   kungalLogoUrl,
@@ -60,7 +60,7 @@ import {
   lookupKungalLogoByName,
   normalizeCompanyName,
   officialWebsiteOf,
-} from "@/features/catalog/kungal-logo";
+} from "@/features/catalog/lib/kungal-logo";
 import {
   dateTimeFieldError,
   durationBetween,
@@ -68,19 +68,41 @@ import {
   formatLocalTime,
   sessionRangeError,
   toLocalTimestamp,
-} from "@/features/play-records/session-time";
-import { isNewerVersion, parseVersion } from "@/features/settings/update-check";
-import { base64Encode, basicAuthValue } from "@/features/sync/base64";
-import { buildBackup, parseBackup } from "@/features/sync/backup";
-import { applyBackupData, collectBackupData } from "@/features/sync/package";
+} from "@/features/play-records/lib/session-time";
+import { isNewerVersion, parseVersion } from "@/features/settings/lib/update-check";
+import { base64Encode, basicAuthValue } from "@/features/sync/lib/base64";
+import { buildBackup, parseBackup } from "@/features/sync/lib/backup";
+import { applyBackupData, collectBackupData } from "@/features/sync/lib/package";
 import {
   getAvatar,
   getBackup,
   joinUrl,
   normalizeServerUrl,
   putBackup,
-} from "@/features/sync/webdav";
-import { readMarks, writeMarks } from "@/features/walkthrough/marks";
+} from "@/features/sync/lib/providers/webdav/client";
+import type { SyncConfig } from "@/features/sync/lib/configs/types";
+import {
+  parseConfig,
+  readActiveId,
+  readConfigs,
+  writeActiveId,
+  writeConfigs,
+} from "@/features/sync/lib/configs/storage";
+import { secretKey } from "@/features/sync/lib/configs/secret-key";
+import {
+  getProvider,
+  isProviderReady,
+  SYNC_PROVIDERS,
+} from "@/features/sync/lib/providers/registry";
+import type { ProviderContext, SyncSecretStore } from "@/features/sync/lib/providers/types";
+import { ONEDRIVE_PROVIDER } from "@/features/sync/lib/providers/onedrive/provider";
+import { ONEDRIVE_ENDPOINTS } from "@/features/sync/lib/providers/onedrive/endpoints";
+import {
+  getAvatar as getOneDriveAvatar,
+  getBackup as getOneDriveBackup,
+  putBackup as putOneDriveBackup,
+} from "@/features/sync/lib/providers/onedrive/client";
+import { readMarks, writeMarks } from "@/features/walkthrough/lib/marks";
 import { registerStore } from "@/lib/storage/key-value";
 import { diffCatalogKeys, flattenCatalog } from "@/lib/i18n/catalog-utils";
 import { en } from "@/lib/i18n/catalogs/en";
@@ -92,7 +114,7 @@ import {
   playtimeByVn,
   recentWeekBuckets,
   weekStartMs,
-} from "@/features/stats/play-stats-logic";
+} from "@/features/stats/lib/play-stats-logic";
 import type { PlaySession } from "@/lib/db/dao/play-session";
 import { imageGate } from "@/hooks/use-preferences";
 import { isFreshDailyQuote } from "@/lib/storage/daily-quote";
@@ -1442,6 +1464,166 @@ async function main(): Promise<void> {
       });
       assert(missing === null, "服务器没有头像时应返回 null");
     } finally {
+      server.stop(true);
+    }
+  });
+
+  await check("多份配置：写入 / 读取 / 当前配置 / 坏数据丢掉", async () => {
+    const configs: SyncConfig[] = [
+      {
+        id: "c1",
+        name: "坚果云",
+        provider: "webdav",
+        options: { url: "https://dav.example.com/dav", username: "u" },
+        lastSyncAt: null,
+        createdAt: 1,
+      },
+      {
+        id: "c2",
+        name: "OneDrive",
+        provider: "onedrive",
+        options: { clientId: "app", accountEmail: "a@b.c" },
+        lastSyncAt: 222,
+        createdAt: 2,
+      },
+    ];
+    await writeConfigs(configs);
+    const list = await readConfigs();
+    assert(list.length === 2, `应读到 2 份配置，实际 ${list.length}`);
+    assert(list[1]?.lastSyncAt === 222, "上次同步时间应保留");
+    assert(list[0]?.options.url === "https://dav.example.com/dav", "选项应原样保留");
+
+    await writeActiveId("c2");
+    assert((await readActiveId()) === "c2", "当前配置 id 应记住");
+
+    // 坏数据：供应商不认识 → 整条丢掉（别的配置不受影响）
+    const broken = {
+      id: "x",
+      name: "坏",
+      provider: "unknown",
+      options: {},
+      lastSyncAt: null,
+      createdAt: 0,
+    } as unknown as SyncConfig;
+    await writeConfigs([...configs, broken]);
+    const dirty = await readConfigs();
+    assert(dirty.length === 2, `坏配置应被丢掉，实际 ${dirty.length}`);
+    assert(parseConfig(broken) === null, "不认识的服务应判非法");
+    assert(parseConfig({ id: "no-provider" }) === null, "没有服务的配置应判非法");
+  });
+
+  await check("供应商：清单 / 校验", async () => {
+    assert(SYNC_PROVIDERS.length === 4, "选择列表应有 4 个服务");
+    assert(isProviderReady("webdav") && isProviderReady("onedrive"), "WebDAV / OneDrive 已实现");
+    assert(!isProviderReady("googledrive") && !isProviderReady("quark"), "另两家还没实现");
+    assert(getProvider("googledrive") === null, "没实现的供应商拿不到实现");
+
+    const webdav = getProvider("webdav");
+    const bad = webdav?.validate({ url: "ftp://x" });
+    assert(bad !== undefined && !bad.ok, "地址不对应校验失败");
+    const good = webdav?.validate({ url: " https://dav.example.com/dav/ ", username: " u " });
+    assert(good?.ok === true, "合法地址应通过");
+    assert(
+      good?.ok && good.options.url === "https://dav.example.com/dav",
+      "地址应被规范化（去末尾斜杠）"
+    );
+    assert(good?.ok && good.options.username === "u", "用户名应去掉空白");
+
+    const oneDrive = getProvider("onedrive");
+    const notConnected = oneDrive?.validate({ clientId: "app" });
+    assert(notConnected !== undefined && !notConnected.ok, "没连账号应校验失败");
+    const connected = oneDrive?.validate({
+      clientId: "app",
+      accountEmail: "a@b.c",
+      accountName: "A",
+    });
+    assert(connected?.ok === true, "连上账号后应通过");
+    assert(
+      oneDrive?.validate({ clientId: "  ", accountEmail: "a@b.c" }).ok === false,
+      "没有应用 ID 应校验失败"
+    );
+    assert(ONEDRIVE_PROVIDER.meta.id === "onedrive", "OneDrive 供应商 id 应是 onedrive");
+  });
+
+  await check("密钥 key：按配置 id 隔离", async () => {
+    const a = secretKey("cfg1", "password");
+    const b = secretKey("cfg2", "password");
+    assert(a !== b, "不同配置的密钥 key 应不同");
+    assert(!a.includes("."), "key 不能带点（Android Keystore）");
+    assert(a.includes("cfg1"), "key 里应带配置 id");
+  });
+
+  await check("OneDrive 客户端：PUT 上传 / GET 下载 / 没有文件返回 null", async () => {
+    const files = new Map<string, string>();
+    let auth: string | null = null;
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const url = new URL(request.url);
+        auth = request.headers.get("Authorization");
+        if (url.pathname.endsWith("/token")) {
+          return new Response(
+            JSON.stringify({ access_token: "tok", refresh_token: "rt", expires_in: 3600 }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (request.method === "PUT") {
+          files.set(url.pathname, await request.text());
+          return new Response(
+            JSON.stringify({
+              size: 12,
+              lastModifiedDateTime: "2026-10-21T07:30:00.000Z",
+            }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (request.method === "GET") {
+          const body = files.get(url.pathname);
+          if (body === undefined) return new Response(null, { status: 404 });
+          return new Response(body, { headers: { "Content-Length": String(body.length) } });
+        }
+        return new Response(null, { status: 405 });
+      },
+    });
+
+    const originalGraph = ONEDRIVE_ENDPOINTS.graph;
+    const originalLogin = ONEDRIVE_ENDPOINTS.login;
+    ONEDRIVE_ENDPOINTS.graph = `http://127.0.0.1:${server.port}/v1.0`;
+    ONEDRIVE_ENDPOINTS.login = `http://127.0.0.1:${server.port}/login`;
+    const secrets: SyncSecretStore = {
+      get: async (key) => (key === "refreshToken" ? "rt" : null),
+      set: async () => {},
+      remove: async () => {},
+    };
+    const ctx: ProviderContext = {
+      provider: "onedrive",
+      configId: "od1",
+      options: { clientId: "app" },
+      secrets,
+    };
+
+    try {
+      const info = await putOneDriveBackup(ctx, JSON.stringify({ hello: "world" }));
+      assert(auth === "Bearer tok", `认证头不对：${auth}`);
+      assert(info.size === 12, `大小应取 Graph 返回的，实际 ${info.size}`);
+      assert(info.modifiedAt === Date.parse("2026-10-21T07:30:00.000Z"), "应解析出修改时间");
+
+      const result = await getOneDriveBackup(ctx);
+      assert(result !== null, "应能下载回来");
+      assert(
+        (JSON.parse(result?.body ?? "{}") as { hello?: string }).hello === "world",
+        "内容应一致"
+      );
+
+      // 云盘上没有那个文件 → null（不是抛错）
+      files.clear();
+      const missing = await getOneDriveBackup(ctx);
+      assert(missing === null, "没有文件时应返回 null");
+      const missingAvatar = await getOneDriveAvatar(ctx);
+      assert(missingAvatar === null, "没有头像时应返回 null");
+    } finally {
+      ONEDRIVE_ENDPOINTS.graph = originalGraph;
+      ONEDRIVE_ENDPOINTS.login = originalLogin;
       server.stop(true);
     }
   });

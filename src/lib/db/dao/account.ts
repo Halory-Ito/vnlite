@@ -5,7 +5,7 @@
  * **不存 Token** —— Token 走 `expo-secure-store`。
  */
 
-import { getDatabase } from "../schema";
+import { getDatabase } from "@/lib/db/schema";
 import type { Account } from "@/lib/storage/session";
 
 interface AccountRow {

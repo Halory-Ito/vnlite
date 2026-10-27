@@ -13,7 +13,7 @@ import { View } from "react-native";
 import { useTranslation } from "@/hooks/use-translation";
 import type { Producer } from "@/lib/api/types";
 
-import { useProducerLogoUrl } from "../use-kungal-logo";
+import { useProducerLogoUrl } from "@/features/catalog/hooks/use-kungal-logo";
 
 /** LOGO 边长 */
 const SIZE = 80;

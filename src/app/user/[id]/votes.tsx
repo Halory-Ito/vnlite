@@ -1,1 +1,1 @@
-export { UserVotesScreen as default } from "@/features/user/components/user-votes-screen";
+export { UserVotesScreen as default } from "@/features/user/screens/user-votes-screen";

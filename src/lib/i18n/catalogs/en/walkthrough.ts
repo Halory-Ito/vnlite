@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhWalkthrough } from "../zh/walkthrough";
+import type { zhWalkthrough } from "@/lib/i18n/catalogs/zh/walkthrough";
 
 /** English catalog · walkthrough namespace. */
 export const enWalkthrough: CatalogOf<typeof zhWalkthrough> = {

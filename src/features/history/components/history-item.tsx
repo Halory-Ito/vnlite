@@ -9,12 +9,12 @@ import { useRouter } from "expo-router";
 import type { JSX } from "react";
 
 import { EntryListItem } from "@/components/entry-list-item";
-import { useKungalNameLogo } from "@/features/catalog/use-kungal-logo";
+import { useKungalNameLogo } from "@/features/catalog/hooks/use-kungal-logo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { HistoryEntry } from "@/lib/db/dao/history";
 import { formatRelativeTime } from "@/utils/format";
 
-import { HISTORY_TYPE_ROUTE } from "../history-constants";
+import { HISTORY_TYPE_ROUTE } from "@/features/history/lib/history-constants";
 
 export interface HistoryItemProps {
   entry: HistoryEntry;

@@ -10,10 +10,10 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { queryClient } from "@/lib/query/client";
 import { initI18n } from "@/lib/i18n";
 import { restoreSession } from "@/lib/storage/session";
-import { loadAvatar } from "@/features/profile/avatar";
+import { loadAvatar } from "@/features/profile/lib/avatar";
 import { GameTimerOverlay } from "@/features/game-timer/components/game-timer-overlay";
-import { initGameTimerNotification } from "@/features/game-timer/notification";
-import { initGameTimerPersistence } from "@/features/game-timer/persistence";
+import { initGameTimerNotification } from "@/features/game-timer/lib/notification";
+import { initGameTimerPersistence } from "@/features/game-timer/lib/persistence";
 import { ThemeProvider } from "@/theme/theme-provider";
 
 import "../global.css";

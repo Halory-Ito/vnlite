@@ -21,7 +21,7 @@ import * as Haptics from "expo-haptics";
 import { useToast } from "heroui-native";
 import { useCallback } from "react";
 
-import { useTranslation } from "@/hooks/use-translation";
+import { useTranslation } from "./use-translation";
 import { copyPreview } from "@/utils/copy-text";
 
 /** 长按阈值；与 RN Pressability 的默认值一致（`DEFAULT_LONG_PRESS_DELAY_MS`） */

@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/screen-state";
 import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 
-import { useUlistMutations } from "../hooks";
+import { useUlistMutations } from "@/features/ulist/hooks";
 
 export function NotInList({ vnId }: { vnId: string }): JSX.Element {
   const { t } = useTranslation();

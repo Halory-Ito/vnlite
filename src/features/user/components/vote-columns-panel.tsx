@@ -16,7 +16,7 @@ import {
 import { FullScreenPanel } from "@/features/browse/components/panel";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { VOTE_COLUMNS, toggleVoteColumn, type VoteColumn } from "../vote-columns";
+import { VOTE_COLUMNS, toggleVoteColumn, type VoteColumn } from "@/features/user/lib/vote-columns";
 
 export function VoteColumnsPanel({
   visible,

@@ -17,7 +17,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import type { VnSummary } from "@/lib/api/types";
 
-import { useJustReleasedVns, useUpcomingVns } from "../hooks";
+import { useJustReleasedVns, useUpcomingVns } from "@/features/home/hooks";
 
 import { CarouselSkeleton, VnCoverCarousel } from "./vn-cover-carousel";
 

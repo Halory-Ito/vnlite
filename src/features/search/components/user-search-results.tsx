@@ -15,8 +15,8 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useUserLookup } from "../hooks";
-import { resultHeadline, userMissDescription } from "../search-logic";
+import { useUserLookup } from "@/features/search/hooks";
+import { resultHeadline, userMissDescription } from "@/features/search/lib/search-logic";
 
 import { SearchResultRow } from "./search-result-row";
 

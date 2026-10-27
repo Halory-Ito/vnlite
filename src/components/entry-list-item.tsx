@@ -12,9 +12,9 @@ import type { JSX } from "react";
 import type { ColorValue } from "react-native";
 import { Pressable, View } from "react-native";
 
-import { CoverImage } from "@/components/cover-image";
-import { Icon, type IconName } from "@/components/icon";
-import { Muted, Paragraph } from "@/components/typo";
+import { CoverImage } from "./cover-image";
+import { Icon, type IconName } from "./icon";
+import { Muted, Paragraph } from "./typo";
 
 export interface EntryListItemProps {
   onPress: () => void;

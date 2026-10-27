@@ -30,9 +30,9 @@ import { Pressable, View } from "react-native";
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 
-import type { WalkthroughMarkApi } from "../use-marks";
-import { groupSteps } from "../select";
-import type { WalkthroughStep } from "../types";
+import type { WalkthroughMarkApi } from "@/features/walkthrough/hooks/use-marks";
+import { groupSteps } from "@/features/walkthrough/lib/select";
+import type { WalkthroughStep } from "@/features/walkthrough/lib/types";
 import { WalkthroughStepRow } from "./walkthrough-step-row";
 
 /** 首次展开先挂这么多行（够填满好几屏，且一次提交不会卡） */

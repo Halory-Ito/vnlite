@@ -20,7 +20,7 @@ import { ActiveFilterStrip, describeFilters } from "@/features/browse/components
 import { DisplayPanel } from "@/features/browse/components/display-panel";
 import { FilterPanel } from "@/features/browse/components/filter-panel";
 import { SortPanel } from "@/features/browse/components/sort-panel";
-import { DEFAULT_BROWSE_SORT, findSortOption } from "@/features/sort/sort-options";
+import { DEFAULT_BROWSE_SORT, findSortOption } from "@/features/sort/lib/sort-options";
 import { flattenPages, useVnList } from "@/features/vn/hooks";
 import { VnInfiniteList } from "@/features/vn/components/vn-infinite-list";
 import { usePreferences } from "@/hooks/use-preferences";

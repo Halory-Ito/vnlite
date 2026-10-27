@@ -16,7 +16,7 @@ import { InputOTP, REGEXP_ONLY_DIGITS, Typography } from "heroui-native";
 import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 
-import { Muted } from "@/components/typo";
+import { Muted } from "./typo";
 import { useTranslation } from "@/hooks/use-translation";
 import { digitsToPartialIso, isoToDigits } from "@/utils/date";
 import { todayIso } from "@/utils/format";

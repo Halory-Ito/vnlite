@@ -1,7 +1,7 @@
 /**
  * 最新评价竖向列表（首页「最新评价」那一档的内容）。
  *
- * 条数与官网首页那一栏一致（`FEED_COUNT`，见 `features/home/feed-config`）——
+ * 条数与官网首页那一栏一致（`FEED_COUNT`，见 `features/home/lib/feed-config`）——
  * Master 要求「默认展示的数量和官网首页一致」。
  *
  * 点条目**弹对话框**看正文（`ReviewDialog`），不在站内再开一页 ——
@@ -19,7 +19,7 @@ import { View } from "react-native";
 import { EmptyState, ErrorState } from "@/components/screen-state";
 import { useTranslation } from "@/hooks/use-translation";
 
-import { useLatestReviews } from "../hooks";
+import { useLatestReviews } from "@/features/review/hooks";
 
 import { ReviewDialog } from "./review-dialog";
 import { ReviewRow } from "./review-row";

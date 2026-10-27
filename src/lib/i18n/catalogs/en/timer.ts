@@ -1,6 +1,6 @@
-import type { CatalogOf } from "../catalog-types";
+import type { CatalogOf } from "@/lib/i18n/catalogs/catalog-types";
 
-import type { zhTimer } from "../zh/timer";
+import type { zhTimer } from "@/lib/i18n/catalogs/zh/timer";
 
 /** English catalog · timer namespace. */
 export const enTimer: CatalogOf<typeof zhTimer> = {

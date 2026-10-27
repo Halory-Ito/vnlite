@@ -24,8 +24,12 @@ import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { PlaySession } from "@/lib/db/dao/play-session";
 
-import { formatClock, formatPlayDuration, formatSessionDate } from "../format";
-import { useDeletePlaySession } from "../hooks";
+import {
+  formatClock,
+  formatPlayDuration,
+  formatSessionDate,
+} from "@/features/play-records/lib/format";
+import { useDeletePlaySession } from "@/features/play-records/hooks";
 import { SessionEditDialog } from "./session-edit-dialog";
 
 export function PlayRecordsList({ sessions }: { sessions: PlaySession[] }): JSX.Element {
