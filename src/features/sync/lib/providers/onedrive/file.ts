@@ -10,10 +10,12 @@ import { UploadType, type File } from "expo-file-system";
 import { t } from "@/lib/i18n/translate";
 
 import type { ProviderContext } from "@/features/sync/lib/providers/types";
-import { accessToken, avatarUploadUrl } from "./client";
+import { accessToken, avatarUploadUrl, ensureBackupFolder } from "./client";
 
 /** 上传头像 */
 export async function putAvatar(ctx: ProviderContext, file: File): Promise<void> {
+  // 原生上传不走 client 的 putBackup，目录要自己保证
+  await ensureBackupFolder(ctx);
   const token = await accessToken(ctx);
   const result = await file.upload(avatarUploadUrl(), {
     httpMethod: "PUT",

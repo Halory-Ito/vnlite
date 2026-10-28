@@ -123,12 +123,7 @@ export function VnInfiniteList({
         }
       />
 
-      <ImageViewer
-        images={covers}
-        index={viewerIndex}
-        onClose={() => setViewerIndex(null)}
-        onIndexChange={setViewerIndex}
-      />
+      <ImageViewer images={covers} index={viewerIndex} onClose={() => setViewerIndex(null)} />
     </View>
   );
 }

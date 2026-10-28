@@ -39,6 +39,7 @@ export const enCore: CatalogOf<typeof zhCore> = {
     collapse: "Show less",
     noImage: "No image",
     noCover: "No cover",
+    anonymous: "Anonymous",
     doubleTapReveal: "Double-tap to reveal",
     doubleTapRevealHint: "Double-tap to show or hide sensitive content",
     image: "Image",
@@ -83,6 +84,8 @@ export const enCore: CatalogOf<typeof zhCore> = {
     feedReviews: "Reviews",
     feedUpcoming: "Upcoming",
     feedReleased: "Released",
+    calendar: "Calendar",
+    ranking: "Rankings",
     upcomingEmpty: "No upcoming releases",
     releasedEmpty: "No recent releases",
   },
@@ -212,6 +215,10 @@ export const enCore: CatalogOf<typeof zhCore> = {
     openVn: "Open VN details: %{title}",
     openUser: "Open user profile: %{author}",
     spoilerHidden: "(spoiler — tap to reveal)",
+    vnEmptyTitle: "No reviews yet",
+    vnEmptyDescription: "Nobody has reviewed this visual novel on VNDB yet",
+    points: "%{count} found this helpful",
+    comments: "%{count} comments",
   },
 
   format: {

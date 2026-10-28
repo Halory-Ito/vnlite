@@ -344,6 +344,12 @@ export interface Tag {
   vn_count?: number;
 }
 
+/** 题材的最小形状：渲染 chip / 展示名字足够了（筛选字典、排行题材列表都用） */
+export interface TagLite {
+  id: string;
+  name: string;
+}
+
 export interface Trait {
   id: string;
   name: string;

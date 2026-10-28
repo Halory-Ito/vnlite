@@ -11,7 +11,7 @@
 
 import { Image } from "expo-image";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
@@ -42,8 +42,24 @@ const GAP_GRID = 8;
 export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
-  const shots = vn.screenshots ?? [];
+  const shots = useMemo(() => vn.screenshots ?? [], [vn.screenshots]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+
+  // 查看器里的顺序与列表一致，所以直接用下标当索引
+  // 查看器用高清 url + dims（缩放边界要靠尺寸算），缩略图只当占位。
+  // 引用必须稳定（useMemo）—— ImageViewer 的 data 引用一变就重建条目
+  const viewerImages = useMemo<ViewerImage[]>(
+    () =>
+      shots.map((shot, i) => ({
+        url: shot.url,
+        thumbnail: shot.thumbnail,
+        dims: shot.dims as [number, number] | undefined,
+        sexual: shot.sexual,
+        violence: shot.violence,
+        label: t("vn.screenshotLabel", { index: i + 1 }),
+      })),
+    [shots, t]
+  );
 
   if (shots.length === 0) {
     return (
@@ -53,17 +69,6 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
       />
     );
   }
-
-  // 查看器里的顺序与列表一致，所以直接用下标当索引
-  // 查看器用高清 url + dims（缩放边界要靠尺寸算），缩略图只当占位
-  const viewerImages: ViewerImage[] = shots.map((shot, i) => ({
-    url: shot.url,
-    thumbnail: shot.thumbnail,
-    dims: shot.dims as [number, number] | undefined,
-    sexual: shot.sexual,
-    violence: shot.violence,
-    label: t("vn.screenshotLabel", { index: i + 1 }),
-  }));
 
   const columns = screenshotColumns(width, height);
   const gap = columns === 1 ? GAP_SINGLE : GAP_GRID;
@@ -90,12 +95,7 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
         </View>
       </ScrollView>
 
-      <ImageViewer
-        images={viewerImages}
-        index={viewerIndex}
-        onClose={() => setViewerIndex(null)}
-        onIndexChange={setViewerIndex}
-      />
+      <ImageViewer images={viewerImages} index={viewerIndex} onClose={() => setViewerIndex(null)} />
     </View>
   );
 }

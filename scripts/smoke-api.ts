@@ -522,7 +522,11 @@ async function main(): Promise<void> {
 
     // 分段控件顺序：作品（默认）在最左
     assert(SCOPE_OPTIONS[0]?.value === "vn", "默认应是作品");
-    assert(SCOPE_OPTIONS.length === 4, "应有 4 档：作品 / 人员 / 用户 / 厂商");
+    assert(SCOPE_OPTIONS.length === 5, "应有 5 档：作品 / 人员 / 用户 / 厂商 / 标签");
+    assert(
+      SCOPE_OPTIONS.map((option) => option.value).join(",") === "vn,staff,user,producer,tag",
+      "档位顺序应为 作品 → 人员 → 用户 → 厂商 → 标签"
+    );
     for (const option of SCOPE_OPTIONS) {
       assert(option.labelKey.length > 0, `${option.value} 缺档位名的翻译键`);
     }

@@ -187,7 +187,7 @@ export interface HorizontalBarDatum {
   value: number;
 }
 
-/** 手绘横向条（名字在左、数值在右、条长按最大值为基准） */
+/** 手绘横向条（名字在左、数值在右、条长按最大值算） */
 export function HorizontalBars({
   data,
   formatValue,
@@ -196,7 +196,8 @@ export function HorizontalBars({
   formatValue: (value: number) => string;
 }): JSX.Element {
   const accent = useThemeColor("accent");
-  const max = data[0]?.value ?? 1;
+  // 取真正的最大值，不能假设调用方已经降序（状态 / 评分的顺序是有语义的）
+  const max = Math.max(1, ...data.map((datum) => datum.value));
 
   return (
     <View className="w-full gap-2.5">

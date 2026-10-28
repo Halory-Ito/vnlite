@@ -69,6 +69,50 @@ import {
   sessionRangeError,
   toLocalTimestamp,
 } from "@/features/play-records/lib/session-time";
+import { parseVnReviews } from "@/features/review/lib/scrape";
+import { excludeIds, pickSimilarTags } from "@/features/recommend/lib/recommend";
+import {
+  addMonths,
+  clampMonth,
+  daysInMonth,
+  groupByDay,
+  monthKey,
+  monthRange,
+  monthsAfterMonth,
+  monthsBeforeMonth,
+} from "@/features/calendar/lib/calendar";
+import {
+  GETCHU_AWARDS,
+  GETCHU_DEPT_ORDER,
+  getchuEntriesFor,
+  getchuYears,
+  MOE_AWARDS,
+  MOE_PRIZE_ORDER,
+  moeEntriesFor,
+  moeYears,
+} from "@/features/awards/lib/awards";
+import {
+  getTagName,
+  getTagNames,
+  loadTagNames,
+  recordTagNames,
+} from "@/features/browse/lib/tag-names";
+import { compileVnFilters } from "@/lib/api/filters";
+import {
+  addPoolTags,
+  getTagPoolState,
+  loadTagPool,
+  mergeTagPool,
+  removePoolTags,
+} from "@/features/ranking/lib/tag-pool";
+import { toTagEntries } from "@/features/search/lib/search-logic";
+import {
+  backlogSummary,
+  completionSummary,
+  statusBuckets,
+  voteBuckets,
+  voteComparison,
+} from "@/features/stats/lib/list-analysis";
 import { isNewerVersion, parseVersion } from "@/features/settings/lib/update-check";
 import { base64Encode, basicAuthValue } from "@/features/sync/lib/base64";
 import { buildBackup, parseBackup } from "@/features/sync/lib/backup";
@@ -1380,14 +1424,19 @@ async function main(): Promise<void> {
     assert(marks.endings.includes("e1"), "攻略标记应恢复");
   });
 
-  await check("WebDAV 客户端：PUT 上传 / GET 下载 / 没有文件返回 null", async () => {
+  await check("WebDAV 客户端：建目录 / PUT 上传 / GET 下载 / 老备份回退", async () => {
     const files = new Map<string, string>();
     let auth: string | null = null;
+    const madeDirs: string[] = [];
     const server = Bun.serve({
       port: 0,
       async fetch(request) {
         const url = new URL(request.url);
         auth = request.headers.get("Authorization");
+        if (request.method === "MKCOL") {
+          madeDirs.push(url.pathname);
+          return new Response(null, { status: 201 });
+        }
         if (request.method === "PUT") {
           files.set(url.pathname, await request.text());
           return new Response(null, { status: 201 });
@@ -1414,6 +1463,11 @@ async function main(): Promise<void> {
       };
       await putBackup(config, JSON.stringify({ hello: "world" }));
       assert(auth === "Basic dTpw", `认证头不对：${auth}`);
+      assert(madeDirs.includes("/dav/vnlite"), `应先建 vnlite 目录，实际：${madeDirs.join(", ")}`);
+      assert(
+        files.has("/dav/vnlite/vnlite-backup.json"),
+        `备份应写进 vnlite 目录，实际：${[...files.keys()].join(", ")}`
+      );
 
       const result = await getBackup(config);
       assert(result !== null, "应能下载回来");
@@ -1423,6 +1477,15 @@ async function main(): Promise<void> {
       );
       assert((result?.info.size ?? 0) > 0, "大小应大于 0");
       assert(result?.info.modifiedAt === 1_700_000_000_000, "应解析出 Last-Modified");
+
+      // 老版本存在同级目录的备份 → 也能读到（不能因为换目录就把旧备份弄丢）
+      files.set("/dav/vnlite-backup.json", JSON.stringify({ hello: "legacy" }));
+      files.delete("/dav/vnlite/vnlite-backup.json");
+      const legacy = await getBackup(config);
+      assert(
+        (JSON.parse(legacy?.body ?? "{}") as { hello?: string }).hello === "legacy",
+        "应回退到老位置的备份"
+      );
 
       // 服务器上没有那个文件 → null（不是抛错）
       const missing = await getBackup({ ...config, url: `http://127.0.0.1:${server.port}/empty` });
@@ -1553,9 +1616,10 @@ async function main(): Promise<void> {
     assert(a.includes("cfg1"), "key 里应带配置 id");
   });
 
-  await check("OneDrive 客户端：PUT 上传 / GET 下载 / 没有文件返回 null", async () => {
+  await check("OneDrive 客户端：建目录 / PUT 上传 / GET 下载 / 老备份回退", async () => {
     const files = new Map<string, string>();
     let auth: string | null = null;
+    let folderCreated = false;
     const server = Bun.serve({
       port: 0,
       async fetch(request) {
@@ -1566,6 +1630,19 @@ async function main(): Promise<void> {
             JSON.stringify({ access_token: "tok", refresh_token: "rt", expires_in: 3600 }),
             { headers: { "Content-Type": "application/json" } }
           );
+        }
+        // 查备份目录
+        if (url.pathname.endsWith("/root:/vnlite") && request.method === "GET") {
+          return folderCreated
+            ? new Response(JSON.stringify({ name: "vnlite" }), {
+                headers: { "Content-Type": "application/json" },
+              })
+            : new Response(null, { status: 404 });
+        }
+        // 建备份目录
+        if (url.pathname.endsWith("/root/children") && request.method === "POST") {
+          folderCreated = true;
+          return new Response(JSON.stringify({ name: "vnlite" }), { status: 201 });
         }
         if (request.method === "PUT") {
           files.set(url.pathname, await request.text());
@@ -1605,6 +1682,11 @@ async function main(): Promise<void> {
     try {
       const info = await putOneDriveBackup(ctx, JSON.stringify({ hello: "world" }));
       assert(auth === "Bearer tok", `认证头不对：${auth}`);
+      assert(folderCreated, "应先建 vnlite 目录");
+      assert(
+        files.has("/v1.0/me/drive/root:/vnlite/vnlite-backup.json:/content"),
+        `备份应写进 vnlite 目录，实际：${[...files.keys()].join(", ")}`
+      );
       assert(info.size === 12, `大小应取 Graph 返回的，实际 ${info.size}`);
       assert(info.modifiedAt === Date.parse("2026-10-21T07:30:00.000Z"), "应解析出修改时间");
 
@@ -1613,6 +1695,18 @@ async function main(): Promise<void> {
       assert(
         (JSON.parse(result?.body ?? "{}") as { hello?: string }).hello === "world",
         "内容应一致"
+      );
+
+      // 老版本存在同级目录的备份 → 也能读到
+      files.set(
+        "/v1.0/me/drive/root:/vnlite-backup.json:/content",
+        JSON.stringify({ hello: "legacy" })
+      );
+      files.delete("/v1.0/me/drive/root:/vnlite/vnlite-backup.json:/content");
+      const legacy = await getOneDriveBackup(ctx);
+      assert(
+        (JSON.parse(legacy?.body ?? "{}") as { hello?: string }).hello === "legacy",
+        "应回退到老位置的备份"
       );
 
       // 云盘上没有那个文件 → null（不是抛错）
@@ -1626,6 +1720,369 @@ async function main(): Promise<void> {
       ONEDRIVE_ENDPOINTS.login = originalLogin;
       server.stop(true);
     }
+  });
+
+  await check("作品评价解析：卡片字段 / Read more 截断 / 坏卡片丢弃", async () => {
+    const html = `
+      <div class="reviews">
+      <article><div><span>Short by <a href="/u154784">succhunter</a> on 2022-04-30</span><span>9/10</span></div><div></div><div><span>&lt;<a href="/report/w4208">report</a>></span>Hello <b>world</b>. <a href="/w4208#review"> Read more &raquo;</a></div><div><a href="/w4208#threadstart">1 comment</a><span><small> 10 points</small></span></div></article>
+      <article><div><span>Medium by <a href="/u2">neonblue</a> on 2020-12-28</span><a href="/r60521">r60521</a><span>9.4/10</span></div><div></div><div><span>&lt;<a href="/report/w1240">report</a>></span>Great game.</div><div><a href="/w1240#threadstart">0 comments</a><span><small> 3 points</small></span></div></article>
+      <article><div><span>没有 report 链接的坏卡片</span></div></article>
+      </div>`;
+
+    const reviews = parseVnReviews(html);
+    assert(reviews.length === 2, `应解析出 2 条，实际 ${reviews.length}`);
+
+    const first = reviews[0]!;
+    assert(first.id === "w4208", `评价 id 不对：${first.id}`);
+    assert(first.author === "succhunter" && first.authorId === "u154784", "作者解析不对");
+    assert(first.date === "2022-04-30", `日期不对：${first.date}`);
+    assert(first.score === 9 && first.length === "Short", "分数 / 篇幅不对");
+    assert(first.excerpt === "Hello world.", `摘要应在 Read more 处截断：${first.excerpt}`);
+    assert(first.points === 10 && first.comments === 1, "有用数 / 评论数不对");
+
+    const second = reviews[1]!;
+    assert(second.score === 9.4, `小数分应保留：${second.score}`);
+    assert(second.length === "Medium", "篇幅不对");
+    assert(second.excerpt === "Great game.", `摘要不对：${second.excerpt}`);
+
+    // 不是评价页 → 空数组（不抛）
+    assert(parseVnReviews("<html><body>nope</body></html>").length === 0, "非评价页应返回空");
+  });
+
+  await check("清单分析：状态 / 评分分布 / backlog / 与社区比", async () => {
+    const make = (over: Partial<UListItem>): UListItem =>
+      ({ id: "v1", vote: null, labels: [], vn: {}, ...over }) as UListItem;
+
+    const items: UListItem[] = [
+      make({
+        id: "v1",
+        labels: [{ id: 1, label: "Playing" }],
+        vn: { id: "v1", title: "", length: 3, rating: 70 },
+      }),
+      make({
+        id: "v2",
+        labels: [{ id: 2, label: "Finished" }],
+        vote: 80,
+        vn: { id: "v2", title: "", length: 2, rating: 70 },
+      }),
+      make({
+        id: "v3",
+        labels: [{ id: 2, label: "Finished" }],
+        vote: 100,
+        vn: { id: "v3", title: "", length: 5, rating: 80 },
+      }),
+      make({
+        id: "v4",
+        labels: [{ id: 4, label: "Dropped" }],
+        vn: { id: "v4", title: "", length: 1, rating: 60 },
+      }),
+      make({
+        id: "v5",
+        labels: [{ id: 5, label: "Wishlist" }],
+        vn: { id: "v5", title: "", length: 5, rating: 90 },
+      }),
+      make({ id: "v6", labels: [{ id: 6, label: "Blacklist" }], vn: { id: "v6", title: "" } }),
+    ];
+
+    const statuses = statusBuckets(items);
+    assert(statuses.length === 6, "六个状态都要有");
+    assert(statuses[0]?.count === 1, "在玩 1 部");
+    assert(statuses[1]?.count === 2, "已通关 2 部");
+    assert(statuses[5]?.count === 1, "黑名单 1 部");
+
+    const votes = voteBuckets(items);
+    assert(votes[7]?.count === 1, "80 分应落在 8 分档");
+    assert(votes[9]?.count === 1, "100 分应落在 10 分档");
+    assert(votes.reduce((sum, bucket) => sum + bucket.count, 0) === 2, "只有 2 部打了分");
+
+    // 待玩：v1(20h) + v5(60h)；v2/v3 已通关、v4 已抛弃、v6 黑名单都不算
+    const backlog = backlogSummary(items);
+    assert(backlog.count === 2, `待玩应为 2 部，实际 ${backlog.count}`);
+    assert(backlog.hours === 80, `预计时长应为 80 小时，实际 ${backlog.hours}`);
+    assert(backlog.known === 2, "两部都填了时长");
+
+    // 只比两边都有分的：v2(8 vs 7) + v3(10 vs 8)
+    const comparison = voteComparison(items);
+    assert(comparison.count === 2, "应只比较 2 部");
+    assert(comparison.mine === 9 && comparison.community === 7.5, "均分不对");
+    assert(comparison.delta === 1.5, "差值不对");
+
+    // 完成率：2 已通关 /（6 − 1 黑名单）
+    const completion = completionSummary(items);
+    assert(completion.rate === 0.4, `完成率不对：${completion.rate}`);
+  });
+
+  await check("相似作品：标签挑选 / 去重", async () => {
+    const vn = {
+      tags: [
+        { id: "g19", name: "Mystery", rating: 2.9, spoiler: 0, category: "cont" },
+        { id: "g32", name: "ADV", rating: 3, spoiler: 0, category: "tech" },
+        { id: "g2", name: "Spoiler tag", rating: 3, spoiler: 2, category: "cont" },
+        { id: "g3", name: "Rare tag", rating: 1, spoiler: 0, category: "cont" },
+        { id: "g4", name: "Romance", rating: 2.4, spoiler: 0, category: "cont" },
+      ],
+    };
+
+    const tags = pickSimilarTags(vn);
+    assert(tags.length === 2, `只应留下 2 个内容标签，实际 ${tags.length}`);
+    assert(tags[0]?.id === "g19" && tags[1]?.id === "g4", "应按认可度降序");
+    assert(!tags.some((tag) => tag.id === "g32"), "技术标签（ADV）不应参与");
+    assert(!tags.some((tag) => tag.id === "g2"), "剧透标签不应参与");
+    assert(!tags.some((tag) => tag.id === "g3"), "冷门标签不应参与");
+
+    const limited = pickSimilarTags(
+      {
+        tags: Array.from({ length: 10 }, (_, i) => ({
+          id: `g${i}`,
+          rating: 2.5,
+          category: "cont",
+        })),
+      },
+      3
+    );
+    assert(limited.length === 3, "limit 应生效");
+
+    const filtered = excludeIds([{ id: "v1" }, { id: "v2" }], new Set(["v1"]));
+    assert(filtered.length === 1 && filtered[0]?.id === "v2", "本作不应出现在相似列表里");
+
+    assert(pickSimilarTags({}).length === 0, "没有标签时应返回空");
+  });
+
+  await check("标签搜索：行数据（id + 作品数）", async () => {
+    const entries = toTagEntries([{ results: [{ id: "g19", name: "Mystery", vn_count: 12345 }] }]);
+    assert(entries.length === 1, "应有一行");
+    assert(entries[0]?.id === "g19" && entries[0]?.title === "Mystery", "标签名 / id 不对");
+    assert(entries[0]?.meta?.includes("g19"), "右侧应带标签 id");
+    assert(toTagEntries(undefined).length === 0, "没有数据时应返回空");
+  });
+
+  await check("发售日历：翻月 / 月份区间 / 按天分组", async () => {
+    assert(
+      JSON.stringify(addMonths({ year: 2026, month: 12 }, 1)) ===
+        JSON.stringify({ year: 2027, month: 1 }),
+      "跨年翻月不对"
+    );
+    assert(
+      JSON.stringify(addMonths({ year: 2026, month: 1 }, -1)) ===
+        JSON.stringify({ year: 2025, month: 12 }),
+      "往前翻月不对"
+    );
+
+    assert(monthKey({ year: 2026, month: 3 }) === "2026-03", "月份 key 不对");
+    // 2024 年 2 月是闰月
+    assert(monthRange({ year: 2024, month: 2 }).to === "2024-02-29", "闰月最后一天应为 29 号");
+    assert(monthRange({ year: 2026, month: 1 }).from === "2026-01-01", "月初不对");
+
+    const groups = groupByDay([
+      { id: "v1", released: "2026-10-01" },
+      { id: "v2", released: "2026-10-01" },
+      { id: "v3", released: "2026-10-05" },
+      { id: "v4", released: "2026-10" },
+      { id: "v5", released: "TBA" },
+      { id: "v6", released: null },
+    ]);
+    assert(groups.length === 2, `应分成 2 天，实际 ${groups.length}`);
+    assert(groups[0]?.day === "2026-10-01" && groups[0].items.length === 2, "同一天应合并");
+    assert(groups[1]?.day === "2026-10-05", "第二天不对");
+
+    // 月历：闰月天数（库负责格子，这里只守日期区间与夹取）
+    assert(daysInMonth({ year: 2024, month: 2 }) === 29, "闰年 2 月应有 29 天");
+    assert(
+      JSON.stringify(clampMonth({ year: 1200, month: 1 })) ===
+        JSON.stringify({ year: 1950, month: 1 }),
+      "越界月份应夹到范围起点"
+    );
+    assert(monthsBeforeMonth({ year: 1950, month: 1 }) === 0, "起点之前不应还有月份");
+    assert(monthsAfterMonth({ year: 2100, month: 12 }) === 0, "终点之后不应还有月份");
+    assert(
+      monthsBeforeMonth({ year: 2026, month: 10 }) === (2026 - 1950) * 12 + 9,
+      "pastScrollRange 不对"
+    );
+  });
+
+  await check("大赏数据：萌えゲーアワード（年份降序 / 层级 / 年代抽查）", async () => {
+    assert(MOE_AWARDS.length >= 45, `萌系条目太少：${MOE_AWARDS.length}`);
+    const seen = new Set<string>();
+    for (const award of MOE_AWARDS) {
+      const key = `${award.year}:${award.prize}:${award.title}`;
+      assert(!seen.has(key), `萌系行重复：${key}`);
+      seen.add(key);
+      assert(award.title.length > 0, `${award.year} 缺标题`);
+      assert(award.vnId === null || /^v\d+$/.test(award.vnId), `${award.year} vnId 形状`);
+    }
+    // 年份降序，年内层级大賞 → 準大賞 → 金 → 銀 → 銅
+    for (let i = 1; i < MOE_AWARDS.length; i += 1) {
+      const prev = MOE_AWARDS[i - 1]!;
+      const curr = MOE_AWARDS[i]!;
+      assert(
+        prev.year > curr.year ||
+          (prev.year === curr.year && MOE_PRIZE_ORDER[prev.prize] <= MOE_PRIZE_ORDER[curr.prize]),
+        "萌系应按年份降序 + 层级排"
+      );
+    }
+    // 每年都有主线层级；2013 起是大賞/準大賞，2009–2012 金銀銅，2006–2008 單一大賞
+    for (const y of moeYears()) {
+      const entries = moeEntriesFor(y);
+      if (y >= 2013 || y <= 2008) {
+        assert(
+          entries.some((e) => e.prize === "grand"),
+          `${y} 缺大賞行`
+        );
+      } else {
+        assert(
+          entries.some((e) => e.prize === "gold"),
+          `${y} 缺金賞行`
+        );
+      }
+    }
+    assert(
+      MOE_AWARDS.filter((e) => e.year === 2011 && e.prize === "silver").length === 2,
+      "2011 应有两行銀賞"
+    );
+    assert(
+      MOE_AWARDS.filter((e) => e.year === 2013 && e.prize === "semi").length === 2,
+      "2013 应有两行準大賞"
+    );
+  });
+
+  await check("大赏数据：Getchu 美少女ゲーム大賞（部门 / 名次 / 排序）", async () => {
+    assert(GETCHU_AWARDS.length >= 400, `Getchu 条目太少：${GETCHU_AWARDS.length}`);
+    const seenRanks = new Set<string>();
+    for (const entry of GETCHU_AWARDS) {
+      assert(GETCHU_DEPT_ORDER[entry.dept] !== undefined, `未知部门：${entry.dept}`);
+      assert(entry.title.length > 0, `${entry.year}/${entry.dept}/第${entry.rank}位 缺标题`);
+      assert(entry.rank >= 1, `${entry.year}/${entry.dept} 名次异常：${entry.rank}`);
+      assert(
+        entry.vnId === null || /^v\d+$/.test(entry.vnId),
+        `${entry.year}/${entry.dept}/第${entry.rank}位 vnId 形状：${entry.vnId}`
+      );
+      const rankKey = `${entry.year}:${entry.dept}:${entry.rank}`;
+      assert(!seenRanks.has(rankKey), `Getchu 名次重复：${rankKey}`);
+      seenRanks.add(rankKey);
+    }
+    // 年份降序 → 部门顺序 → 名次升序
+    for (let i = 1; i < GETCHU_AWARDS.length; i += 1) {
+      const prev = GETCHU_AWARDS[i - 1]!;
+      const curr = GETCHU_AWARDS[i]!;
+      assert(
+        prev.year > curr.year ||
+          (prev.year === curr.year &&
+            (GETCHU_DEPT_ORDER[prev.dept] < GETCHU_DEPT_ORDER[curr.dept] ||
+              (GETCHU_DEPT_ORDER[prev.dept] === GETCHU_DEPT_ORDER[curr.dept] &&
+                prev.rank <= curr.rank))),
+        "Getchu 应按 年份→部门→名次 排"
+      );
+    }
+    // 年份 coverage：2010–2023 全年在，総合部门每个年至少 5 条
+    assert(getchuYears().length >= 14, `Getchu 年份不全：${getchuYears().length}`);
+    for (const y of getchuYears()) {
+      assert(getchuEntriesFor(y, "total").length >= 5, `${y} 的総合部门条目太少`);
+    }
+  });
+
+  await check("题材列表：合并（去重 / 屏蔽 / 顺序）", () => {
+    const base = [
+      { id: "g1", name: "奇幻" },
+      { id: "g2", name: "悬疑" },
+      { id: "g3", name: "学园" },
+    ];
+    // 基础 ∪ 自加；同一 id 只留基础位；被删的基础候选不再出现
+    const pool = mergeTagPool(
+      base,
+      [
+        { id: "g4", name: "百合" },
+        { id: "g2", name: "悬疑" },
+      ],
+      ["g3"]
+    );
+    const joined = pool.map((tag) => tag.id).join(",");
+    assert(joined === "g1,g2,g4", `合并结果不对：${joined}`);
+    assert(mergeTagPool([], [], []).length === 0, "全空应得空列表");
+  });
+
+  await check("题材列表：增删记入 KV（自加直接删 / 基础候选进屏蔽名单）", async () => {
+    await loadTagPool();
+    const fresh = getTagPoolState();
+    assert(fresh.loaded && fresh.added.length === 0, "首读应为空");
+    assert(fresh.removed.length === 0, "首读屏蔽名单应为空");
+
+    await addPoolTags([{ id: "g9", name: "百合" }]);
+    assert(
+      getTagPoolState()
+        .added.map((tag) => tag.id)
+        .join(",") === "g9",
+      "自加应记入 added"
+    );
+    // 重复加不生效
+    await addPoolTags([
+      { id: "g9", name: "百合" },
+      { id: "g8", name: "学园" },
+    ]);
+    assert(
+      getTagPoolState()
+        .added.map((tag) => tag.id)
+        .join(",") === "g9,g8",
+      "自加应去重之后再追加"
+    );
+
+    await removePoolTags(["g9", "g5"], ["g5"]);
+    assert(
+      getTagPoolState()
+        .added.map((tag) => tag.id)
+        .join(",") === "g8",
+      "自加移除应直接删；非自加不该动 added"
+    );
+    assert(
+      getTagPoolState().removed.length === 1 && getTagPoolState().removed[0] === "g5",
+      "基础候选删除应记入屏蔽名单"
+    );
+
+    await addPoolTags([{ id: "g5", name: "奇幻" }]);
+    assert(!getTagPoolState().removed.includes("g5"), "被删的候选加回来应撤销屏蔽");
+
+    // 落盘形状：重进应用还能读回来（KV 序列化为数组）
+    const savedAdded = JSON.parse(memoryStore.get("ranking_tag_pool_added") ?? "null");
+    const savedRemoved = JSON.parse(memoryStore.get("ranking_tag_pool_removed") ?? "null");
+    assert(
+      Array.isArray(savedAdded) && savedAdded.length === 2,
+      `added 应落成 KV 数组：${String(savedAdded)}`
+    );
+    assert(Array.isArray(savedRemoved) && savedRemoved.length === 0, "removed 应落成 KV 数组");
+  });
+
+  await check("浏览筛选：题材组合编译（AND）/ 题材名字典（KV 回读）", async () => {
+    // 编译：每个题材一条 tag 谓词（AND 语义都要命中），与原语言等一起包进 and
+    const compiled = compileVnFilters({ tags: ["g1", "g2"], olang: ["ja"] });
+    assert(compiled?.[0] === "and", "多个筛选应包在 and 里");
+    const tagParts = (compiled!.slice(1) as unknown[][]).filter(
+      (p) => Array.isArray(p) && p[0] === "tag"
+    );
+    assert(
+      tagParts.length === 2 && tagParts.every((p) => p[1] === "="),
+      `每个题材都应有 tag 谓词：${JSON.stringify(tagParts)}`
+    );
+    assert(compileVnFilters(undefined) === undefined, "未设筛选不产生谓词");
+    assert(compileVnFilters({}) === undefined, "空对象不产生谓词");
+
+    // 名字典：记录（补缺不覆盖）→ 同步读取 → KV 落盘形状
+    await loadTagNames();
+    assert(getTagName("g10001") === undefined, "初始字典应为空");
+    await recordTagNames([{ id: "g10001", name: "奇幻" }]);
+    assert(getTagName("g10001") === "奇幻", "应记录名字");
+    await recordTagNames([{ id: "notag1", name: "非题材 id" }]);
+    assert(getTagName("notag1") === undefined, "非 g 开头的 id 不应记录");
+    await loadTagNames();
+    assert(getTagName("g10001") === "奇幻", "重复 load 幂等，不冲掉内存");
+    const saved = JSON.parse(memoryStore.get("browse_tag_names") ?? "null");
+    assert(
+      saved && typeof saved === "object" && saved.g10001 === "奇幻",
+      `KV 应是 id→名字 的对象：${String(saved)}`
+    );
+    // 已记录的同名再记一次不改状态（省一次写盘）
+    const snapshot = getTagNames();
+    await recordTagNames([{ id: "g10001", name: "奇幻" }]);
+    assert(getTagNames() === snapshot, "重复同名记录不应变更状态");
   });
 
   /* ---- 结果 ---- */

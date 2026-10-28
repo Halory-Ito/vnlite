@@ -17,6 +17,7 @@ export const zhSearch = {
       staff: "人员",
       user: "用户",
       producer: "厂商",
+      tag: "标签",
     },
 
     /** 完整集合名：空态文案（「没有与 x 匹配的制作者」）与行长数据用 */
@@ -25,6 +26,7 @@ export const zhSearch = {
       staff: "制作人员",
       user: "用户",
       producer: "制作者",
+      tag: "标签",
     },
 
     loading: "搜索中…",
@@ -35,6 +37,9 @@ export const zhSearch = {
     emptyDescription: "没有与「%{keyword}」匹配的%{noun}",
     userEmptyTitle: "没有找到用户",
     vnEmptyTitle: "没有找到作品",
+
+    /** 标签行的右侧读数 */
+    tagMeta: "%{count} 部作品",
 
     /** 结果列表顶部的标题（不带到档位名） */
     resultsHeadline: "搜索「%{keyword}」的结果",

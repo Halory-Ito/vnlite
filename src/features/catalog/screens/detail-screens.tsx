@@ -198,12 +198,7 @@ function RelatedVns({
         ))}
       </View>
 
-      <ImageViewer
-        images={covers}
-        index={viewerIndex}
-        onClose={() => setViewerIndex(null)}
-        onIndexChange={setViewerIndex}
-      />
+      <ImageViewer images={covers} index={viewerIndex} onClose={() => setViewerIndex(null)} />
     </>
   );
 }

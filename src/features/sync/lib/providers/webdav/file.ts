@@ -9,7 +9,13 @@
 import { UploadType, type File } from "expo-file-system";
 
 import { AVATAR_FILE_NAME } from "@/features/sync/lib/backup";
-import { buildAuthHeaders, errorForStatus, joinUrl, type WebDavConfig } from "./client";
+import {
+  buildAuthHeaders,
+  ensureBackupDir,
+  errorForStatus,
+  remoteFileUrl,
+  type WebDavConfig,
+} from "./client";
 
 /**
  * 上传头像。
@@ -18,7 +24,9 @@ import { buildAuthHeaders, errorForStatus, joinUrl, type WebDavConfig } from "./
  * 缺了会存成 `application/octet-stream`。
  */
 export async function putAvatar(config: WebDavConfig, file: File): Promise<void> {
-  const result = await file.upload(joinUrl(config.url, AVATAR_FILE_NAME), {
+  // 原生上传不走 client 的 putBackup，目录要自己保证
+  await ensureBackupDir(config);
+  const result = await file.upload(remoteFileUrl(config, AVATAR_FILE_NAME), {
     httpMethod: "PUT",
     uploadType: UploadType.BINARY_CONTENT,
     headers: {

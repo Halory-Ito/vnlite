@@ -7,4 +7,11 @@
 
 declare const Bun: {
   write(path: string, data: string | Uint8Array): Promise<number>;
+  /** 读文件，目前同步脚本只用 json() */
+  file(path: string): { json(): Promise<unknown> };
 };
+
+/** bun 给 fetch 的独有代理参数（Sync 脚本走本地代理用），DOM lib 里没有 */
+interface RequestInit {
+  proxy?: string;
+}

@@ -41,6 +41,13 @@ export const zhBrowse = {
       rating: "最低评分",
       votecount: "最少投票数",
       votecountOption: "≥%{min} 票",
+      /** 题材筛选（filter-group / tag-search） */
+      tags: "题材",
+      addTag: "添加题材",
+      tagPlaceholder: "搜索题材名",
+      tagNoResults: "没有找到相关题材",
+      tagInList: "已在筛选",
+      tagVnCount: "%{count} 部作品",
       olang: "原语言",
       platform: "平台",
       length: "时长",

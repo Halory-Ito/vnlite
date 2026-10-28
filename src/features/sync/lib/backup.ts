@@ -21,6 +21,15 @@
 export const BACKUP_APP = "vnlite";
 /** 备份格式版本。改动 `data` 的结构时 +1，旧备份按旧版本解析 */
 export const BACKUP_FORMAT = 1;
+/**
+ * 云盘上的**备份目录**。
+ *
+ * 1.4.4 起备份文件不再直接躺在用户选的目录里，而是收进 `vnlite/` 子目录 ——
+ * 用户目录里通常还有自己的文件，混在一起既难找又容易误删。
+ *
+ * ⚠️ 老版本备份在同级根目录下（没有这一层），下载时要回退去找（见各 provider）。
+ */
+export const BACKUP_DIR = "vnlite";
 /** WebDAV 上的备份文件名（固定名 —— 上传覆盖，下载拿最新的） */
 export const BACKUP_FILE_NAME = "vnlite-backup.json";
 /**

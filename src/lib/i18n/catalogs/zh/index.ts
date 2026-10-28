@@ -9,6 +9,7 @@
  */
 
 import { zhBrowse } from "./browse";
+import { zhCalendar } from "./calendar";
 import { zhCatalog } from "./catalog";
 import { zhCore } from "./core";
 import { zhDiscussion } from "./discussion";
@@ -17,6 +18,7 @@ import { zhFavorite } from "./favorite";
 import { zhHistory } from "./history";
 import { zhMisc } from "./misc";
 import { zhProfile } from "./profile";
+import { zhRanking } from "./ranking";
 import { zhRecords } from "./records";
 import { zhSearch } from "./search";
 import { zhStats } from "./stats";
@@ -44,6 +46,8 @@ export const zh = {
   ...zhStats,
   ...zhSync,
   ...zhProfile,
+  ...zhCalendar,
+  ...zhRanking,
   enums: { ...zhEnums },
   ...zhMisc,
 };

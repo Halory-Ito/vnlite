@@ -26,6 +26,22 @@ export const zhStats = {
     typesEmpty: "你的收藏里没有标出 ADV / NVL / RPG 这类类型标签",
     pieEmpty: "没有可统计的数据",
 
+    /* 清单分析页（/stats/list） */
+    listAnalysis: "清单分析",
+    laTitle: "清单分析",
+    laRate: "完成率",
+    laBacklog: "待玩 %{count} 部 · 预计 %{hours} 小时",
+    laBacklogHint: "其中 %{known} / %{total} 部填了时长，其余按中篇估算",
+    laMyVote: "我的均分",
+    laCommunityVote: "社区均分",
+    laVoteDelta: "差值",
+    laStatus: "状态分布",
+    laVotes: "评分分布",
+    laScore: "%{score} 分",
+    laLoginTitle: "登录后可以看清单分析",
+    laLoginDescription: "清单数据在 VNDB 上，需要先登录才能读",
+    laEmptyDescription: "先去 VNDB 清单里加几部作品吧",
+
     /* 游玩统计 */
     playTitle: "游玩统计",
     playLoading: "正在读取游玩记录…",

@@ -28,7 +28,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Chip, Tabs, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
@@ -39,6 +39,8 @@ import { H3, Muted } from "@/components/typo";
 import { StatBlock } from "@/components/ui";
 import { FavoriteButton } from "@/features/favorite/components/favorite-button";
 import { VnDiscussionsTab } from "@/features/discussion/components/vn-discussions-tab";
+import { VnReviewsTab } from "@/features/review/components/vn-reviews-tab";
+import { VnSimilarTab } from "@/features/recommend/components/vn-similar-tab";
 import { UlistEditEntry } from "@/features/ulist/components/ulist-edit-entry";
 import { UlistToggleButton } from "@/features/ulist/components/ulist-toggle-button";
 import { useUlistItem } from "@/features/ulist/hooks";
@@ -79,6 +81,8 @@ type TabKey =
   | "screenshots"
   | "relations"
   | "quotes"
+  | "reviews"
+  | "similar"
   | "discussions"
   | "walkthrough"
   | "records"
@@ -94,9 +98,9 @@ type TabKey =
  * 拿不到结果前无法预判；如果只有部分页签会消失，页签集合会在不同作品间跳变，
  * 用户会以为「功能没了」。统一显示 + 统一空态更可预测。
  *
- * ⚠️ 没有「评价」页签：Kana API 不提供 reviews（只有 `/vn` 的 `has_review` 布尔过滤器），
- * 拿不到正文 / 作者 / 分数，所以只做 API 支持得起的「语录」。
- * 「讨论」页签的数据走抓取 VNDB 网站（API 同样没有讨论端点），见 features/discussion。
+ * ⚠️ 「评价」页签的数据来自抓取 VNDB 网站的作品评价页（`/v17/reviews`）——
+ * Kana API 没有 reviews 端点（只有 `/vn` 的 `has_review` 布尔过滤器）。
+ * 「讨论」页签同样走抓取（API 没有讨论端点），见 features/discussion。
  * 「攻略」页签的数据走独立仓库的静态 JSON（API 也没有），见 features/walkthrough。
  */
 const TABS: readonly { key: TabKey; labelKey: TranslationKey }[] = [
@@ -107,6 +111,8 @@ const TABS: readonly { key: TabKey; labelKey: TranslationKey }[] = [
   { key: "screenshots", labelKey: "vn.tabScreenshots" },
   { key: "relations", labelKey: "vn.tabRelations" },
   { key: "quotes", labelKey: "vn.tabQuotes" },
+  { key: "reviews", labelKey: "vn.tabReviews" },
+  { key: "similar", labelKey: "vn.tabSimilar" },
   { key: "discussions", labelKey: "vn.tabDiscussions" },
   { key: "walkthrough", labelKey: "vn.tabWalkthrough" },
   { key: "records", labelKey: "vn.tabRecords" },
@@ -130,6 +136,23 @@ export default function VnDetailScreen(): JSX.Element {
   const { t } = useTranslation();
   const vn = detail.data;
 
+  // 封面查看器的单图数组：引用必须稳定（ImageViewer 的 data 引用一变就重建条目）。
+  // 要放在早退分支之前（hook 不能有条件），vn 还可能没数据，这里用可选链兜住
+  const coverImages = useMemo<ViewerImage[]>(() => {
+    const image = vn?.image;
+    if (!image?.url) return [];
+    return [
+      {
+        url: image.url,
+        thumbnail: image.thumbnail,
+        dims: image.dims,
+        sexual: image.sexual,
+        violence: image.violence,
+        label: t("home.coverLabel", { title: vn?.title ?? "" }),
+      },
+    ];
+  }, [vn?.image, vn?.title, t]);
+
   // 记录浏览历史（数据加载完成后）
   useEffect(() => {
     if (vn) recordView("vn", vn.id, vn.title, vn.alttitle, vn.image?.thumbnail);
@@ -146,19 +169,6 @@ export default function VnDetailScreen(): JSX.Element {
   // 游玩状态 = 我的清单标签里的状态标签（Playing / Finished / …，VNDB 英文原名）
   const playStatus =
     (myListItem.data?.labels ?? []).find((label) => label.id >= 1 && label.id <= 5)?.label ?? null;
-
-  const coverImages: ViewerImage[] = vn.image?.url
-    ? [
-        {
-          url: vn.image.url,
-          thumbnail: vn.image.thumbnail,
-          dims: vn.image.dims,
-          sexual: vn.image.sexual,
-          violence: vn.image.violence,
-          label: t("home.coverLabel", { title: vn.title }),
-        },
-      ]
-    : [];
 
   return (
     <View className="flex-1">
@@ -214,7 +224,7 @@ export default function VnDetailScreen(): JSX.Element {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1">
         <Tabs.List className="mx-3">
-          {/* 10 个页签放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
+          {/* 页签太多放不下，必须走 ScrollView；它会自动把选中项滚进视野 */}
           <Tabs.ScrollView>
             {/* ⚠️ 指示块要自己挂：HeroUI 不会自动注入，漏了就没有「选中」的底色 */}
             <Tabs.Indicator />
@@ -235,6 +245,8 @@ export default function VnDetailScreen(): JSX.Element {
           {tab === "screenshots" ? <VnScreenshotsTab vn={vn} /> : null}
           {tab === "relations" ? <VnRelationsTab vn={vn} /> : null}
           {tab === "quotes" ? <VnQuotesTab vnId={vn.id} /> : null}
+          {tab === "reviews" ? <VnReviewsTab vnId={vn.id} /> : null}
+          {tab === "similar" ? <VnSimilarTab vn={vn} /> : null}
           {tab === "discussions" ? <VnDiscussionsTab vnId={vn.id} /> : null}
           {tab === "walkthrough" ? <VnWalkthroughTab vnId={vn.id} /> : null}
           {tab === "records" ? <PlayRecordsTab vnId={vn.id} /> : null}

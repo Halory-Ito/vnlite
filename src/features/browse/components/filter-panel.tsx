@@ -19,10 +19,9 @@
  *
  * ## 交互
  *
- * 边改边生效（见 `FilterSheet` 旧版的说明），顶部固定汇总条，
- * 底部固定「已选 N 项 / 完成」。**不使用任何 Portal** ——
- * 就是一个 `absoluteFill` 的普通 View，铺在同层的最上面。
- * 因此它既不会穿透，也不会在关闭后残留。
+ * 边改边生效，顶部固定汇总条，底部固定「已选 N 项 / 完成」。
+ * **不使用任何 Portal**：就是一个 `absoluteFill` 普通视图铺在同层最上面，
+ * 关闭即整棵子树消失 —— 不会穿透，也不会残留。
  */
 
 import { Typography } from "heroui-native";
@@ -31,67 +30,28 @@ import { Pressable, useWindowDimensions, View } from "react-native";
 
 import { Muted } from "@/components/muted";
 import { useTranslation } from "@/hooks/use-translation";
-import { LENGTH, type DevStatus, type Language, type Platform } from "@/lib/api/enums";
+import type { DevStatus, Language, Platform } from "@/lib/api/enums";
 import type { VnFilterState } from "@/lib/api/filters";
 import { devStatusLabel, languageLabel, platformLabel } from "@/utils/format";
 
+import {
+  DECADE_YEARS,
+  DEV_STATUS_VALUES,
+  LENGTH_OPTIONS,
+  POPULAR_LANGUAGES,
+  POPULAR_PLATFORMS,
+  RATING_OPTIONS,
+  VOTECOUNTS,
+} from "@/features/browse/lib/filter-options";
 import {
   FilterChip,
   MultiSelectGroup,
   SingleSelectGroup,
   type FilterChipOption,
 } from "./filter-group";
+import { FilterTagGroup } from "./filter-tag-group";
 import { FilterSummary, describeFilters } from "./filter-summary";
 import { FullScreenPanel } from "./panel";
-
-/** 常用语言放前面，减少滚动（标签渲染期用 `languageLabel()` 取） */
-const POPULAR_LANGUAGES: Language[] = [
-  "ja",
-  "zh",
-  "zh-Hans",
-  "zh-Hant",
-  "en",
-  "ko",
-  "fr",
-  "de",
-  "ru",
-  "es",
-  "it",
-  "pt-br",
-];
-
-/** 常用平台放前面（标签渲染期用 `platformLabel()` 取） */
-const POPULAR_PLATFORMS: Platform[] = [
-  "win",
-  "mac",
-  "lin",
-  "and",
-  "ios",
-  "web",
-  "ps5",
-  "ps4",
-  "swi",
-  "xbo",
-];
-
-/** 时长选项直接用 VNDB 的英文描述（VNDB 原文即英文，两种语言都不翻译） */
-const LENGTH_OPTIONS: FilterChipOption[] = [1, 2, 3, 4, 5].map((n) => ({
-  value: String(n),
-  label: LENGTH[n] as string,
-}));
-
-const RATING_OPTIONS: FilterChipOption[] = [
-  { value: "90", label: "90+" },
-  { value: "85", label: "85+" },
-  { value: "80", label: "80+" },
-  { value: "70", label: "70+" },
-];
-
-/** 票数下限（标签渲染期翻译，模块级不存文案） */
-const VOTECOUNTS = [10, 50, 100, 500] as const;
-
-/** 发行年代：value 是 `releasedFrom` 的起始日期，标签渲染期翻译 */
-const DECADE_YEARS = [2020, 2015, 2010, 2005, 2000] as const;
 
 export interface FilterPanelProps {
   onClose: () => void;
@@ -124,7 +84,7 @@ export function FilterPanel({
     value: String(min),
     label: t("browse.filter.votecountOption", { min }),
   }));
-  const devStatusOptions: FilterChipOption[] = ([0, 1, 2] as DevStatus[]).map((n) => ({
+  const devStatusOptions: FilterChipOption[] = DEV_STATUS_VALUES.map((n) => ({
     value: String(n),
     label: devStatusLabel(n),
   }));
@@ -154,7 +114,6 @@ export function FilterPanel({
       onClose={onClose}
       fixedHeader={<FilterSummary filters={value} onChange={onChange} />}
       footer={
-        /* 底部固定条：条数 + 清空 */
         <View className="flex-row items-center justify-between gap-3 border-t border-separator px-4 py-3">
           <Muted type="body-xs">
             {activeCount === 0
@@ -193,6 +152,8 @@ export function FilterPanel({
         selected={value.minVotecount ? String(value.minVotecount) : null}
         onSelect={(v) => update({ minVotecount: v ? Number(v) : undefined })}
       />
+
+      <FilterTagGroup filters={value} update={update} />
 
       <MultiSelectGroup
         label={t("browse.filter.olang")}
@@ -247,7 +208,6 @@ export function FilterPanel({
         </View>
       </View>
 
-      {/* 给底部固定条留出空间，最后一个分组不会被压住 */}
       <View style={{ height: Math.max(0, height * 0.02) }} />
     </FullScreenPanel>
   );

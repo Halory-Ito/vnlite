@@ -8,8 +8,8 @@
 
 import { fetchVndbHtml } from "@/lib/scrape/client";
 
-import { parseReviewList, parseReviewPage } from "./scrape";
-import type { ReviewListPage, VndbReviewDetail } from "./scrape";
+import { parseReviewList, parseReviewPage, parseVnReviews } from "./scrape";
+import type { ReviewListPage, VndbReviewDetail, VnReviewEntry } from "./scrape";
 
 /**
  * 最新评价列表。
@@ -35,4 +35,15 @@ export async function fetchReview(
 ): Promise<VndbReviewDetail | null> {
   const html = await fetchVndbHtml(`/${reviewId}`, signal);
   return parseReviewPage(html, reviewId);
+}
+
+/**
+ * 某部作品的全部评价（VN 详情页「评价」页签）。
+ *
+ * 页面是 `/v17/reviews`：整页还带着作品的简介与标签，评价在
+ * `<div class="reviews">` 里 —— 解析见 `parseVnReviews`。
+ */
+export async function fetchVnReviews(vnId: string, signal?: AbortSignal): Promise<VnReviewEntry[]> {
+  const html = await fetchVndbHtml(`/${vnId}/reviews`, signal);
+  return parseVnReviews(html);
 }

@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 
-import { fetchLatestReviews, fetchReview } from "@/features/review/lib/client";
+import { fetchLatestReviews, fetchReview, fetchVnReviews } from "@/features/review/lib/client";
 
 /** 最新评价列表（`/w`）；`limit` 只截前端展示条数，不影响请求 */
 export function useLatestReviews(limit: number) {
@@ -30,6 +30,17 @@ export function useReview(reviewId: string) {
     queryKey: queryKeys.review.detail(reviewId),
     enabled: Boolean(reviewId),
     queryFn: ({ signal }) => fetchReview(reviewId, signal),
+    staleTime: STALE_TIME.catalog,
+    retry: false,
+  });
+}
+
+/** 某部作品的全部评价（VN 详情页「评价」页签） */
+export function useVnReviews(vnId: string) {
+  return useQuery({
+    queryKey: queryKeys.review.byVn(vnId),
+    enabled: Boolean(vnId),
+    queryFn: ({ signal }) => fetchVnReviews(vnId, signal),
     staleTime: STALE_TIME.catalog,
     retry: false,
   });

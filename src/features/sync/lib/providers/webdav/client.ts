@@ -22,7 +22,7 @@
 import { t } from "@/lib/i18n/translate";
 
 import { basicAuthValue } from "@/features/sync/lib/base64";
-import { AVATAR_FILE_NAME, BACKUP_FILE_NAME } from "@/features/sync/lib/backup";
+import { AVATAR_FILE_NAME, BACKUP_DIR, BACKUP_FILE_NAME } from "@/features/sync/lib/backup";
 import { request } from "@/features/sync/lib/providers/http";
 import type { RemoteFileInfo } from "@/features/sync/lib/providers/types";
 
@@ -64,6 +64,32 @@ export function errorForStatus(status: number): Error {
   return new Error(t("sync.requestFailed", { status: String(status) }));
 }
 
+/** 云盘上的完整文件地址（`{目录}/vnlite/{文件名}`） */
+export function remoteFileUrl(config: WebDavConfig, name: string): string {
+  return joinUrl(joinUrl(config.url, BACKUP_DIR), name);
+}
+
+/** 老版本的同级地址（备份目录还没有的时候）；只用于**读取**回退 */
+function legacyFileUrl(config: WebDavConfig, name: string): string {
+  return joinUrl(config.url, name);
+}
+
+/**
+ * 建备份目录（`MKCOL`）。
+ *
+ * WebDAV 的 `PUT` **不会**自动创建父目录，缺了就是 409 Conflict。
+ * 已经存在时服务器会回 405 Method Not Allowed（RFC 4918），同样算成功。
+ */
+export async function ensureBackupDir(config: WebDavConfig): Promise<void> {
+  const response = await request(joinUrl(config.url, BACKUP_DIR), {
+    method: "MKCOL",
+    headers: buildAuthHeaders(config),
+  });
+  // 201 建好了 / 405 已经有了；其它 2xx 也当成功
+  if (response.ok || response.status === 405) return;
+  throw errorForStatus(response.status);
+}
+
 /**
  * 上传备份。
  *
@@ -71,8 +97,9 @@ export function errorForStatus(status: number): Error {
  * @param body 备份 JSON 字符串
  */
 export async function putBackup(config: WebDavConfig, body: string): Promise<RemoteFileInfo> {
-  const url = joinUrl(config.url, BACKUP_FILE_NAME);
-  const response = await request(url, {
+  // 先确保 `vnlite/` 在（PUT 不会自动建目录）
+  await ensureBackupDir(config);
+  const response = await request(remoteFileUrl(config, BACKUP_FILE_NAME), {
     method: "PUT",
     headers: {
       ...buildAuthHeaders(config),
@@ -88,11 +115,26 @@ export async function putBackup(config: WebDavConfig, body: string): Promise<Rem
  * 下载备份。
  *
  * 服务器上没有这个文件时返回 null（不是错误 —— 只是还没上传过）。
+ *
+ * 顺序：先找 `vnlite/vnlite-backup.json`；没有就回退到老版本的同级
+ * `vnlite-backup.json`（1.4.3 及以前的备份）—— 老用户的备份不会「凭空消失」。
  */
 export async function getBackup(
   config: WebDavConfig
 ): Promise<{ body: string; info: RemoteFileInfo } | null> {
-  const url = joinUrl(config.url, BACKUP_FILE_NAME);
+  const found = await fetchBackupAt(remoteFileUrl(config, BACKUP_FILE_NAME), config);
+  if (found) return found;
+
+  const legacy = await fetchBackupAt(legacyFileUrl(config, BACKUP_FILE_NAME), config);
+  if (legacy) return legacy;
+  return null;
+}
+
+/** 从指定地址取备份；404 返回 null */
+async function fetchBackupAt(
+  url: string,
+  config: WebDavConfig
+): Promise<{ body: string; info: RemoteFileInfo } | null> {
   const response = await request(url, { method: "GET", headers: buildAuthHeaders(config) });
   if (response.status === 404) return null;
   if (!response.ok) throw errorForStatus(response.status);
@@ -114,16 +156,21 @@ export async function getBackup(
  * 下载头像。
  *
  * 服务器上没有这个文件时返回 null（沿用备份的语义：没传过不是错误）。
+ * 同样从 `vnlite/` 找，找不到再回退到老版本的同级文件。
  *
  * 上传那半在 `file.ts`（要用原生上传，bun 里跑不了）；
  * 这里是纯 fetch，冒烟脚本也能覆盖。
  */
 export async function getAvatar(config: WebDavConfig): Promise<Uint8Array | null> {
-  const response = await request(joinUrl(config.url, AVATAR_FILE_NAME), {
-    method: "GET",
-    headers: buildAuthHeaders(config),
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw errorForStatus(response.status);
-  return new Uint8Array(await response.arrayBuffer());
+  const urls = [remoteFileUrl(config, AVATAR_FILE_NAME), legacyFileUrl(config, AVATAR_FILE_NAME)];
+  for (const url of urls) {
+    const response = await request(url, {
+      method: "GET",
+      headers: buildAuthHeaders(config),
+    });
+    if (response.status === 404) continue;
+    if (!response.ok) throw errorForStatus(response.status);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  return null;
 }

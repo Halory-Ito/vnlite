@@ -89,12 +89,7 @@ export function VnCollection({ mode, items, onPressItem, footer }: VnCollectionP
         }
       />
 
-      <ImageViewer
-        images={covers}
-        index={viewerIndex}
-        onClose={() => setViewerIndex(null)}
-        onIndexChange={setViewerIndex}
-      />
+      <ImageViewer images={covers} index={viewerIndex} onClose={() => setViewerIndex(null)} />
     </View>
   );
 }

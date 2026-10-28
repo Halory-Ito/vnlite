@@ -30,6 +30,7 @@ import {
 } from "@/features/search/lib/search-logic";
 
 import { CatalogSearchResults } from "@/features/search/components/catalog-search-results";
+import { TagSearchResults } from "@/features/search/components/tag-search-results";
 import { UserSearchResults } from "@/features/search/components/user-search-results";
 import { VnSearchResults } from "@/features/search/components/vn-search-results";
 
@@ -82,6 +83,8 @@ export function SearchScreen(): JSX.Element {
             <VnSearchResults keyword={keyword} />
           ) : scope === "user" ? (
             <UserSearchResults keyword={keyword} />
+          ) : scope === "tag" ? (
+            <TagSearchResults keyword={keyword} />
           ) : (
             <CatalogSearchResults scope={scope} keyword={keyword} />
           )}

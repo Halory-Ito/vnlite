@@ -15,7 +15,7 @@
 
 import { t } from "@/lib/i18n/translate";
 
-import { AVATAR_FILE_NAME, BACKUP_FILE_NAME } from "@/features/sync/lib/backup";
+import { AVATAR_FILE_NAME, BACKUP_DIR, BACKUP_FILE_NAME } from "@/features/sync/lib/backup";
 import { request } from "@/features/sync/lib/providers/http";
 import type { ProviderContext, RemoteFileInfo } from "@/features/sync/lib/providers/types";
 import { ONEDRIVE_ENDPOINTS } from "./endpoints";
@@ -30,11 +30,16 @@ export const ONEDRIVE_CLIENT_ID_KEY = "clientId";
 /** 访问令牌缓存（内存）：配置 id → 令牌 */
 const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
+/** 已经确认存在的备份目录（内存）：避免每次上传都多打一趟 */
+const ensuredFolders = new Set<string>();
+
 /** 令牌提前 1 分钟就当过期（宁可多换一次也别卡在请求上） */
 const EXPIRY_MARGIN_MS = 60_000;
 
-function fileUrl(name: string): string {
-  return `${ONEDRIVE_ENDPOINTS.graph}/me/drive/root:/${name}:/content`;
+/** 云盘上的完整文件地址（`vnlite/{文件名}`）；`legacy` = 老版本的同级地址 */
+function fileUrl(name: string, legacy = false): string {
+  const path = legacy ? name : `${BACKUP_DIR}/${name}`;
+  return `${ONEDRIVE_ENDPOINTS.graph}/me/drive/root:/${path}:/content`;
 }
 
 function num(value: unknown, fallback: number): number {
@@ -49,9 +54,10 @@ function clientIdOf(ctx: ProviderContext): string {
   return (ctx.options[ONEDRIVE_CLIENT_ID_KEY] ?? "").trim();
 }
 
-/** 断开连接 / 配置被删时忘掉缓存里的令牌 */
+/** 断开连接 / 配置被删时忘掉缓存里的令牌与目录状态 */
 export function forgetAccessToken(configId: string): void {
   tokenCache.delete(configId);
+  ensuredFolders.delete(configId);
 }
 
 /** 拿一个可用的访问令牌（缓存没有或快过期就用刷新令牌换） */
@@ -82,6 +88,7 @@ async function graphError(response: Response): Promise<Error> {
 /** 上传备份正文 */
 export async function putBackup(ctx: ProviderContext, body: string): Promise<RemoteFileInfo> {
   const token = await accessToken(ctx);
+  await ensureBackupFolder(ctx);
   const response = await request(fileUrl(BACKUP_FILE_NAME), {
     method: "PUT",
     headers: {
@@ -101,39 +108,83 @@ export async function putBackup(ctx: ProviderContext, body: string): Promise<Rem
   };
 }
 
+/**
+ * 确保备份目录存在。
+ *
+ * 先查 `vnlite/`：有就直接返回（同一份配置一个会话只查一次）；
+ * 404 才建 —— 建的时候 409（别处已经建好了）也算成功。
+ */
+export async function ensureBackupFolder(ctx: ProviderContext): Promise<void> {
+  if (ensuredFolders.has(ctx.configId)) return;
+  const token = await accessToken(ctx);
+
+  const lookup = await request(`${ONEDRIVE_ENDPOINTS.graph}/me/drive/root:/${BACKUP_DIR}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (lookup.ok) {
+    ensuredFolders.add(ctx.configId);
+    return;
+  }
+  if (lookup.status !== 404) throw await graphError(lookup);
+
+  const created = await request(`${ONEDRIVE_ENDPOINTS.graph}/me/drive/root/children`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: BACKUP_DIR,
+      folder: {},
+      "@microsoft.graph.conflictBehavior": "fail",
+    }),
+  });
+  // 201 = 建好了，409 = 已经有了（并发 / 多设备），都能继续
+  if (!created.ok && created.status !== 409) throw await graphError(created);
+  ensuredFolders.add(ctx.configId);
+}
+
 /** 下载备份正文；云盘上没有这个文件时返回 null */
 export async function getBackup(
   ctx: ProviderContext
 ): Promise<{ body: string; info: RemoteFileInfo } | null> {
   const token = await accessToken(ctx);
-  const response = await request(fileUrl(BACKUP_FILE_NAME), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw await graphError(response);
 
-  const body = await response.text();
-  const length = Number(response.headers.get("Content-Length"));
-  const modified = response.headers.get("Last-Modified");
-  const modifiedAt = modified ? Date.parse(modified) : Number.NaN;
-  return {
-    body,
-    info: {
-      size: Number.isFinite(length) && length > 0 ? length : body.length,
-      modifiedAt: Number.isFinite(modifiedAt) ? modifiedAt : null,
-    },
-  };
+  // 先找 `vnlite/` 里的；没有就回退到老版本的同级文件
+  for (const legacy of [false, true]) {
+    const response = await request(fileUrl(BACKUP_FILE_NAME, legacy), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 404) continue;
+    if (!response.ok) throw await graphError(response);
+
+    const body = await response.text();
+    const length = Number(response.headers.get("Content-Length"));
+    const modified = response.headers.get("Last-Modified");
+    const modifiedAt = modified ? Date.parse(modified) : Number.NaN;
+    return {
+      body,
+      info: {
+        size: Number.isFinite(length) && length > 0 ? length : body.length,
+        modifiedAt: Number.isFinite(modifiedAt) ? modifiedAt : null,
+      },
+    };
+  }
+  return null;
 }
 
-/** 下载头像；云盘上没有时返回 null */
+/** 下载头像；云盘上没有时返回 null（同样回退老位置） */
 export async function getAvatar(ctx: ProviderContext): Promise<Uint8Array | null> {
   const token = await accessToken(ctx);
-  const response = await request(fileUrl(AVATAR_FILE_NAME), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw await graphError(response);
-  return new Uint8Array(await response.arrayBuffer());
+  for (const legacy of [false, true]) {
+    const response = await request(fileUrl(AVATAR_FILE_NAME, legacy), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.status === 404) continue;
+    if (!response.ok) throw await graphError(response);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  return null;
 }
 
 /** 上传头像用的地址（原生上传那边用） */

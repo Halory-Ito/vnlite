@@ -56,6 +56,8 @@ export const queryKeys = {
   tag: {
     all: ["tag"] as const,
     list: (search?: string, page?: number) => ["tag", "list", search ?? "", page ?? 1] as const,
+    /** 全站最多的内容大标签候选（浏览筛选 / 排行榜题材列表共用的基础清单） */
+    top: () => ["tag", "top"] as const,
     detail: (id: string) => ["tag", "detail", id] as const,
     vns: (id: string, direct: boolean) =>
       ["tag", "vns", id, direct ? "direct" : "inherit"] as const,
@@ -109,6 +111,30 @@ export const queryKeys = {
     list: (limit: number) => ["review", "list", limit] as const,
     /** 单条评价详情（`/w18526`，站内评价页） */
     detail: (id: string) => ["review", "detail", id] as const,
+    /** 某部作品的全部评价（`/v17/reviews`，VN 详情页「评价」页签） */
+    byVn: (vnId: string) => ["review", "byVn", vnId] as const,
+  },
+
+  /* ---- 相似作品（作品页「相似」页签：本作的标签 → 别的作品） ---- */
+  similar: {
+    all: ["similar"] as const,
+    /** `tagKey` = 参与计算的标签 id 串，标签变了整条链自然重置 */
+    list: (vnId: string, tagKey: string) => ["similar", "list", vnId, tagKey] as const,
+  },
+
+  /* ---- 发售日历 ---- */
+  calendar: {
+    all: ["calendar"] as const,
+    /** `month` = `YYYY-MM` */
+    month: (month: string) => ["calendar", "month", month] as const,
+  },
+
+  /* ---- 排行榜 / 大赏 ---- */
+  ranking: {
+    all: ["ranking"] as const,
+    year: (year: number) => ["ranking", "year", year] as const,
+    /** `tagIds` 排序后拼接：同组合不同选择顺序都命中同一份缓存 */
+    tag: (tagIds: readonly string[]) => ["ranking", "tag", [...tagIds].sort().join(",")] as const,
   },
 
   /* ---- 攻略（静态 JSON 仓库，不是 Kana API，见 features/walkthrough） ---- */

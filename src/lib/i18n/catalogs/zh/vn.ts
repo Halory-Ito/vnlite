@@ -19,10 +19,18 @@ export const zhVn = {
     tabScreenshots: "截图",
     tabRelations: "关联",
     tabQuotes: "语录",
+    tabReviews: "评价",
+    tabSimilar: "相似",
     tabDiscussions: "讨论",
     tabWalkthrough: "攻略",
     tabRecords: "记录",
     tabExtLinks: "外链",
+
+    /** 相似页签 */
+    similarLoading: "正在找相似的作品…",
+    similarEmptyTitle: "没有找到相似的作品",
+    similarEmptyDescription: "这个标签组合暂时没有别的作品，换部作品试试",
+    similarNoTags: "这部作品的内容标签太少，算不出相似作品",
 
     /** 概览页签 */
     description: "简介",

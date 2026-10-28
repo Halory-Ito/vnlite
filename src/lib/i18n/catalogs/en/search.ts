@@ -10,6 +10,7 @@ export const enSearch: CatalogOf<typeof zhSearch> = {
       staff: "Staff",
       user: "User",
       producer: "Producer",
+      tag: "Tag",
     },
 
     noun: {
@@ -17,6 +18,7 @@ export const enSearch: CatalogOf<typeof zhSearch> = {
       staff: "staff",
       user: "users",
       producer: "producers",
+      tag: "tags",
     },
 
     loading: "Searching…",
@@ -27,6 +29,8 @@ export const enSearch: CatalogOf<typeof zhSearch> = {
     emptyDescription: "No %{noun} found for “%{keyword}”",
     userEmptyTitle: "User not found",
     vnEmptyTitle: "No visual novels found",
+
+    tagMeta: "%{count} visual novels",
 
     resultsHeadline: "Search results for “%{keyword}”",
 

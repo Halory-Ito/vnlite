@@ -121,6 +121,117 @@ function parseScore(cell: string): number | null {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 作品页的评价（/v17/reviews）                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 作品页「评价」页签的一条。
+ *
+ * 与列表页 `/w` 的结构**完全不同**：那边是表格，这里是 `<div class="reviews">`
+ * 里的 `<article>` 卡片：
+ *
+ * ```html
+ * <div class="reviews"><article>
+ *   <div>
+ *     <span>Short by <a href="/u154784">succhunter</a> on 2022-04-30</span>
+ *     <a href="/r60521">r60521</a>            <!-- 可选：评价针对的发行版 -->
+ *     <span>9/10</span>
+ *   </div>
+ *   <div></div>
+ *   <div><span>&lt;<a href="/report/w4208">report</a>></span>正文…<a href="/w4208#review"> Read more »</a></div>
+ *   <div><a href="/w4208#threadstart">1 comment</a>…<small> 10 points</small></div>
+ * </article>…</div>
+ * ```
+ *
+ * 所以只能另写一套解析；同样只依赖上面这几个形状，认不出就整条丢掉。
+ */
+export interface VnReviewEntry {
+  /** `w4208` */
+  id: string;
+  author: string | null;
+  authorId: string | null;
+  /** `YYYY-MM-DD` */
+  date: string | null;
+  /** 0–10（官网允许一位小数，如 `9.4/10`） */
+  score: number | null;
+  /** `Short` / `Medium` / `Long` */
+  length: string | null;
+  /** 正文摘要（纯文本；长评价在「Read more」处截断） */
+  excerpt: string;
+  /** 有用度（`10 points`） */
+  points: number | null;
+  /** 评论数 */
+  comments: number;
+}
+
+/** 卡片头部：`Short by <a>…</a> on 2022-04-30` + 分数 */
+const VN_REVIEW_HEADER_RE = /^<div>([\s\S]*?)<\/div>/;
+/** 正文：报告链接的 `</span>` 之后，到页脚 div 之前（页脚是 `w… #threadstart` 链接） */
+const VN_REVIEW_BODY_RE =
+  /<span>&lt;<a href="\/report\/w\d+">report<\/a>><\/span>([\s\S]*?)<\/div>/;
+
+/** 解析作品页的评价列表。解析不到时返回空数组（不抛） */
+export function parseVnReviews(html: string): VnReviewEntry[] {
+  const start = html.indexOf('<div class="reviews">');
+  if (start < 0) return [];
+
+  const entries: VnReviewEntry[] = [];
+  const parts = html.slice(start).split("<article>");
+
+  for (const raw of parts.slice(1)) {
+    const chunk = raw.split("</article>")[0] ?? "";
+    // 评价 id 从「report」链接里取（每张卡片都有）
+    const id = chunk.match(/<a href="\/report\/w(\d+)">/)?.[1];
+    if (!id) continue;
+
+    const header = chunk.match(VN_REVIEW_HEADER_RE)?.[1] ?? "";
+    const headerText = toText(header);
+    const authorLink = header.match(USER_LINK_RE);
+
+    entries.push({
+      id: `w${id}`,
+      author: authorLink ? toText(authorLink[2] ?? "") || null : null,
+      authorId: authorLink ? `u${authorLink[1]}` : null,
+      date: headerText.match(/\bon\s+(\d{4}-\d{2}-\d{2})/)?.[1] ?? null,
+      score: parseVoteHtml(header),
+      length: headerText.match(/^(Short|Medium|Long)\b/)?.[1] ?? null,
+      excerpt: excerptOf(chunk.match(VN_REVIEW_BODY_RE)?.[1] ?? ""),
+      points: toNumber(chunk.match(/(\d+)\s+points?/)?.[1]),
+      comments: toNumber(chunk.match(/(\d+)\s+comments?/)?.[1]) ?? 0,
+    });
+  }
+
+  return entries;
+}
+
+/**
+ * `9/10` / `9.4/10` → 9 / 9.4。
+ *
+ * ⚠️ 必须从**原始 HTML** 里取：`toText` 去标签时不加空格，
+ * `…2022-04-30</span><span>9/10` 会粘成 `2022-04-309/10`，
+ * 按纯文本匹配会读出 309 分。
+ */
+function parseVoteHtml(html: string): number | null {
+  const raw = html.match(/(\d+(?:\.\d+)?)\s*\/\s*10\s*</)?.[1];
+  if (!raw) return null;
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function toNumber(raw: string | undefined): number | null {
+  if (raw === undefined) return null;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** 正文 HTML → 纯文本摘要（去掉「Read more »」这类链接尾巴） */
+function excerptOf(html: string): string {
+  const text = toText(html);
+  const cut = text.indexOf("Read more");
+  return (cut >= 0 ? text.slice(0, cut) : text).trim();
+}
+
+/* -------------------------------------------------------------------------- */
 /* 详情（/w18526）                                                             */
 /* -------------------------------------------------------------------------- */
 

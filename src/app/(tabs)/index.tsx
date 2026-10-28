@@ -19,9 +19,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Card, Skeleton } from "heroui-native";
+import { Button, Card, Skeleton } from "heroui-native";
 import type { JSX } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
@@ -46,8 +46,39 @@ export default function HomeTab(): JSX.Element {
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
       <QuoteCard />
       <RandomVnCard />
+      <DiscoverRow />
       <HomeFeed />
     </ScrollView>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 发现入口：发售日历 / 排行榜                                                  */
+/* -------------------------------------------------------------------------- */
+
+function DiscoverRow(): JSX.Element {
+  const router = useRouter();
+  const { t } = useTranslation();
+
+  return (
+    <View className="mx-4 my-3 flex-row gap-2">
+      <Button
+        size="sm"
+        variant="secondary"
+        className="flex-1"
+        onPress={() => router.push("/calendar")}
+      >
+        <Button.Label>{t("home.calendar")}</Button.Label>
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        className="flex-1"
+        onPress={() => router.push("/ranking")}
+      >
+        <Button.Label>{t("home.ranking")}</Button.Label>
+      </Button>
+    </View>
   );
 }
 
@@ -198,18 +229,23 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
   // 长按整行复制「作品名 + 官网链接」；长按不会连带触发 onPress（进详情页）
   const copyable = useCopyProps(vnCopyText(vn), { preview: vn.title });
   const coverLabel = t("home.coverLabel", { title: vn.title });
-  const cover = vn.image?.url
-    ? [
-        {
-          url: vn.image.url,
-          thumbnail: vn.image.thumbnail,
-          dims: vn.image.dims,
-          sexual: vn.image.sexual,
-          violence: vn.image.violence,
-          label: coverLabel,
-        },
-      ]
-    : [];
+  // 查看器的图组引用必须稳定（ImageViewer 的 data 引用一变就重建条目）
+  const cover = useMemo(
+    () =>
+      vn.image?.url
+        ? [
+            {
+              url: vn.image.url,
+              thumbnail: vn.image.thumbnail,
+              dims: vn.image.dims,
+              sexual: vn.image.sexual,
+              violence: vn.image.violence,
+              label: coverLabel,
+            },
+          ]
+        : [],
+    [vn.image, coverLabel]
+  );
 
   return (
     <>

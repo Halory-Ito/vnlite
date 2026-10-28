@@ -15,11 +15,11 @@
  */
 
 import { t, type TranslationKey } from "@/lib/i18n/translate";
-import type { Producer, Staff } from "@/lib/api/types";
+import type { Producer, Staff, Tag } from "@/lib/api/types";
 import { producerTypeLabel } from "@/utils/format";
 
 /** 搜索页支持的范围，顺序即分段控件里从左到右的顺序 */
-export const SEARCH_SCOPES = ["vn", "staff", "user", "producer"] as const;
+export const SEARCH_SCOPES = ["vn", "staff", "user", "producer", "tag"] as const;
 export type SearchScope = (typeof SEARCH_SCOPES)[number];
 
 /**
@@ -33,6 +33,7 @@ export const SCOPE_LABEL_KEY: Record<SearchScope, TranslationKey> = {
   staff: "search.scope.staff",
   user: "search.scope.user",
   producer: "search.scope.producer",
+  tag: "search.scope.tag",
 };
 
 /** 完整的集合名：空态文案（「没有与 x 匹配的制作者」）与行长数据用 */
@@ -41,6 +42,7 @@ export const SCOPE_NOUN_KEY: Record<SearchScope, TranslationKey> = {
   staff: "search.noun.staff",
   user: "search.noun.user",
   producer: "search.noun.producer",
+  tag: "search.noun.tag",
 };
 
 /** 分段控件的选项（渲染时 `t(labelKey)` 翻成档位名） */
@@ -155,5 +157,20 @@ export function toProducerEntries(pages: { results: Producer[] }[] | undefined):
     title: producer.name,
     original: producer.original ?? null,
     meta: `${producerTypeLabel(producer.type ?? "in")} · ${producer.id}`,
+  }));
+}
+
+/**
+ * 标签分页结果 → 行数据。
+ *
+ * 右侧显示「标签 id · N 部作品」：id（`g19`）能一眼看出是标签，
+ * 作品数则告诉用户这个标签是热门大标签还是冷门小标签。
+ */
+export function toTagEntries(pages: { results: Tag[] }[] | undefined): SearchEntry[] {
+  return flatMapEntries(pages, (tag) => ({
+    id: tag.id,
+    title: tag.name,
+    original: null,
+    meta: `${tag.id} · ${t("search.tagMeta", { count: tag.vn_count ?? 0 })}`,
   }));
 }

@@ -24,7 +24,9 @@
     "build:ios:sim": "bunx eas-cli build --platform ios --profile preview-simulator",
     "smoke:theme": "bun run scripts/smoke-theme.ts",
     "smoke:layout": "bun run scripts/smoke-layout.ts",
-    "sync:kungal": "bun run scripts/sync-kungal-logos.ts"
+    "sync:kungal": "bun run scripts/sync-kungal-logos.ts",
+    "sync:awards": "bun run scripts/sync-awards.ts",
+    "sync:getchu-awards": "bun run scripts/sync-getchu-awards.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
@@ -59,6 +61,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-calendars": "^1.1314.0",
     "react-native-chart-kit": "^7.0.4",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.1",

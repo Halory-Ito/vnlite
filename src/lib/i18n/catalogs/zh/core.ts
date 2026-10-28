@@ -38,6 +38,7 @@ export const zhCore = {
     collapse: "收起",
     noImage: "无图",
     noCover: "暂无封面",
+    anonymous: "匿名",
     doubleTapReveal: "双击显示",
     doubleTapRevealHint: "双击可显示或隐藏敏感内容",
     image: "图片",
@@ -85,6 +86,8 @@ export const zhCore = {
     feedReviews: "最新评价",
     feedUpcoming: "即将发售",
     feedReleased: "最新上架",
+    calendar: "发售日历",
+    ranking: "排行榜",
     upcomingEmpty: "没有即将发售的作品",
     releasedEmpty: "没有新发售的作品",
   },
@@ -214,6 +217,10 @@ export const zhCore = {
     openVn: "打开作品详情：%{title}",
     openUser: "打开用户页：%{author}",
     spoilerHidden: "（剧透内容，点按显示）",
+    vnEmptyTitle: "还没有评价",
+    vnEmptyDescription: "这部作品在 VNDB 上还没有人写评价",
+    points: "%{count} 人觉得有用",
+    comments: "%{count} 条评论",
   },
 
   /** utils/format 的通用文案（枚举中英表在 format.language） */

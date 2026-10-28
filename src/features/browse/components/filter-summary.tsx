@@ -23,6 +23,8 @@ import type { VnFilterState } from "@/lib/api/filters";
 import { t as translate } from "@/lib/i18n/translate";
 import { devStatusLabel, languageLabel, platformLabel } from "@/utils/format";
 
+import { getTagName } from "@/features/browse/lib/tag-names";
+
 /** 一条生效中的条件。`clear` 返回清掉它之后的新状态 */
 export interface ActiveFilter {
   key: string;
@@ -50,8 +52,9 @@ export function describeFilters(filters: VnFilterState): ActiveFilter[] {
 
   for (const tag of filters.tags ?? []) {
     out.push({
+      // 名字来自选用时的字典（filters 里只存 id）；没记住名字才退回裸 id
       key: `tag:${tag}`,
-      label: `#${tag}`,
+      label: `#${getTagName(tag) ?? tag}`,
       clear: (f) => ({ ...f, tags: without(f.tags, tag) }),
     });
   }

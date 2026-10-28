@@ -90,6 +90,7 @@ function CollectionStatsSection(): JSX.Element {
 function CollectionContent({ items }: { items: UListItem[] }): JSX.Element {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
+  const router = useRouter();
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const labels = useUlistLabels();
@@ -127,6 +128,12 @@ function CollectionContent({ items }: { items: UListItem[] }): JSX.Element {
         <StatBlock value={String(summary.total)} label={t("stats.total")} tone="accent" />
         <StatBlock value={String(summary.finished)} label={t("stats.finished")} />
         <StatBlock value={formatRating(summary.averageVote)} label={t("stats.averageVote")} />
+      </View>
+
+      <View className="px-4 pb-2">
+        <Button size="sm" variant="secondary" onPress={() => router.push("/stats/list")}>
+          <Button.Label>{t("stats.listAnalysis")}</Button.Label>
+        </Button>
       </View>
 
       <PieSection

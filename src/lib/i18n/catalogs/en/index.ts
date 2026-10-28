@@ -6,6 +6,7 @@
  */
 
 import { enBrowse } from "./browse";
+import { enCalendar } from "./calendar";
 import { enCatalog } from "./catalog";
 import { enCore } from "./core";
 import { enDiscussion } from "./discussion";
@@ -14,6 +15,7 @@ import { enFavorite } from "./favorite";
 import { enHistory } from "./history";
 import { enMisc } from "./misc";
 import { enProfile } from "./profile";
+import { enRanking } from "./ranking";
 import { enRecords } from "./records";
 import { enSearch } from "./search";
 import { enStats } from "./stats";
@@ -41,6 +43,8 @@ export const en = {
   ...enStats,
   ...enSync,
   ...enProfile,
+  ...enCalendar,
+  ...enRanking,
   enums: { ...enEnums },
   ...enMisc,
 };

@@ -18,10 +18,17 @@ export const enVn: CatalogOf<typeof zhVn> = {
     tabScreenshots: "Screenshots",
     tabRelations: "Relations",
     tabQuotes: "Quotes",
+    tabReviews: "Reviews",
+    tabSimilar: "Similar",
     tabDiscussions: "Discussions",
     tabWalkthrough: "Walkthrough",
     tabRecords: "Play time",
     tabExtLinks: "Links",
+
+    similarLoading: "Looking for similar novels…",
+    similarEmptyTitle: "No similar novels found",
+    similarEmptyDescription: "No other novel matches this tag combination — try another title",
+    similarNoTags: "This novel has too few content tags to compute similarities",
 
     description: "Description",
     noDescription: "No description available.",

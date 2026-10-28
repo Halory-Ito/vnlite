@@ -32,6 +32,13 @@ export const enBrowse: CatalogOf<typeof zhBrowse> = {
       rating: "Minimum rating",
       votecount: "Minimum vote count",
       votecountOption: "≥%{min} votes",
+      /** Tag filter (filter-group / tag-search) */
+      tags: "Tags",
+      addTag: "Add tag",
+      tagPlaceholder: "Search tag names",
+      tagNoResults: "No matching tags",
+      tagInList: "In filters",
+      tagVnCount: "%{count} works",
       olang: "Original language",
       platform: "Platforms",
       length: "Length",

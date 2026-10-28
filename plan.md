@@ -237,6 +237,18 @@
         即将发售与最新上架的 TBA 与排序 / 评价列表与详情抓取解析）
 - [x] `features/browse/components/FilterSheet` —— 高级筛选（评分 / 票数 / 语言 /
       平台 / 时长 / 开发状态 / 年代 / 内容完整度）
+- [x] **筛选支持题材**（Master 要求，2026-10-28）：筛选面板加「题材」分组，
+      **可多选**（组合之间「都命中」，`compileVnFilters` 的 tag 语义本就支持）
+  - [x] 已选题材 chip 在先、点一下取消；下面铺作品数前 12 的快捷推荐（直接点即选）
+  - [x] 「添加题材」展开搜索块（`components/tag-search.tsx`，从排行模块提升为
+        browse 共享组件，`autoFocus` 由调用方决定） —— 长尾题材搜名字加进来
+  - [x] 筛选状态只存 id（`VnFilterState.tags`，缓存 key 干净）；名字进
+        `lib/tag-names.ts` 的 **id→名字字典**（模块级 store + KV `browse_tag_names`，
+        跨会话仍在），汇总条与面板显示「#名字」，记不住名字才退回裸 id
+  - [x] **快捷推荐与题材榜的自定义列表一致**（Master 要求）：两边都用
+        `hooks/use-custom-tags` 装配（自动候选 ∪ 排行榜加的 − 排行榜删的，
+        状态在 `features/ranking/lib/tag-pool` 同一份 store / KV）；
+        榜里编辑删除、搜索添加马上反映到筛选的推荐里；冒烟 81 → 82 项
 - [x] `components/SegmentedControl`
 - [x] **卡片显示项可配置**：独立的「卡片显示」面板（入口在浏览页头部，**筛选按钮左边**）
       （评分 / 发售日期 / 原语言 / 时长 / 平台 / 开发状态），存 `preferences.cardFields`
@@ -913,7 +925,19 @@
       reanimated 4 + gesture-handler 2 + worklets 都是现成依赖）
 - [x] 能力：双指缩放（maxScale 6）/ 双击放大 / 拖动平移 / 左右滑换图 /
       上下滑关闭 / 顶部显示 `i / n` + 关闭按钮（吃安全区）
-- [x] 组件本身不持状态（`index === null` 即关闭），封面与截图墙共用一个
+- [x] 组件不持「开/关」状态（`index === null` 即关闭），封面与截图墙共用一个；
+      翻页下标由查看器内部自持（`index` 只作打开那一刻的初始值，见下）
+- [x] **修复「切换截图闪几帧别的图」**（两层机制，都已处理）：
+      ①滑动落定时 `onIndexChange` 直连父 setState，父重渲染连带重建 `images`
+      （每次 `map` 都是新数组）+ `data={[...images]}` 每次复制，`Gallery` 对
+      `data` 引用变化敏感，条目在滑动过渡中途被重建 —— 修法：翻页位置由查看器
+      内部持有（打开即挂载、关闭即卸载的内部体 useState），`data` 直传不复制，
+      调用方 `images` 一律 `useMemo` 稳住引用，`onIndexChange` 只留作可选通报
+      ②`GalleryItem` 自带 memo 但比较器含 `renderItem` 引用 —— 内联箭头函数
+      每次渲染都是新引用，查看器任何一次 setState 都重建全部条目，重建时
+      动画样式（transform）有重挂空档，上一张（zIndex 更高：`data.length - index`，
+      图已解码）闪现在当前张上面 —— 修法：`renderItem` 用 `useCallback` 稳定，
+      当前下标 / NSFW 放行记录改走 context 下发，条目自己订阅
 - [x] **修复「查看器一片空白」**：`GalleryItem` 的内层容器是**按内容量尺寸**的
       （量出来的宽高当作图片尺寸去算缩放/平移边界），子元素写 `w-full/h-full` 会量出 0。
       现在用 `fitContainer(比例, 窗口)` 显式算出像素尺寸再渲染，比例取自 API 的 `dims`
@@ -1627,3 +1651,209 @@ features/<module>/
 - [x] `bun run typecheck` / `lint` / `format:check` 全绿
 - [x] `smoke:db` 73 项、`smoke:theme`、`smoke:layout` 全绿
 - [x] `bun run bundle:check` 通过（3470 modules，与重构前一致）
+
+---
+
+## Module 14 · 备份目录 / 评价页签 / 标签搜索 / 相似推荐 / 清单分析（2026-10-27）
+
+> Master 要求：① 同步时先在云盘建 `vnlite/` 目录，备份放进去；
+> ② VN 详情加「评价」页签；③ 搜索页支持按标签搜；④ 相似推荐；⑤ 清单分析。
+
+### Type 14.1 · 备份收进 `vnlite/` 目录
+
+- [x] `lib/backup.ts#BACKUP_DIR = "vnlite"`：备份与头像都放进去，不再和用户自己的文件混在一起
+- [x] WebDAV：先 `MKCOL {目录}/vnlite`（PUT 不会自动建父目录）
+  - [x] 2xx 视为建好；**405 = 已经存在**（RFC 4918），同样继续
+  - [x] 原生头像上传（`file.ts`）也要先建目录 —— 它不走 `putBackup`
+- [x] OneDrive：先 `GET /me/drive/root:/vnlite`，404 才 `POST /children` 建
+  - [x] 409 = 别处已经建好（多设备并发），继续；同一份配置一个会话只查一次
+- [x] **老备份不丢**：下载先找 `vnlite/`，404 再回退到老版本的同级文件（备份 + 头像）
+- [x] 冒烟：假服务器记录 `MKCOL`、断言文件落在 `/dav/vnlite/…`、老位置回退可读（WebDAV + OneDrive）
+
+### Type 14.2 · VN 详情「评价」页签
+
+- [x] 抓 `/v{id}/reviews`（`fetchVnReviews`）—— Kana 没有 reviews 端点
+- [x] `parseVnReviews` 解析卡片式结构：作者 / 日期 / 分数 / 篇幅 / 摘要 / 有用数 / 评论数
+  - [x] ⚠️ 分数从**原始 HTML** 取：`toText` 去标签不加空格，`…30</span><span>9/10`
+        会粘成 `…309/10`（读出 309 分，冒烟卡住）
+  - [x] 长评价在「Read more」处截断；没有 report 链接的坏卡片整条丢掉
+- [x] `VnReviewsTab`：卡片列表 + 点击弹 `ReviewDialog`（复用首页那套）
+- [x] 页签插在「语录」与「讨论」之间；zh / en 文案补齐
+- [x] 冒烟：卡片字段 / 小数分 / Read more 截断 / 坏卡片丢弃 / 非评价页返回空
+
+### Type 14.3 · 搜索页「标签」档
+
+- [x] `SEARCH_SCOPES` 加 `tag`（第五档），分段控件仍在同一行放得下
+- [x] `useTagSearch` → `/tag?search=` + `searchrank` 排序 + 无限翻页
+- [x] `toTagEntries`：右侧显示「标签 id · N 部作品」
+- [x] 点一行进 `/tag/{id}`（那个页面列出该标签下的作品）
+- [x] 冒烟：行数据（id / 名称 / 作品数）
+
+### Type 14.4 · 作品页「相似」页签
+
+> 初版做成了「我的 → 相似推荐」（按收藏算口味），Master 指出放在作品页更合适 ——
+> 语境就是「和这部相似的作品」，也不用登录。已改成页签，独立页面与入口一并移除。
+
+- [x] `features/recommend/lib/recommend.ts`（纯逻辑）
+  - [x] `pickSimilarTags(limit = 4)`：只取**内容标签**（`category !== "tech"`）、
+        非剧透、`rating >= 2`，按认可度降序
+  - [x] 为什么不取技术标签：ADV / NVL / Multiple Endings 几乎每部都有，
+        拿它们去查只会把「所有 ADV」都捞回来
+  - [x] `excludeIds`：本作不出现在相似列表里
+- [x] `useSimilarVns(vn)`：`or(byTag…)` + `rating >= 60` → 按评分降序取 30 条
+- [x] `VnSimilarTab`：**只给封面网格**（不显示「基于标签：…」—— 点进来的人要看的是作品），
+      点一个进那部作品；标签太少 / 无结果各有空态
+- [x] 页签插在「评价」与「讨论」之间；`/recommend` 页面与「我的」入口已删除
+- [x] 冒烟：只留内容标签 / 按认可度排序 / limit / 排除本作 / 无标签返回空
+
+### Type 14.5 · 清单分析
+
+- [x] `features/stats/lib/list-analysis.ts`（纯逻辑）
+  - [x] `statusBuckets`：六个内置状态各多少（在玩 / 已通关 / 搁置 / 抛弃 / 想玩 / 黑名单）
+  - [x] `voteBuckets`：1–10 分分布（VNDB 的 vote 是 10–100，按 10 分制取整档）
+  - [x] `backlogSummary`：待玩数量 + **预计时长**（按 `vn.length` 的 1–5 档取中位数，
+        没填按中篇估）；已通关 / 抛弃 / 黑名单不计
+  - [x] `voteComparison`：只比两边都有分的条目，统一换成 10 分制
+  - [x] `completionSummary`：完成率的分母排除黑名单
+- [x] `ULIST_STATS_FIELDS` 补 `vn.length` / `vn.rating`
+- [x] `/stats/list` 页面：概览三块数字 + 待玩预估 + 我的 vs 社区 + 状态 / 评分 / 年代三组横条
+- [x] 记录统计页的收藏区加「清单分析」入口；`src/app/stats.tsx` 挪成 `stats/index.tsx`，
+      才能同时存在 `/stats` 与 `/stats/list`
+- [x] 顺手修 `HorizontalBars` 的基准（原来假设首项最大，状态 / 评分分布的顺序有语义）
+- [x] 冒烟：状态 / 评分分布 / backlog / 与社区比 / 完成率
+
+### Type 14.6 · 质量
+
+- [x] `smoke:db` 73 → 77 项全绿
+- [x] `typecheck` / `lint` / `format:check` 全绿
+- [x] `bun run bundle:check` 通过（3481 modules）
+- [ ] 真机验证：① 坚果云 / Nextcloud 上 `MKCOL` 是否被接受；② OneDrive 首次上传是否自动落到
+      `vnlite/`；③ 作品评价页与标签搜索的实际排版
+
+---
+
+## Module 15 · 发售日历 / 排行榜 / 大赏（2026-10-27）
+
+> Master 要求：① 发售日历；② 排行榜（每年最佳 10 部 / 每个题材最佳 10 部）；
+> ③ 历年来美少女游戏「打赏」（大赏）名单。
+
+### Type 15.1 · 发售日历
+
+- [x] `features/calendar/lib/calendar.ts`（纯逻辑）
+  - [x] `addMonths` 跨年翻月、`monthRange` 算首尾（闰月 2 月 29 号也对）
+  - [x] `daysInMonth` / `clampMonth`（1950–2100，跳转输入越界只翻到边界）
+  - [x] `groupByDay`：只收**精确到日**的 `released`（`2026-10` / `TBA` 不进日历）
+- [x] `useMonthReleases`：`/vn` 按 `released` 区间查、发售日升序、翻页拉全（最多 5 页）
+- [x] 月历改用第三方 **`react-native-calendars` 的 `CalendarList`**
+  - [x] 纵向分页（`pagingEnabled`），相邻月份预先在原生列表里，没有淡入淡出
+  - [x] 自定义 `dayComponent`：今天空心圆 / 选中实心圆 / 有发售的小圆点
+        （尺寸和圆角显式写死；日期数字 `selectable={false}`，避免文字选区变方块）
+  - [x] **星期行固定在列表外**（页内 header 置空），翻月时不会跟着滚走；
+        页高 = 6 × 48 = 288，`calendarHeight` 与列表视口严格一致
+  - [x] 日期格的主题色 / 文案走 Context（42 个格子不再各调 3 个 hook）；
+        `memo` 只比 `dateString` + `marked/selected`，加载分页时不重渲染整月
+  - [x] **左右各预取一个月的第一页**：滑到相邻月份时圆点已经在了；
+        当前月仍然自动拉全（最多 `MAX_PAGES` = 5 页 / 500 部）
+  - [x] 快速甩动时库会渲染占位页，把占位文字置透明，避免闪出 `2026-01-01`
+  - [x] 页高固定 6 行（`calendarStyle` 去掉默认左右 padding），4–5 行的月份补空
+  - [x] 「跳转」走 `scrollToMonth` 直达；初始月份之前 / 之后各生成到 1950–2100
+  - [x] **切月不自动选中**任何一天（不默认今天 / 第一个有发售的日子），由用户自己点；
+        没选日期时下方留空，不预先铺整月
+  - [x] 下方列表用 `FlashList`，只列选中的那一天；换月 / 换日期自动回到顶部
+  - [x] 空态只看第一页是否加载完，不会因为「后面还有页」一直转圈
+  - [x] 读屏用 `accessibilityActions`（increment / decrement）补上切月能力
+  - [x] 平板上日历限宽 560 并居中，格子不会被拉成大块
+- [x] 首页新增「发售日历 / 排行榜」两个入口（放在语录与随机之后）
+- [x] 冒烟：跨年翻月 / 闰月区间 / 同一天合并 / 整月与 TBA 被过滤 /
+      闰年天数 / 越界月份夹取 / 翻页范围（1950–2100）
+
+### Type 15.2 · 排行榜
+
+- [x] `queryTopVns`：`/vn` 评分降序 + **至少 30 票**（否则榜首常是一两票的冷门 100 分）
+- [x] 年度榜：2000 年至今，年份 chip + 前 10
+- [x] 题材榜：全站作品数最多的**内容标签**（`category === "cont"`，排除 ADV / NVL 这类技术标签）
+      做候选 chip + 前 10
+- [x] 题材榜标签**可多选**：组合之间是「全都命中」（AND），缓存 key 用排序后的 id 串，
+      同组合不同选择顺序命中同一份缓存；清空组合显示空态，不请求
+- [x] **选题材收进全屏面板**（`components/tag-panel.tsx`）：主屏只留
+      「选择题材 (N)」按钮 + 已选 chip（点一下取消），选择 / 取消 / 删除 / 添加都在面板里 ——
+      横向滚动行一长既看不清选了哪些也点不中
+  - [x] 顶部搜索框：结果带作品数，点一下加入列表并选中；已在列表的标「已在列表」
+  - [x] 「已选」一节：当前命中的题材一目了然，点 chip 取消
+  - [x] 「题材列表」一节：全部候选勾选切换；右上角「编辑」进入删除模式（题材带 ×）
+- [x] **题材列表可自定义**（`lib/tag-pool.ts`，模块级共享状态 + KV 持久化）：
+  - [x] 列表 = 自动候选（作品数前 24 的内容标签）∪ 自加题材 − 已删除
+  - [x] 删除自己加的直接删掉；删除候选记进**屏蔽名单**，自动候选刷新也不会回来；
+        删掉的题材搜回来会顺势撤销屏蔽
+  - [x] 增删改动落 KV，重进应用仍是自己的列表；合并逻辑 `mergeTagPool` 冒烟直测
+- [x] `/ranking` 一页三档（年度 / 题材 / 大赏），共用 `RankingList`（名次 + 封面 + 评分 · 票数）
+- [x] 修复横向题材行的拉伸：RN 给横向 ScrollView 内置 `flexGrow: 1`，在 flex-1 列容器里
+      会疯长抢列表空间（没选题材时按钮被 stretch 拉成大半屏高）。行按内容高排布
+      （`flexGrow: 0` + 内容容器 `alignItems: "center"`），年榜 `ChipRow` 同款保护
+- [x] 平板：列表全宽、chip 行横向滚动，不写死宽度
+
+### Type 15.3 · 大赏（萌系 + 美少女两类）—— 入口暂以「待开发」占位（2026-10-28）
+
+- [ ] **恢复大赏档上线**（Master 要求：排行榜第三档暂标「待开发」，只显示占位）：
+      组件（`awards-section` / `awards-moe` / `awards-getchu`）与两份数据都已就绪，
+      接回 `ranking-screen` 的 `AwardsSection` 即可；等数据核对满意后恢复
+- [x] **大赏拆两类可切换**（Master 要求）：`components/awards-section.tsx` 用 SegmentedControl 切
+      「萌系游戏大赏 / 美少女游戏大赏」—— 萌系区分层级，美少女按年份 × 部门
+- [x] **萌系：主线层级全量**（原来只有 2014–2025 的大賞单行）
+  - [x] 数据源两段：2006–2020 按日文维基「萌えゲーアワード」获奖表整理
+        （2006–2008 是「美少女ゲームアワード」单一大赏、2009–2012 金/銀/銅、
+        2013–2020 大賞+準大賞；已抽样对照官网 2011/2013/2018 页面一致，
+        硬编码在 `sync-awards.ts` 的 `HISTORY` 表里，官网每次改版式不值得逐个写解析）；
+        2021 起继续抓官网 `prize/{年}/gp.html` 单一大赏页
+  - [x] 2021 起各部門賞是几十个杂赏单页，噪声大**不收**；官网某年页抓不到时
+        用输出文件里的既有行兜底，重跑不丢 2021+ 数据
+  - [x] 49 条：每年有主线层级行（2009–2012 金銀銅年代没有大賞行），同年按
+        大賞 → 準大賞 → 金 → 銀 → 銅 排序
+  - [x] `MoeAwards`：按年份分段，行 = 层级徽章 + 作品 + 品牌（大賞徽章高亮），
+        点行进作品详情页；`AwardRow` 抽到 `features/awards/components` 共用
+  - [x] 戦国†恋姫X 一行的「X」是维基写的重发行后缀，VNDB 收的是初代 —— 显式
+        `VN_OVERRIDES` 映射而不是加宽匹配（宽匹配会把 `恋しなさい!S` 误配到初代）
+- [x] **美少女：Getchu 年度投票数据**
+  - [x] `scripts/sync-getchu-awards.ts`：抓 `getchu.com/pc/{年}_g_ranking/{部门}.html`
+        2010–2023（8 部门体系 2010 起定型：総合/シナリオ/システム/グラフィック/
+        ミュージック/ムービー/キャラクター/エロ；Getchu 2024 停服）
+  - [x] 年龄门 `?gc=gc` 绕过；EUC-JP 解码；本机直连 reset 由
+        `SYNC_PROXY=http://127.0.0.1:7890` 走本地代理（bun fetch 的 `proxy` 参数）
+  - [x] 两套路版式并扫，同一名次取标题更长的：
+        新式 `vote_num`（2023 式，「N位. <a>标题(品牌)</a>」）、
+        旧式 `【N位】`（2010 式，标题链接后的 `（<a>品牌</a>）`）
+  - [x] 角色部门的坑：标题锚点不是 `soft.phtml` 而是 `chara_XX.html#charaNN`
+        （作品 id 在下方图片链接上），老年份的引用是「」不是『』，
+        2025 式是「角色名（作品名）」—— 解析与检索键都做了兜底
+  - [x] 作品链接是 Getchu 自己的 `soft.phtml?id=` 不能直连 VNDB —— 标题走
+        Kana `search`；角色部门行取『』/「」里的作品名做键（一个作品多个角色共用
+        一次查询）；匹配比较做 NFKC 折叠（全角数字 / 符号，如 `アマカノ2＋`）；
+        解析缓存**全表跨部门共享**，同一作品只查一次；波浪号 〜/～ 互换兜底；
+        结构性错位的标题走显式 `VN_OVERRIDES`（12 条，用 Kana 逐个验证过）
+  - [x] 1357 条写入 `features/awards/lib/getchu.json`：year / dept / rank / title / brand / vnId
+        （未匹配 VNDB id 的 146 条（约 1 成）待后续核对；重抓全量：
+        `SYNC_PROXY=… bun run sync:getchu-awards`）
+  - [x] `GetchuAwards`：年份 chip 行 + 部门 chip 行（该年缺数据的部门 chip 不渲染）+
+        名次列表（前三名徽章高亮）；换年时已选部门缺数据自动回総合
+- [x] 冒烟：萌系按年代断主线层级（2013+/2006–2008 要有大賞，2009–2012 要有金赏）/
+      去重 / 2011 双銀赏 / 2013 双準大赏 / Getchu (年,部门,名次) 唯一 / 部门枚举 /
+      年份覆盖 ≥14 / 三级排序 —— 82 → 83 项
+
+### Type 15.3 (旧) · 萌えゲーアワード 大赏（重做前）
+
+- [x] `scripts/sync-awards.ts`：抓官网 `prize/{年}/gp.html`，解析大賞 → 用 Kana `search` 对 VN id
+      → 写 `features/awards/lib/awards.json`（`bun run sync:awards`，每年颁奖后跑一次）
+  - [x] 两种页面结构都兼容：2021+ 是 `<h3 class="title"><p>标题</p>`，旧版是 `<img alt="标题">`
+  - [x] 标题匹配：全角标点归一化 / 去括号补语 / 去尾部品牌词（旧版把品牌塞进了标题行）
+  - [x] `search` 必须包在 `and` 里（Kana 的坑）
+- [x] 已生成 2014–2025 共 12 年；2025 的「アイコミ」还没进 VNDB，`vnId` 为 null
+  - [x] 2011–2013 的页面是另一种版式、2006–2010 的旧地址 404，暂时没收录（要补得单独写解析）
+- [x] `/ranking` 的「大赏」档：年份 + 作品名 + 品牌；能匹配到 VN 的点进详情页
+- [x] 冒烟：年份唯一 / 字段完整 / vnId 形状 / 年份降序
+
+### Type 15.4 · 质量
+
+- [x] `smoke:db` 77 → 79 项全绿
+- [x] `typecheck` / `lint` / `format:check` 全绿
+- [x] `bun run bundle:check` 通过
+- [ ] 真机验证：平板上的日历与榜单排版、2000 年前年份的覆盖情况

@@ -4,8 +4,9 @@
  * 清单 Tab 与制作者详情的「作品」页签共用；条目只画封面（点格子 = 进作品详情页），
  * 敏感封面的「双击放行」仍由 `CoverImage` 处理。
  *
- * 列数由 `utils/grid#coverGridColumns` 按窗口短边决定（手机 3 / iPad mini 6 /
- * 大平板 8）；转屏时短边不变，格子不会跳。列数变化要给 FlashList 换 `key`：
+ * 列数由 `utils/grid#coverGridColumns` 决定（手机 3 / iPad mini 6 / 大平板 8）；
+ * 宽度取**容器实测宽度**（`onLayout`），父级有最大宽度或多栏布局时也能算对。
+ * 转屏时短边不变，格子不会跳。列数变化要给 FlashList 换 `key`：
  * 它的布局管理器只在挂载时按 `numColumns` 建一次，原地改值不生效。
  *
  * ⚠️ FlashList v2 的布局管理器按**列表自身宽度**分列（windowSize / numColumns），
@@ -19,6 +20,7 @@
 
 import { FlashList } from "@shopify/flash-list";
 import type { JSX, ReactElement } from "react";
+import { useState } from "react";
 import { Pressable, View, useWindowDimensions, type RefreshControlProps } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
@@ -59,15 +61,29 @@ export function VnCoverGrid({
   refreshControl,
   footer,
 }: VnCoverGridProps): JSX.Element {
-  const { width, height } = useWindowDimensions();
-  // 一个 NSFW 订阅供整屏格子共用（格子里判断「这张封面会不会被隐藏」）
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  /**
+   * 网格宽度按**容器**量，而不是窗口。
+   *
+   * 手机上两者一样；平板上详情页以后可能做双栏、或者某个父容器有最大宽度，
+   * 那时按窗口算就会多算列、把封面挤扁。`onLayout` 前先用窗口宽度兜底。
+   */
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const width = measuredWidth > 0 ? measuredWidth : windowWidth;
   const nsfwMode = useNsfwMode();
-  const columns = coverGridColumns(width, height);
+  // 短边决定列数：这里把「容器宽度」和「窗口高度」一起传进去
+  const columns = coverGridColumns(width, windowHeight);
   const cellWidth = (width - (EDGE - GAP / 2) * 2) / columns;
   const coverWidth = Math.floor(cellWidth - GAP);
 
   return (
-    <View style={{ flex: 1, paddingHorizontal: EDGE - GAP / 2 }}>
+    <View
+      style={{ flex: 1, paddingHorizontal: EDGE - GAP / 2 }}
+      onLayout={(event) => {
+        const next = event.nativeEvent.layout.width;
+        if (Math.abs(next - measuredWidth) > 1) setMeasuredWidth(next);
+      }}
+    >
       <FlashList<CoverGridEntry>
         /*
          * flex-1 不可省：FlashList 默认按内容高度撑开，会溢出到 Tab 栏下方，

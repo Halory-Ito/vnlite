@@ -24,6 +24,22 @@ export const enStats: CatalogOf<typeof zhStats> = {
     typesEmpty: "None of the VNs in your list are tagged with ADV / NVL / RPG or similar",
     pieEmpty: "No data to chart",
 
+    /* List analysis page (/stats/list) */
+    listAnalysis: "List analysis",
+    laTitle: "List analysis",
+    laRate: "Completion",
+    laBacklog: "%{count} in backlog · about %{hours} h to go",
+    laBacklogHint: "%{known} of %{total} have a known length; the rest are estimated as medium",
+    laMyVote: "My average",
+    laCommunityVote: "Community",
+    laVoteDelta: "Difference",
+    laStatus: "By status",
+    laVotes: "Score distribution",
+    laScore: "%{score} pts",
+    laLoginTitle: "Sign in to see your list analysis",
+    laLoginDescription: "Your list lives on VNDB, so signing in is required",
+    laEmptyDescription: "Add a few VNs to your VNDB list first",
+
     /* Play stats */
     playTitle: "Play stats",
     playLoading: "Loading play sessions…",
