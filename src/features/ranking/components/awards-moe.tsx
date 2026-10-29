@@ -7,7 +7,6 @@ import { Typography } from "heroui-native";
 import type { JSX } from "react";
 import { ScrollView, View } from "react-native";
 
-import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import { AwardRow } from "@/features/awards/components/award-row";
 import { moeEntriesFor, moeYears } from "@/features/awards/lib/awards";
@@ -27,9 +26,6 @@ export function MoeAwards(): JSX.Element {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-      <Muted type="body-xs" className="px-4 pb-1">
-        {t("ranking.awardsMoeNote")}
-      </Muted>
       {years.map((year) => (
         <View key={year} className="gap-0.5">
           <Typography type="body-sm" className="px-4 pt-3 pb-1 font-semibold">

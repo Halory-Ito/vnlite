@@ -19,8 +19,9 @@
  */
 
 import { FlashList } from "@shopify/flash-list";
+import { Image as ExpoImage } from "expo-image";
 import type { JSX, ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions, type RefreshControlProps } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
@@ -29,6 +30,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import type { Image } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
 import { coverGridColumns } from "@/utils/grid";
+import { coverUrl } from "@/utils/format";
 
 /** 网格布局：列数随屏幕、格子间距 8、左右外边距 16 */
 const GAP = 8;
@@ -75,6 +77,19 @@ export function VnCoverGrid({
   const columns = coverGridColumns(width, windowHeight);
   const cellWidth = (width - (EDGE - GAP / 2) * 2) / columns;
   const coverWidth = Math.floor(cellWidth - GAP);
+
+  // 一屏外的封面提前预热（FlashList 只预挂 250px，滚到才下会一直等）
+  const prefetched = useRef(new Set<string>());
+  useEffect(() => {
+    const fresh: string[] = [];
+    for (const entry of entries) {
+      const url = coverUrl(entry.image);
+      if (!url || prefetched.current.has(url)) continue;
+      prefetched.current.add(url);
+      fresh.push(url);
+    }
+    if (fresh.length > 0) void ExpoImage.prefetch(fresh, "memory-disk");
+  }, [entries]);
 
   return (
     <View
@@ -123,7 +138,7 @@ function GridTile({
   const image = entry.image;
   const cover = (
     <CoverImage
-      url={image?.thumbnail ?? image?.url}
+      url={coverUrl(image)}
       width={width}
       height={COVER_RATIO}
       sexual={image?.sexual}

@@ -15,6 +15,7 @@ import { Pressable, View } from "react-native";
 import { CoverImage } from "./cover-image";
 import { Icon, type IconName } from "./icon";
 import { Muted, Paragraph } from "./typo";
+import { toThumbnailUrl } from "@/utils/format";
 
 export interface EntryListItemProps {
   onPress: () => void;
@@ -67,7 +68,7 @@ export function EntryListItem({
     >
       {imageUrl ? (
         <CoverImage
-          url={imageUrl}
+          url={imageUrl ? (toThumbnailUrl(imageUrl) ?? imageUrl) : undefined}
           width={48}
           height={[48, 64]}
           /* 显式给「安全」分级：厂商 LOGO 这类图不参与 NSFW 处理 */

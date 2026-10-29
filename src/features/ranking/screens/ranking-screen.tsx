@@ -5,8 +5,7 @@
  *   年度 —— 某一年发售的作品按评分排前 10
  *   题材 —— 在题材列表里挑一组（可多选 / 可自定义增删，见 `components/tag-ranking`）
  *           按评分排前 10
- *   大赏 —— 暂以「待开发」占位（数据管线已在仓库，见 `features/awards`；
- *         恢复上线时接回 `components/awards-section`）
+ *   大赏 —— 历届奖项名单（萌系游戏大赏 / 美少女游戏大赏），数据在 `features/awards`
  *
  * 评分用的是 VNDB 的贝叶斯评分，再叠一个「至少 30 票」的门槛，
  * 免得榜首全是一两票的冷门 100 分。
@@ -17,12 +16,12 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { BackBar } from "@/components/back-bar";
-import { EmptyState } from "@/components/screen-state";
 import { SegmentedControl } from "@/components/segmented-control";
 import { useTranslation } from "@/hooks/use-translation";
 import { todayIso } from "@/utils/format";
 
 import { ChipRow } from "@/features/ranking/components/chip-row";
+import { AwardsSection } from "@/features/ranking/components/awards-section";
 import { FilterChip } from "@/features/browse/components/filter-group";
 import { RankingList } from "@/features/ranking/components/ranking-list";
 import { TagRanking } from "@/features/ranking/components/tag-ranking";
@@ -40,7 +39,7 @@ export default function RankingScreen(): JSX.Element {
   const modes = [
     { value: "year" as const, label: t("ranking.modeYear") },
     { value: "tag" as const, label: t("ranking.modeTag") },
-    { value: "awards" as const, label: t("ranking.modeComing") },
+    { value: "awards" as const, label: t("ranking.modeAwards") },
   ];
 
   return (
@@ -52,7 +51,7 @@ export default function RankingScreen(): JSX.Element {
 
       {mode === "year" ? <YearRanking /> : null}
       {mode === "tag" ? <TagRanking /> : null}
-      {mode === "awards" ? <EmptyState title={t("ranking.awardsComingSoon")} /> : null}
+      {mode === "awards" ? <AwardsSection /> : null}
     </View>
   );
 }

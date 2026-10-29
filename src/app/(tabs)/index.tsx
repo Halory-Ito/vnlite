@@ -39,7 +39,7 @@ import { readDailyQuote, writeDailyQuote } from "@/lib/storage/daily-quote";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import { vnCopyText } from "@/utils/copy-text";
-import { formatRating, formatReleased, languageLabel, todayIso } from "@/utils/format";
+import { coverUrl, formatRating, formatReleased, languageLabel, todayIso } from "@/utils/format";
 
 export default function HomeTab(): JSX.Element {
   return (
@@ -259,7 +259,7 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
       >
         <View className="flex-row gap-3">
           <CoverImage
-            url={vn.image?.thumbnail ?? vn.image?.url}
+            url={coverUrl(vn.image)}
             width={70}
             height={[70, 93]}
             sexual={vn.image?.sexual}

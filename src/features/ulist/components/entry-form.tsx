@@ -20,7 +20,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { ApiError } from "@/lib/api/errors";
 import type { UListItem, UListLabel } from "@/lib/api/types";
 import { dateRangeErrors } from "@/utils/date";
-import { formatReleased } from "@/utils/format";
+import { coverUrl, formatReleased } from "@/utils/format";
 
 import { diffPatch, draftFrom, type UlistDraft } from "@/features/ulist/lib/entry-logic";
 import { useUlistMutations } from "@/features/ulist/hooks";
@@ -154,7 +154,7 @@ function EntryHeader({
   return (
     <View className="flex-row items-center gap-3 px-4">
       <CoverImage
-        url={vn.image?.thumbnail ?? vn.image?.url}
+        url={coverUrl(vn.image)}
         width={56}
         height={[56, 78]}
         roundedClassName="rounded-md"

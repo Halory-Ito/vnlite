@@ -1,4 +1,8 @@
 /**
+ * ⚠️ 已被 `scripts/sync-awards-csv.ts` 取代 —— 大赏数据统一以仓库根的
+ * `award-data.csv` 为源（覆盖 2003–2023 全部部门）。本脚本保留用于从
+ * Getchu 原始页面复核；直接跑会覆盖 `getchu.json`。
+ *
  * 生成 `src/features/awards/lib/getchu.json` —— 美少女ゲーム大賞（Getchu 年度投票）。
  *
  * ## 数据源

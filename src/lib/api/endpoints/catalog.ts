@@ -104,7 +104,7 @@ export function queryVnsByCharacter(
        * 角色详情页的「登场作品」整块显示不出来。
        */
       filters: vnWithCharacter(characterId),
-      fields: "id,title,released,rating,image.url,image.sexual,image.violence",
+      fields: "id,title,released,rating,image.url,image.thumbnail,image.sexual,image.violence",
       sort: "released",
       reverse: true,
       results: MAX_RESULTS_PER_PAGE,
@@ -123,7 +123,7 @@ export function queryVnsByDeveloper(
     {
       filters: vnWithDeveloper(producerId) as Predicate,
       fields:
-        "id,title,alttitle,olang,released,rating,votecount,length,platforms,image.url,image.sexual,image.violence",
+        "id,title,alttitle,olang,released,rating,votecount,length,platforms,image.url,image.thumbnail,image.sexual,image.violence",
       sort: "rating",
       reverse: true,
       results: MAX_RESULTS_PER_PAGE,
@@ -240,7 +240,7 @@ export function queryVnsByStaff(
     {
       filters: vnWithStaff(staffId) as Predicate,
       fields:
-        "id,title,alttitle,olang,released,rating,votecount,length,platforms,image.url,image.sexual,image.violence",
+        "id,title,alttitle,olang,released,rating,votecount,length,platforms,image.url,image.thumbnail,image.sexual,image.violence",
       sort: "rating",
       reverse: true,
       results: MAX_RESULTS_PER_PAGE,
@@ -318,7 +318,8 @@ export function queryVnsByTagId(
     "/vn",
     {
       filters: byTag(tagId, { direct }),
-      fields: "id,title,released,rating,votecount,image.url,image.sexual,image.violence",
+      fields:
+        "id,title,released,rating,votecount,image.url,image.thumbnail,image.sexual,image.violence",
       sort: "rating",
       reverse: true,
       results: MAX_RESULTS_PER_PAGE,

@@ -291,6 +291,7 @@ function Header({
     <View className="flex-row items-start gap-4 px-4 pb-3">
       <CoverImage
         url={vn.image?.url}
+        placeholder={vn.image?.thumbnail}
         width={124}
         height={[104, 138]}
         sexual={vn.image?.sexual}

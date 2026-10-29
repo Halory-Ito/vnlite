@@ -276,10 +276,24 @@ export function decodeHtmlEntities(text: string): string {
   return text.replace(/&(?:amp|lt|gt|quot|#39|apos|nbsp);/g, (m) => map[m] ?? m);
 }
 
-/** VNDB 图片 URL 支持 `t.`（缩略图）前缀，列表页用小图省流量 */
+/**
+ * VNDB 的缩略图是同路径加 `.t`（`/cv/` → `/cv.t/`、`/sf/` → `/sf.t/`）。
+ * 实测 1080×1529 的封面原图约 550 KB，缩略图（256×362）约 50 KB；
+ * 截图 800×600 约 135 KB，缩略图（136×102）约 8 KB。
+ *
+ * 角色图（`/ch/`）没有缩略图版本（请求 `/ch.t/` 会 404），所以只处理 cv / sf。
+ */
 export function toThumbnailUrl(url: string | undefined): string | undefined {
   if (!url) return undefined;
-  return url.replace("//t.vndb.org/", "//t.vndb.org/");
+  return url.replace(/^(https?:\/\/t\.vndb\.org)\/(cv|sf)\//, "$1/$2.t/");
+}
+
+/** 列表 / 网格里取封面用：优先缩略图，没有就由原图推导，最后退回原图 */
+export function coverUrl(
+  image: { url?: string | null; thumbnail?: string | null } | undefined | null
+): string | undefined {
+  if (!image) return undefined;
+  return image.thumbnail ?? toThumbnailUrl(image.url ?? undefined) ?? image.url ?? undefined;
 }
 
 /** 字节数 → `53.2 MB`（下载体积用；单位是通用记号，不必翻译） */

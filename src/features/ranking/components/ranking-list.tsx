@@ -14,7 +14,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state"
 import { Muted, Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
-import { formatRating } from "@/utils/format";
+import { coverUrl, formatRating } from "@/utils/format";
 
 export interface RankingListProps {
   items: readonly VnSummary[];
@@ -66,7 +66,7 @@ export function RankingList({
           </Paragraph>
 
           <CoverImage
-            url={vn.image?.thumbnail}
+            url={coverUrl(vn.image)}
             width={44}
             height={[44, 62]}
             sexual={vn.image?.sexual}

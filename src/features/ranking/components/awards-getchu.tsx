@@ -1,14 +1,13 @@
 /**
  * 美少女ゲーム大賞（Getchu 年度投票）：年份 + 部门两级选择，下面是
  * 名次列表（前三名徽章高亮，同 `RankingList` 的配色习惯）。
- * 数据 2010–2023（Getchu 2024 停服），见 `features/awards/lib/awards`。
+ * 数据 2003–2023，见 `features/awards/lib/awards`。
  */
 
 import type { JSX } from "react";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 
-import { Muted } from "@/components/typo";
 import { FilterChip } from "@/features/browse/components/filter-group";
 import { useTranslation } from "@/hooks/use-translation";
 import { AwardRow } from "@/features/awards/components/award-row";
@@ -32,6 +31,11 @@ const DEPT_KEYS = {
   movie: "ranking.deptMovie",
   chara: "ranking.deptChara",
   eros: "ranking.deptEros",
+  naming: "ranking.deptNaming",
+  voice: "ranking.deptVoice",
+  theme: "ranking.deptTheme",
+  vocal: "ranking.deptVocal",
+  bgm: "ranking.deptBgm",
 } as const;
 
 const DEPTS = Object.keys(GETCHU_DEPT_ORDER) as GetchuDept[];
@@ -52,10 +56,6 @@ export function GetchuAwards(): JSX.Element {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-      <Muted type="body-xs" className="px-4 pb-1">
-        {t("ranking.awardsGetchuNote")}
-      </Muted>
-
       <ChipRow label={t("ranking.pickYear")}>
         {years.map((y) => (
           <FilterChip

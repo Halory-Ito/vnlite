@@ -1974,10 +1974,17 @@ async function main(): Promise<void> {
         "Getchu 应按 年份→部门→名次 排"
       );
     }
-    // 年份 coverage：2010–2023 全年在，総合部门每个年至少 5 条
-    assert(getchuYears().length >= 14, `Getchu 年份不全：${getchuYears().length}`);
+    // 年份 coverage：2003–2023 全年在，総合部门每个年至少 5 条
+    assert(getchuYears().length >= 20, `Getchu 年份不全：${getchuYears().length}`);
     for (const y of getchuYears()) {
       assert(getchuEntriesFor(y, "total").length >= 5, `${y} 的総合部门条目太少`);
+    }
+    // 早年短暂出现过的部门（作品命名 / 配音 / 主题曲 / Vocal / BGM）也要有数据
+    for (const dept of ["naming", "voice", "theme", "vocal", "bgm"] as const) {
+      assert(
+        GETCHU_AWARDS.some((entry) => entry.dept === dept),
+        `Getchu 缺部门数据：${dept}`
+      );
     }
   });
 

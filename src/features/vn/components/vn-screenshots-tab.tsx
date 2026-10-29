@@ -7,12 +7,17 @@
  * 布局按屏幕分档（`utils/grid#screenshotColumns`）：手机单列大图，
  * iPad mini 3 列、大平板 4 列 —— 平板上单列会浪费掉大半屏宽度。
  * 每张图仍按原始宽高比（`dims`）出图，点任意一张进全屏查看器。
+ *
+ * ⚠️ 用 FlashList 而不是 `ScrollView + map`：截图原图一张 ~130 KB，
+ * 二十张一次性挂载就是两三 MB 同时排队，进页面会长时间白着。
+ * 虚拟化后只请求视野内的几张，缩略图（~8 KB）先铺底。
  */
 
+import { FlashList } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import type { JSX } from "react";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { EmptyState } from "@/components/screen-state";
@@ -72,28 +77,38 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
 
   const columns = screenshotColumns(width, height);
   const gap = columns === 1 ? GAP_SINGLE : GAP_GRID;
-  // 与封面网格同一个算法：可用宽度减掉列间距后均分
-  const tileWidth = Math.floor((width - EDGE * 2 - gap * (columns - 1)) / columns);
+  // 与封面网格同一个算法：外层 padding 各让半个列间距，格子再让一个列间距
+  const cellWidth = (width - (EDGE - gap / 2) * 2) / columns;
+  const tileWidth = Math.floor(cellWidth - gap);
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
-        <View className="flex-row flex-wrap px-4 pt-2" style={{ gap }}>
-          {shots.map((shot, i) => (
-            <ScreenshotCard
-              key={shot.id}
-              width={tileWidth}
-              url={shot.url}
-              thumbnail={shot.thumbnail}
-              sexual={shot.sexual}
-              violence={shot.violence}
-              /* VNDB 的截图尺寸字段叫 `dims`（[宽, 高]），没有 width/height */
-              dims={shot.dims as [number, number] | undefined}
-              onPress={() => setViewerIndex(i)}
-            />
-          ))}
-        </View>
-      </ScrollView>
+      <View style={{ flex: 1, paddingHorizontal: EDGE - gap / 2 }}>
+        <FlashList
+          /* flex-1 不可省：默认按内容撑开会溢到 Tab 栏下面吃掉触摸 */
+          style={{ flex: 1 }}
+          /* 列数变了要重挂：布局管理器只在挂载时读一次 numColumns */
+          key={`screenshots-${columns}`}
+          data={shots}
+          numColumns={columns}
+          keyExtractor={(shot) => shot.id}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          renderItem={({ item, index }) => (
+            <View style={{ paddingHorizontal: gap / 2, paddingBottom: gap }}>
+              <ScreenshotCard
+                width={tileWidth}
+                url={item.url}
+                thumbnail={item.thumbnail}
+                sexual={item.sexual}
+                violence={item.violence}
+                /* VNDB 的截图尺寸字段叫 `dims`（[宽, 高]），没有 width/height */
+                dims={item.dims as [number, number] | undefined}
+                onPress={() => setViewerIndex(index)}
+              />
+            </View>
+          )}
+        />
+      </View>
 
       <ImageViewer images={viewerImages} index={viewerIndex} onClose={() => setViewerIndex(null)} />
     </View>
@@ -146,11 +161,13 @@ function ScreenshotCard({
     >
       <Image
         source={url}
-        // 缩略图（136×102，几 KB）先铺上，高清图解码完再盖上去
+        // 缩略图（136×102，约 8 KB）先铺上，原图解码完再盖上去
         placeholder={thumbnail ? { uri: thumbnail } : undefined}
         placeholderContentFit="cover"
         style={{ width: "100%", height: "100%" }}
         contentFit="cover"
+        // 列表滚回去直接命中内存缓存，不再重新解码原图
+        cachePolicy="memory-disk"
         blurRadius={gate.blurred ? 18 : 0}
         transition={200}
         // 内容优先（原生没有 lazy/eager，只有优先级队列）

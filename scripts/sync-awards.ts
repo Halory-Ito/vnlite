@@ -1,4 +1,8 @@
 /**
+ * ⚠️ 已被 `scripts/sync-awards-csv.ts` 取代 —— 大赏数据统一以仓库根的
+ * `award-data.csv` 为源（含 2006–2026 全部主线层级）。本脚本仅在需要
+ * 从官网原始页面复核单年数据时使用，直接跑会覆盖 `awards.json`。
+ *
  * 生成 `src/features/awards/lib/awards.json` —— 萌えゲーアワード（萌系大赏）主线数据。
  *
  * ## 数据两段取材

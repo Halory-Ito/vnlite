@@ -50,7 +50,9 @@ export default function BrowseTab(): JSX.Element {
     reverse: sortPref.reverse,
   });
 
-  const items = flattenPages<VnSummary>(query.data?.pages);
+  // 引用稳定：`flattenPages` 每次渲染都新建数组，会让 FlashList 与封面查看器
+  // 反复重建条目（图片跟着重新解码）
+  const items = useMemo(() => flattenPages<VnSummary>(query.data?.pages), [query.data?.pages]);
   // 计数直接由「已生效条件」推导，面板和这里不可能对不上
   const activeFilterCount = describeFilters(filters).length;
   // 卡片字段被改过（不是全开）时给「显示」按钮上强调色，和筛选按钮的用法一致

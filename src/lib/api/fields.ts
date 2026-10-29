@@ -145,6 +145,9 @@ export const VN_DETAIL_FIELDS = [
   "relations.alttitle",
   "relations.released",
   "relations.image.url",
+  "relations.image.thumbnail",
+  "relations.image.sexual",
+  "relations.image.violence",
   "screenshots.id",
   "screenshots.url",
   "screenshots.thumbnail",
@@ -377,6 +380,7 @@ export const ULIST_FIELDS = [
   "vn.votecount",
   "vn.length",
   "vn.image.url",
+  "vn.image.thumbnail",
   "vn.image.sexual",
   "vn.image.violence",
 ] as const satisfies readonly FieldSpec<UListItem>[];

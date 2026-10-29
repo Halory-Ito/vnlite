@@ -19,7 +19,7 @@ import { Muted, Paragraph } from "@/components/typo";
 import { SectionHeader } from "@/components/ui";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail } from "@/lib/api/types";
-import { formatReleased, relationLabel } from "@/utils/format";
+import { coverUrl, formatReleased, relationLabel } from "@/utils/format";
 
 type Relation = NonNullable<VnDetail["relations"]>[number];
 
@@ -70,7 +70,7 @@ function RelationRow({ rel }: { rel: Relation }): JSX.Element {
     <Link href={`/vn/${rel.id}`} asChild>
       <Pressable className="flex-row items-center gap-3 px-4 py-2 active:opacity-60">
         <CoverImage
-          url={rel.image?.url}
+          url={coverUrl(rel.image)}
           width={48}
           height={[48, 64]}
           sexual={rel.image?.sexual}

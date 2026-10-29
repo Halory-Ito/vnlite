@@ -8,6 +8,7 @@
  */
 
 import { useRouter } from "expo-router";
+import { Image } from "expo-image";
 import { ListGroup, useToast } from "heroui-native";
 import type { JSX } from "react";
 import { ScrollView } from "react-native";
@@ -37,11 +38,15 @@ export default function MeScreen(): JSX.Element {
   );
 
   const clearCache = () => {
-    // 内存缓存（所有业务数据）+ 攻略的落盘缓存一起清：
-    // 攻略索引有 ~190KB 且带 24h TTL，只清内存的话用户会觉得「清完还在」
-    void Promise.all([clearContentCache(), clearWalkthroughCache()]).then(() =>
-      toast.show(t("me.cacheCleared"))
-    );
+    // 内存缓存（所有业务数据）+ 攻略的落盘缓存 + 封面 / 截图图片缓存一起清：
+    // 攻略索引有 ~190KB 且带 24h TTL，只清内存的话用户会觉得「清完还在」；
+    // 图片缓存不跟着清的话，用户遇到「图坏了 / 占了几个 G」时也没法自救
+    void Promise.all([
+      clearContentCache(),
+      clearWalkthroughCache(),
+      Image.clearMemoryCache(),
+      Image.clearDiskCache(),
+    ]).then(() => toast.show(t("me.cacheCleared")));
   };
 
   return (

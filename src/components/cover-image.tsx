@@ -37,6 +37,8 @@ function resolve(width: SizeSpec, height: SizeSpec): { w: number; h: number } {
 
 export interface CoverImageProps {
   url: string | undefined;
+  /** 低清占位（列表封面传 `thumbnail`）：先铺占位再盖原图，避免白屏等待 */
+  placeholder?: string;
   width: SizeSpec;
   height: SizeSpec;
   sexual?: number;
@@ -54,6 +56,7 @@ export interface CoverImageProps {
 
 export function CoverImage({
   url,
+  placeholder,
   width,
   height,
   sexual,
@@ -77,7 +80,7 @@ export function CoverImage({
   const hidden = gate.mode === "hide" && gate.isSensitive;
   const blurred = showNsfw ? false : gate.mode === "blur" && gate.level >= 2;
 
-  const placeholder = (
+  const placeholderNode = (
     <View
       className={`items-center justify-center bg-default-soft ${roundedClassName}`}
       style={{ width: w, height: h }}
@@ -90,12 +93,16 @@ export function CoverImage({
   );
 
   const image = !url ? (
-    placeholder
+    placeholderNode
   ) : (
     <Image
       source={url}
+      placeholder={placeholder ? { uri: placeholder } : undefined}
+      placeholderContentFit="cover"
       style={style ? [{ width: w, height: h }, style] : { width: w, height: h }}
       contentFit="cover"
+      // 列表滚回去时命中内存缓存，不再走「磁盘读 + 重新解码」
+      cachePolicy="memory-disk"
       transition={priority === "low" ? 100 : 200}
       priority={priority}
       // `loading` 只在 web 上生效；原生没有 lazy 概念（挂载即入队），
@@ -108,7 +115,7 @@ export function CoverImage({
   );
 
   // 硬隐藏档：不给绕过口子
-  if (hidden) return placeholder;
+  if (hidden) return placeholderNode;
   if (!canReveal && !onPress) return image;
 
   return (

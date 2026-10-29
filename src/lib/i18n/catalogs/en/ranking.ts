@@ -9,9 +9,7 @@ export const enRanking: CatalogOf<typeof zhRanking> = {
     title: "Rankings",
     modeYear: "Year",
     modeTag: "Tag",
-    /** Awards tab is parked behind a "coming soon" placeholder for now */
-    modeComing: "Coming soon",
-    awardsComingSoon: "Awards in the works — stay tuned",
+    modeAwards: "Awards",
 
     pickYear: "Pick a year",
     pickTag: "Choose tags",
@@ -33,9 +31,6 @@ export const enRanking: CatalogOf<typeof zhRanking> = {
     /** Two award families (awards-section) */
     awardsMoe: "Moe Game Award",
     awardsGetchu: "Bishōjo Game Award",
-    awardsMoeNote: "Moe Game Award main prizes over the years (official site / Japanese Wikipedia)",
-    awardsGetchuNote:
-      "Getchu Bishōjo Game Award annual vote, 2010–2023 (service closed; archived copy)",
 
     /** Moe award levels */
     prizeGrand: "Grand Prize",
@@ -44,7 +39,7 @@ export const enRanking: CatalogOf<typeof zhRanking> = {
     prizeSilver: "Silver Prize",
     prizeBronze: "Bronze Prize",
 
-    /** Getchu departments (official button order) */
+    /** Getchu departments */
     deptTotal: "Overall",
     deptScenario: "Scenario",
     deptSystem: "System",
@@ -53,5 +48,10 @@ export const enRanking: CatalogOf<typeof zhRanking> = {
     deptMovie: "Movie",
     deptChara: "Character",
     deptEros: "Ero",
+    deptNaming: "Title",
+    deptVoice: "Voice",
+    deptTheme: "Theme song",
+    deptVocal: "Vocal",
+    deptBgm: "BGM",
   },
 };

@@ -26,6 +26,7 @@
     "smoke:layout": "bun run scripts/smoke-layout.ts",
     "sync:kungal": "bun run scripts/sync-kungal-logos.ts",
     "sync:awards": "bun run scripts/sync-awards.ts",
+    "sync:awards-csv": "bun run scripts/sync-awards-csv.ts",
     "sync:getchu-awards": "bun run scripts/sync-getchu-awards.ts"
   },
   "dependencies": {

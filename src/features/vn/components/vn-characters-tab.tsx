@@ -22,7 +22,7 @@ import { Muted, Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { CharacterRole } from "@/lib/api/enums";
 import type { Character } from "@/lib/api/types";
-import { characterRoleLabel } from "@/utils/format";
+import { characterRoleLabel, coverUrl } from "@/utils/format";
 
 import { useVnCharacters } from "@/features/vn/hooks";
 
@@ -83,7 +83,7 @@ function CharacterRow({ character, muted }: { character: Character; muted: strin
     <Link href={`/character/${character.id}`} asChild>
       <Pressable className="flex-row items-center gap-3 px-4 py-2 active:opacity-60">
         <CoverImage
-          url={character.image?.thumbnail ?? character.image?.url}
+          url={coverUrl(character.image)}
           width={48}
           height={[48, 64]}
           sexual={character.image?.sexual}

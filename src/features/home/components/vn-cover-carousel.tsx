@@ -17,6 +17,7 @@ import { imageGate, useNsfwMode } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
+import { coverUrl } from "@/utils/format";
 
 /** VNDB 封面缩略图比例（256×362） */
 const COVER_RATIO = [256, 362] as const;
@@ -67,7 +68,7 @@ function Card({
   const image = vn.image;
   const cover = (
     <CoverImage
-      url={image?.thumbnail ?? image?.url}
+      url={coverUrl(image)}
       width={width}
       height={COVER_RATIO}
       sexual={image?.sexual}

@@ -8,8 +8,9 @@
  */
 
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from "@shopify/flash-list";
+import { Image } from "expo-image";
 import type { JSX, ReactElement, ReactNode, Ref } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
@@ -18,6 +19,7 @@ import { Separator } from "@/components/separator";
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
+import { coverUrl } from "@/utils/format";
 
 import { VnListItem } from "./vn-list-item";
 
@@ -57,6 +59,24 @@ export function VnInfiniteList({
   const { t } = useTranslation();
   // 封面查看器：null = 关着。挂在列表这一层，整页只用一个 Modal
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  /**
+   * 提前把封面缩略图拉进内存缓存。
+   *
+   * FlashList 只预挂屏幕外 ~250px 的条目，下一页的图要滚到附近才开始下载，
+   * 表现为「一直滚、一直等」。数据一到位就预热，滚动到那里时基本已解码好。
+   * `seen` 记住已经下过指令的 URL，避免每次渲染重复入队。
+   */
+  const prefetched = useRef(new Set<string>());
+  useEffect(() => {
+    const fresh: string[] = [];
+    for (const vn of items) {
+      const url = coverUrl(vn.image);
+      if (!url || prefetched.current.has(url)) continue;
+      prefetched.current.add(url);
+      fresh.push(url);
+    }
+    if (fresh.length > 0) void Image.prefetch(fresh, "memory-disk");
+  }, [items]);
 
   // 可放大的封面（没图的条目本来就没得看），顺便记下 id → 下标
   const { covers, coverIndex } = useMemo(() => {

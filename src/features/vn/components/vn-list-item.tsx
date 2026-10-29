@@ -16,7 +16,13 @@ import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import type { CardField } from "@/lib/storage/preferences";
 import { vnCopyText } from "@/utils/copy-text";
-import { devStatusLabel, formatLength, formatReleased, languageLabel } from "@/utils/format";
+import {
+  devStatusLabel,
+  coverUrl,
+  formatLength,
+  formatReleased,
+  languageLabel,
+} from "@/utils/format";
 
 export interface VnListItemProps {
   vn: VnSummary;
@@ -58,7 +64,7 @@ export function VnListItem({
       accessibilityHint={copyable.accessibilityHint}
     >
       <CoverImage
-        url={vn.image?.thumbnail ?? vn.image?.url}
+        url={coverUrl(vn.image)}
         width={62}
         height={[62, 82]}
         sexual={vn.image?.sexual}

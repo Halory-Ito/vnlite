@@ -1792,52 +1792,39 @@ features/<module>/
       （`flexGrow: 0` + 内容容器 `alignItems: "center"`），年榜 `ChipRow` 同款保护
 - [x] 平板：列表全宽、chip 行横向滚动，不写死宽度
 
-### Type 15.3 · 大赏（萌系 + 美少女两类）—— 入口暂以「待开发」占位（2026-10-28）
+### Type 15.3 · 大赏（萌系 + 美少女两类）
 
-- [ ] **恢复大赏档上线**（Master 要求：排行榜第三档暂标「待开发」，只显示占位）：
-      组件（`awards-section` / `awards-moe` / `awards-getchu`）与两份数据都已就绪，
-      接回 `ranking-screen` 的 `AwardsSection` 即可；等数据核对满意后恢复
-- [x] **大赏拆两类可切换**（Master 要求）：`components/awards-section.tsx` 用 SegmentedControl 切
-      「萌系游戏大赏 / 美少女游戏大赏」—— 萌系区分层级，美少女按年份 × 部门
-- [x] **萌系：主线层级全量**（原来只有 2014–2025 的大賞单行）
-  - [x] 数据源两段：2006–2020 按日文维基「萌えゲーアワード」获奖表整理
-        （2006–2008 是「美少女ゲームアワード」单一大赏、2009–2012 金/銀/銅、
-        2013–2020 大賞+準大賞；已抽样对照官网 2011/2013/2018 页面一致，
-        硬编码在 `sync-awards.ts` 的 `HISTORY` 表里，官网每次改版式不值得逐个写解析）；
-        2021 起继续抓官网 `prize/{年}/gp.html` 单一大赏页
-  - [x] 2021 起各部門賞是几十个杂赏单页，噪声大**不收**；官网某年页抓不到时
-        用输出文件里的既有行兜底，重跑不丢 2021+ 数据
-  - [x] 49 条：每年有主线层级行（2009–2012 金銀銅年代没有大賞行），同年按
-        大賞 → 準大賞 → 金 → 銀 → 銅 排序
-  - [x] `MoeAwards`：按年份分段，行 = 层级徽章 + 作品 + 品牌（大賞徽章高亮），
-        点行进作品详情页；`AwardRow` 抽到 `features/awards/components` 共用
-  - [x] 戦国†恋姫X 一行的「X」是维基写的重发行后缀，VNDB 收的是初代 —— 显式
-        `VN_OVERRIDES` 映射而不是加宽匹配（宽匹配会把 `恋しなさい!S` 误配到初代）
+- [x] **大赏档上线**：排行榜第三档 `大赏` 接回 `components/awards-section`，
+      用 SegmentedControl 切「萌系游戏大赏 / 美少女游戏大赏」
+- [x] **数据源统一为 `award-data.csv`**（MASTER 指定：以该 CSV 作为大赏榜单数据）：
+      `scripts/sync-awards-csv.ts` 读仓库根 CSV（萌娘百科两份获奖表）→ 同时生成
+      `features/awards/lib/awards.json` 与 `getchu.json`，`bun run sync:awards-csv` 重跑
+  - [x] 部门映射：综合 / 剧本 / 系统 / 作画 / 音乐 / 影片 / 角色 / 工口 +
+        早年短暂出现的 作品命名 / 配音 / 主题曲 / Vocal / BGM（共 13 个）；
+        `制作公司部门` 是厂商榜、不对应作品，跳过
+  - [x] 角色 / 配音部门：CSV 的作品名做主标题，角色名放副标题
+  - [x] 萌系年度列按官网口径归一（萌娘百科 2026 年度的 `AiComi` 即 2025 年度「アイコミ」）
+- [x] **vnId 绑定**：优先级 = 显式映射表（中文标题在 VNDB 无别名可查的 43 条，
+      逐条核对过发售年 + 厂商）→ 旧输出文件同名行 → `.tmp-awards-vnid.json` 缓存 →
+      Kana `search`（标题变体：去零售版后缀 / 去括号 / 按波浪号拆段；中文标题对不上
+      罗马音时用「发售年 ±1」兜底）
+  - [x] 结果：Getchu 2092 条里 2032 条有 vnId（97.1%）、萌系 52 条里 51 条（98.1%），
+        未匹配的 61 条是 VNDB 没有独立条目的作品（系列续作 / 冷门 2003–2007 作品 / 新作），
+        行照常显示，只是不可点
+  - [x] 同一年同一部门不允许出现重复 vnId（冒烟卡住 3 处年份校验误判，已用显式映射纠偏）
+  - [x] 萌娘百科 2009 作画部门把第 7 名写成「第6名」，写入时按原顺序顺延
+- [x] **萌系：主线层级全量**（2006–2026）
+  - [x] 2006–2008 是「美少女ゲームアワード」单一大赏、2009–2012 金/銀/銅、
+        2013 起大賞+準大賞
+  - [x] 每年有主线层级行，同年按 大賞 → 準大賞 → 金 → 銀 → 銅 排序
+  - [x] `MoeAwards`：按年份分段，行 = 层级徽章 + 作品 + 品牌（大賞徽章高亮）
 - [x] **美少女：Getchu 年度投票数据**
-  - [x] `scripts/sync-getchu-awards.ts`：抓 `getchu.com/pc/{年}_g_ranking/{部门}.html`
-        2010–2023（8 部门体系 2010 起定型：総合/シナリオ/システム/グラフィック/
-        ミュージック/ムービー/キャラクター/エロ；Getchu 2024 停服）
-  - [x] 年龄门 `?gc=gc` 绕过；EUC-JP 解码；本机直连 reset 由
-        `SYNC_PROXY=http://127.0.0.1:7890` 走本地代理（bun fetch 的 `proxy` 参数）
-  - [x] 两套路版式并扫，同一名次取标题更长的：
-        新式 `vote_num`（2023 式，「N位. <a>标题(品牌)</a>」）、
-        旧式 `【N位】`（2010 式，标题链接后的 `（<a>品牌</a>）`）
-  - [x] 角色部门的坑：标题锚点不是 `soft.phtml` 而是 `chara_XX.html#charaNN`
-        （作品 id 在下方图片链接上），老年份的引用是「」不是『』，
-        2025 式是「角色名（作品名）」—— 解析与检索键都做了兜底
-  - [x] 作品链接是 Getchu 自己的 `soft.phtml?id=` 不能直连 VNDB —— 标题走
-        Kana `search`；角色部门行取『』/「」里的作品名做键（一个作品多个角色共用
-        一次查询）；匹配比较做 NFKC 折叠（全角数字 / 符号，如 `アマカノ2＋`）；
-        解析缓存**全表跨部门共享**，同一作品只查一次；波浪号 〜/～ 互换兜底；
-        结构性错位的标题走显式 `VN_OVERRIDES`（12 条，用 Kana 逐个验证过）
-  - [x] 1357 条写入 `features/awards/lib/getchu.json`：year / dept / rank / title / brand / vnId
-        （未匹配 VNDB id 的 146 条（约 1 成）待后续核对；重抓全量：
-        `SYNC_PROXY=… bun run sync:getchu-awards`）
+  - [x] 2003–2023 全量，年份 × 部门 × 名次（综合部门每年 ≥10 条）
   - [x] `GetchuAwards`：年份 chip 行 + 部门 chip 行（该年缺数据的部门 chip 不渲染）+
         名次列表（前三名徽章高亮）；换年时已选部门缺数据自动回総合
 - [x] 冒烟：萌系按年代断主线层级（2013+/2006–2008 要有大賞，2009–2012 要有金赏）/
       去重 / 2011 双銀赏 / 2013 双準大赏 / Getchu (年,部门,名次) 唯一 / 部门枚举 /
-      年份覆盖 ≥14 / 三级排序 —— 82 → 83 项
+      年份覆盖 ≥20 / 早年部门有数据 / 三级排序
 
 ### Type 15.3 (旧) · 萌えゲーアワード 大赏（重做前）
 
@@ -1857,3 +1844,27 @@ features/<module>/
 - [x] `typecheck` / `lint` / `format:check` 全绿
 - [x] `bun run bundle:check` 通过
 - [ ] 真机验证：平板上的日历与榜单排版、2000 年前年份的覆盖情况
+
+### Type 15.5 · 图片加载优化（2026-10-29，Master 反馈「列表和截图页图出得慢」）
+
+- [x] **根因**：多处接口只请求 `image.url`（原图 550 KB），没有 `image.thumbnail`
+      （256×362，50 KB）；截图墙用原图（135 KB）而缩略图只有 8 KB —— 差 11~17 倍
+- [x] `toThumbnailUrl` 之前是空实现（`replace` 前后相同、也没人调用），改成真规则：
+      `t.vndb.org/cv|sf/` → `cv.t|sf.t/`（实测 cv 551KB→51KB、sf 135KB→8KB；
+      角色图 `/ch.t/` 是 404，不做转换）
+- [x] 新增 `coverUrl(image)`：缩略图 → 原图推导 → 原图，列表/网格统一走它
+- [x] 接口补字段：`ULIST_FIELDS.vn.image.thumbnail`、`relations.image.thumbnail`、
+      角色作品 / 制作者作品 / staff 作品 / 标签作品的 `image.thumbnail`
+- [x] `CoverImage`：`cachePolicy="memory-disk"`（原来默认 disk，Android 会跳过内存缓存，
+      滚动回收后每次都要重新解码）+ 新增 `placeholder` 低清占位
+- [x] 详情页头部封面：原图 + `thumbnail` 占位，不再白屏等 550 KB
+- [x] **截图页改成 FlashList**（原来 `ScrollView + map` 一次挂全部原图），
+      缩略图铺底、只请求视野内的原图；列数变化重挂（同封面网格）
+- [x] 列表封面预取：`VnInfiniteList` / `VnCoverGrid` 数据到手就调 `Image.prefetch`
+      （`memory-disk`），用 `seen` 集合去重；FlashList 只预挂 250px，不预热就一直等
+- [x] `explore` 的 `flattenPages` 用 `useMemo`：数组引用不再每次渲染都变，
+      避免列表与封面查看器反复重建条目
+- [x] 「清空缓存」补 `Image.clearMemoryCache()` + `Image.clearDiskCache()`，
+      图片缓存不再只增不减
+- [ ] 标签详情 / 角色相关作品仍是 `ScrollView + map`（最多 100 条），
+      现在是小图（~50 KB/张）可接受，后续再虚拟化
