@@ -2044,3 +2044,11 @@ features/<module>/
 - [x] 清理夸克临时探测脚本、二维码、研究缓存和导出产物，保留本地环境配置
 - [x] 应用配置、版本常量和 package.json 统一更新为 1.4.4
 - [x] 完成提交前验证：32 项网盘测试、83 项数据库测试、类型与格式检查通过，lint 仅现有警告；待提交文件不含本地百度凭据或临时产物
+
+## Module 24 · 构建与环境配置（2026-11-02）
+
+### Type 24.1 · EAS 构建配置隔离
+
+- [x] 将本地百度网盘环境变量配置注入本地 as.json 各构建 profile（development、preview、preview-arm64、production）
+- [x] 在 .gitignore 中忽略 as.json，并将其实际从 Git 跟踪中解除（git rm --cached）
+- [x] 新增并提供 as.example.json 模板文件供仓库公开引用与示例

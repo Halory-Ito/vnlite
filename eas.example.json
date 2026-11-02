@@ -9,18 +9,31 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "BAIDU_APP_KEY": "YOUR_BAIDU_APP_KEY",
+        "BAIDU_SECRET_KEY": "YOUR_BAIDU_SECRET_KEY",
+        "BAIDU_REDIRECT_URI": "oob"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "BAIDU_APP_KEY": "YOUR_BAIDU_APP_KEY",
+        "BAIDU_SECRET_KEY": "YOUR_BAIDU_SECRET_KEY",
+        "BAIDU_REDIRECT_URI": "oob"
       }
     },
     "preview-arm64": {
       "extends": "preview",
       "env": {
-        "VNLITE_ANDROID_ABIS": "arm64-v8a"
+        "VNLITE_ANDROID_ABIS": "arm64-v8a",
+        "BAIDU_APP_KEY": "YOUR_BAIDU_APP_KEY",
+        "BAIDU_SECRET_KEY": "YOUR_BAIDU_SECRET_KEY",
+        "BAIDU_REDIRECT_URI": "oob"
       }
     },
     "preview-simulator": {
@@ -33,6 +46,11 @@
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "BAIDU_APP_KEY": "YOUR_BAIDU_APP_KEY",
+        "BAIDU_SECRET_KEY": "YOUR_BAIDU_SECRET_KEY",
+        "BAIDU_REDIRECT_URI": "oob"
       }
     }
   },

@@ -48,3 +48,6 @@ yarn-error.*
 # Generated native folders
 /ios
 /android
+
+eas.json
+
