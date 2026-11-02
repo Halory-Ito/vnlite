@@ -1581,7 +1581,10 @@ async function main(): Promise<void> {
   });
 
   await check("供应商：清单 / 校验", async () => {
-    assert(SYNC_PROVIDERS.length === 1, "选择列表只有 WebDAV 一个服务");
+    assert(
+      SYNC_PROVIDERS.length === 3 && SYNC_PROVIDERS.some((item) => item.id === "quark"),
+      "选择列表包含 WebDAV、百度网盘和夸克网盘"
+    );
     assert(isProviderReady("webdav"), "WebDAV 已实现");
 
     const webdav = getProvider("webdav");

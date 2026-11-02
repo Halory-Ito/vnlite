@@ -19,6 +19,7 @@
 import { useRouter } from "expo-router";
 import { Button } from "heroui-native";
 import type { JSX } from "react";
+import { useState } from "react";
 import { View } from "react-native";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -38,6 +39,7 @@ export default function SyncScreen(): JSX.Element {
   const router = useRouter();
   const { configs, activeId, loading, setActive, markSynced } = useSyncConfigs();
   const backup = useSyncBackup();
+  const [pendingUpload, setPendingUpload] = useState<SyncConfig | null>(null);
   /**
    * 同一时间只允许一次同步。
    *
@@ -46,7 +48,10 @@ export default function SyncScreen(): JSX.Element {
    */
   const syncing = backup.busyConfigId !== null;
 
-  const onUpload = (config: SyncConfig): void => {
+  const onUpload = (): void => {
+    if (!pendingUpload || syncing) return;
+    const config = pendingUpload;
+    setPendingUpload(null);
     void (async () => {
       const ok = await backup.upload(config);
       if (ok) await markSynced(config.id, Date.now());
@@ -81,7 +86,7 @@ export default function SyncScreen(): JSX.Element {
                 onEdit={() =>
                   router.push({ pathname: "/settings/sync-config", params: { id: config.id } })
                 }
-                onUpload={() => onUpload(config)}
+                onUpload={() => setPendingUpload(config)}
                 onDownload={() => void backup.download(config)}
               />
             ))}
@@ -92,6 +97,17 @@ export default function SyncScreen(): JSX.Element {
           <Button.Label>{t("sync.addConfig")}</Button.Label>
         </Button>
       </SettingsSection>
+
+      <ConfirmDialog
+        isOpen={pendingUpload !== null}
+        onClose={() => setPendingUpload(null)}
+        title={t("sync.uploadConfirmTitle")}
+        description={t("sync.uploadConfirmBody")}
+        confirmLabel={t("sync.uploadConfirm")}
+        status="warning"
+        isPending={syncing}
+        onConfirm={onUpload}
+      />
 
       <ConfirmDialog
         isOpen={backup.pending !== null}

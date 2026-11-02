@@ -11,20 +11,39 @@
 import { deleteSecureValue, readSecureValue, writeSecureValue } from "@/lib/storage/secure";
 
 import type { SyncSecretStore } from "@/features/sync/lib/providers/types";
+import { t } from "@/lib/i18n/translate";
 import { SECRET_KEYS, secretKey } from "./secret-key";
+
+async function secureOperation<T>(key: string, action: () => Promise<T>): Promise<T> {
+  if (!key.startsWith("quark")) return action();
+  try {
+    return await action();
+  } catch {
+    throw new Error(t("sync.quark.storageFailed"));
+  }
+}
 
 /** 绑定了配置 id 的密钥存取 */
 export function secretStoreFor(configId: string): SyncSecretStore {
   return {
-    get: (key: string) => readSecureValue(secretKey(configId, key)),
-    set: (key: string, value: string) => writeSecureValue(secretKey(configId, key), value),
-    remove: (key: string) => deleteSecureValue(secretKey(configId, key)),
+    get: (key: string) =>
+      secureOperation(key, () =>
+        readSecureValue(secretKey(configId, key), key.startsWith("quark"))
+      ),
+    set: (key: string, value: string) =>
+      secureOperation(key, () =>
+        writeSecureValue(secretKey(configId, key), value, key.startsWith("quark"))
+      ),
+    remove: (key: string) =>
+      secureOperation(key, () =>
+        deleteSecureValue(secretKey(configId, key), key.startsWith("quark"))
+      ),
   };
 }
 
 /** 删掉一份配置的全部密钥（配置被删除时调用） */
 export async function clearConfigSecrets(configId: string): Promise<void> {
   for (const key of SECRET_KEYS) {
-    await deleteSecureValue(secretKey(configId, key));
+    await deleteSecureValue(secretKey(configId, key), key.startsWith("quark"));
   }
 }

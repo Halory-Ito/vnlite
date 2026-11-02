@@ -1,3 +1,5 @@
+import Constants from "expo-constants";
+import { configureBaidu } from "@/features/sync/lib/providers/baidu/config";
 import type { JSX } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -23,6 +25,7 @@ import "../global.css";
  * 否则会先闪一帧默认语言。偏好异步水合完成后 `initI18n` 内部会再同步一次。
  */
 initI18n();
+configureBaidu(Constants.expoConfig?.extra?.baidu);
 
 export default function RootLayout(): JSX.Element {
   // 冷启动恢复登录态：读 SecureStore 的 token → /authinfo 校验 → 写本地 account 表。

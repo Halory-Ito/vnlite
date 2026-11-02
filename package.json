@@ -1,6 +1,6 @@
 {
   "name": "vnlite",
-  "version": "1.4.2",
+  "version": "1.4.4",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -32,6 +32,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
     "@gorhom/bottom-sheet": "^5.2.14",
+    "@noble/hashes": "^2.4.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.2.0",
     "@shopify/flash-list": "2.0.2",
@@ -75,6 +76,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.3.2",
+    "toqr": "0.1.1",
     "uniwind": "^1.10.0"
   },
   "devDependencies": {

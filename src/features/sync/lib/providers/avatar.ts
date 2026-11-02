@@ -1,3 +1,6 @@
+import { upload as uploadQuark } from "./quark/client";
+import { upload } from "./baidu/client";
+import { AVATAR_FILE_NAME } from "../backup";
 /**
  * 头像上传的分发（**原生**）。
  *
@@ -14,6 +17,12 @@ import { webdavConfigOf } from "@/features/sync/lib/providers/webdav/provider";
 
 /** 上传本地头像到对应的网盘 */
 export async function putProviderAvatar(ctx: ProviderContext, file: File): Promise<void> {
+  if (ctx.provider === "quark") {
+    await uploadQuark(ctx, AVATAR_FILE_NAME, await file.bytes());
+  }
+  if (ctx.provider === "baidunetdisk") {
+    await upload(ctx, AVATAR_FILE_NAME, await file.bytes());
+  }
   if (ctx.provider === "webdav") {
     await putWebDavAvatar(await webdavConfigOf(ctx), file);
   }

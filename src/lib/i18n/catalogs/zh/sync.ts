@@ -36,6 +36,44 @@ export const zhSync = {
     /* ---- 供应商 ---- */
     provider: {
       webdav: "WebDAV",
+      baidunetdisk: "百度网盘",
+      quark: "夸克网盘",
+    },
+    quark: {
+      storageFailed: "无法安全保存授权或上传状态，请检查设备安全存储后重试",
+      notConnected: "请重新连接夸克网盘",
+      authFailed: "夸克授权失败，请重新获取授权",
+      expired: "授权已过期，请重试",
+      cancelled: "已取消授权",
+      apiError: "夸克网盘请求失败（错误码 %{code}）",
+      invalidResponse: "夸克网盘返回的数据不完整",
+      invalidDirectory: "请输入有效的目录名称，不要包含路径分隔符",
+      directory: "同步目录",
+      authorize: "使用夸克授权",
+      reconnect: "重新授权",
+      openAuthorization: "打开夸克授权",
+      qrLabel: "使用夸克 App 扫码授权",
+      connected: "已连接夸克网盘",
+      openFailed: "无法打开夸克，请确认已安装夸克，或使用夸克扫码授权",
+      integrityFailed: "云端文件校验失败，请重新同步",
+      pending: "上次上传尚未恢复完成，请稍后重试",
+      conflict: "云端文件发生变化，请重试",
+      uploadFailed: "夸克文件上传失败",
+    },
+    baidu: {
+      notConnected: "请先连接百度网盘",
+      configMissing: "未配置百度网盘 AppKey 或 SecretKey",
+      authFailed: "授权失败，请重新获取授权码",
+      codeRequired: "请输入授权码",
+      apiError: "百度网盘请求失败（错误码 %{code}）",
+      invalidResponse: "百度网盘返回的数据不完整",
+      invalidPath: "目录必须位于 /apps/应用名称 下",
+      directory: "应用目录",
+      code: "授权码",
+      connect: "确认授权",
+      connected: "已连接百度网盘",
+      reconnect: "重新授权",
+      openAuthorization: "打开百度授权页面",
     },
 
     /* ---- 同步状态 ---- */
@@ -49,6 +87,10 @@ export const zhSync = {
     uploaded: "备份已上传",
     restored: "数据已恢复",
     remoteMissing: "服务器上还没有备份",
+
+    uploadConfirmTitle: "覆盖云端备份？",
+    uploadConfirmBody: "将使用本机数据覆盖云端已有备份，且不可撤销。",
+    uploadConfirm: "覆盖并上传",
 
     restoreTitle: "恢复备份",
     restoreBody:

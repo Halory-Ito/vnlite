@@ -31,18 +31,19 @@ function keyFor(platform: string): string {
 const memoryVault = new Map<string, string>();
 
 /** 读一个安全存储的值；取不到返回 null */
-export async function readSecureValue(key: string): Promise<string | null> {
+export async function readSecureValue(key: string, strict = false): Promise<string | null> {
   try {
     if (Platform.OS === "web") return memoryVault.get(key) ?? null;
     return await SecureStore.getItemAsync(key);
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     // 设备不支持 SecureStore 时不阻塞功能，只是没存过
     return null;
   }
 }
 
 /** 写一个安全存储的值 */
-export async function writeSecureValue(key: string, value: string): Promise<void> {
+export async function writeSecureValue(key: string, value: string, strict = false): Promise<void> {
   try {
     if (Platform.OS === "web") {
       memoryVault.set(key, value);
@@ -50,20 +51,22 @@ export async function writeSecureValue(key: string, value: string): Promise<void
     }
     await SecureStore.setItemAsync(key, value);
   } catch (error) {
+    if (strict) throw error;
     // 写失败只降级到内存，本次会话仍可用
     console.warn("[storage] SecureStore 写入失败，已降级为内存存储", error);
   }
 }
 
 /** 删一个安全存储的值 */
-export async function deleteSecureValue(key: string): Promise<void> {
+export async function deleteSecureValue(key: string, strict = false): Promise<void> {
   try {
     if (Platform.OS === "web") {
       memoryVault.delete(key);
       return;
     }
     await SecureStore.deleteItemAsync(key);
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     // 忽略
   }
 }

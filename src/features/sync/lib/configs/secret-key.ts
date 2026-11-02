@@ -8,11 +8,20 @@
  * 不被 `expo-secure-store`（依赖 react-native）拖进来。
  */
 
+import { COOKIE_KEYS } from "../providers/quark/cookies";
+
 /** 密钥 key 的前缀 */
 export const SECRET_PREFIX = "vnlite_sync_";
 
 /** 目前用到的密钥键名 */
-export const SECRET_KEYS = ["password", "refreshToken"] as const;
+export const SECRET_KEYS = [
+  "password",
+  "refreshToken",
+  "accessToken",
+  "tokenExpiresAt",
+  ...COOKIE_KEYS,
+  "quarkTransaction",
+] as const;
 
 /** 完整的 SecureStore key */
 export function secretKey(configId: string, key: string): string {

@@ -1,5 +1,5 @@
 /**
- * 同步供应商的抽象（目前只有 WebDAV）。
+ * 同步供应商的抽象（WebDAV、百度网盘与夸克网盘）。
  *
  * ## 为什么要抽象
  *
@@ -15,7 +15,7 @@
 import type { TranslationKey } from "@/lib/i18n/translate";
 
 /** 供应商 id */
-export type SyncProviderId = "webdav";
+export type SyncProviderId = "webdav" | "baidunetdisk" | "quark";
 
 /** 供应商元信息 */
 export interface SyncProviderMeta {
@@ -76,4 +76,5 @@ export interface SyncProvider {
   getBackup: (ctx: ProviderContext) => Promise<{ body: string; info: RemoteFileInfo } | null>;
   /** 下载头像；服务器上没有时返回 null */
   getAvatar: (ctx: ProviderContext) => Promise<Uint8Array | null>;
+  connect?: (ctx: ProviderContext) => Promise<void>;
 }

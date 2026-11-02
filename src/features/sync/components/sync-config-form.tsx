@@ -1,13 +1,4 @@
-/**
- * 新建 / 编辑一份同步配置的表单。
- *
- * 结构：配置名称 → 服务（`Select`）→ 各家自己的字段 → 保存。
- *
- * ## 密钥不进表单的 state 之外
- *
- * 密码只在这里编辑，提交时写进 SecureStore（`configs/secrets`），
- * 配置本体（AsyncStorage）里只有地址、用户名、应用 ID 这些不敏感的东西。
- */
+/** 新建和编辑云同步配置。 */
 
 import { Button, Input, Label, Select, TextField } from "heroui-native";
 import type { JSX } from "react";
@@ -15,6 +6,8 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { Muted } from "@/components/typo";
+import { QuarkFields } from "@/features/sync/components/provider-forms/quark-fields";
+import { BaiduFields } from "@/features/sync/components/provider-forms/baidu-fields";
 import { WebDavFields } from "@/features/sync/components/provider-forms/webdav-fields";
 import { secretStoreFor } from "@/features/sync/lib/configs/secrets";
 import { createConfigId, type SyncConfig } from "@/features/sync/lib/configs/types";
@@ -156,7 +149,13 @@ export function SyncConfigForm({
         />
       ) : null}
 
-      {providerId !== "webdav" ? <Muted type="body-xs">{t("sync.providerNotReady")}</Muted> : null}
+      {providerId === "baidunetdisk" ? (
+        <BaiduFields id={id} options={options} onChange={setOptions} />
+      ) : null}
+
+      {providerId === "quark" ? (
+        <QuarkFields id={id} options={options} onChange={setOptions} />
+      ) : null}
 
       {error ? (
         <Muted type="body-xs" className="text-danger-soft-foreground">

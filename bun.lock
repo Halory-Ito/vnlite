@@ -7,6 +7,7 @@
       "dependencies": {
         "@expo/metro-runtime": "~57.0.16",
         "@gorhom/bottom-sheet": "^5.2.14",
+        "@noble/hashes": "^2.4.0",
         "@react-native-async-storage/async-storage": "2.2.0",
         "@react-native-community/slider": "5.2.0",
         "@shopify/flash-list": "2.0.2",
@@ -50,6 +51,7 @@
         "tailwind-merge": "^3.6.0",
         "tailwind-variants": "^3.2.2",
         "tailwindcss": "^4.3.2",
+        "toqr": "0.1.1",
         "uniwind": "^1.10.0",
       },
       "devDependencies": {
@@ -296,6 +298,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "https://registry.npmmirror.com/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.6.0.tgz", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "https://registry.npmmirror.com/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@noble/hashes": ["@noble/hashes@2.4.0", "https://registry.npmmirror.com/@noble/hashes/-/hashes-2.4.0.tgz", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
     "@oxfmt/binding-android-arm-eabi": ["@oxfmt/binding-android-arm-eabi@0.71.0", "https://registry.npmmirror.com/@oxfmt/binding-android-arm-eabi/-/binding-android-arm-eabi-0.71.0.tgz", { "os": "android", "cpu": "arm" }, "sha512-l31EyBfB4egJeFua11aQFEUE9nnDtfpWCadqQovm0WL30t/yUHtdFl/5HyFXvd5xT8Ewh3U4TI9f30GowrQ1fw=="],
 

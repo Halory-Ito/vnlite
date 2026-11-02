@@ -40,6 +40,46 @@ export const enSync: CatalogOf<typeof zhSync> = {
     /* ---- 供应商 ---- */
     provider: {
       webdav: "WebDAV",
+      baidunetdisk: "Baidu Netdisk",
+      quark: "Quark Drive",
+    },
+    quark: {
+      storageFailed:
+        "Could not securely save authorization or upload state. Check device secure storage and retry.",
+      notConnected: "Reconnect Quark Drive",
+      authFailed: "Quark authorization failed. Please try again.",
+      expired: "Authorization expired. Please try again.",
+      cancelled: "Authorization cancelled",
+      apiError: "Quark Drive request failed (code %{code})",
+      invalidResponse: "Quark Drive returned an incomplete response",
+      invalidDirectory: "Enter a valid folder name without path separators",
+      directory: "Sync folder",
+      authorize: "Authorize with Quark",
+      reconnect: "Authorize again",
+      openAuthorization: "Open Quark authorization",
+      qrLabel: "Scan with the Quark app to authorize",
+      connected: "Connected to Quark Drive",
+      openFailed:
+        "Could not open Quark. Check that Quark is installed, or scan the QR code with Quark.",
+      integrityFailed: "Cloud file verification failed. Sync again.",
+      pending: "The previous upload still needs recovery. Please retry shortly.",
+      conflict: "Cloud files changed. Please retry.",
+      uploadFailed: "Quark file upload failed",
+    },
+    baidu: {
+      notConnected: "Connect Baidu Netdisk first",
+      configMissing: "Baidu AppKey or SecretKey is not configured",
+      authFailed: "Authorization failed. Request a new code.",
+      codeRequired: "Enter the authorization code",
+      apiError: "Baidu Netdisk request failed (code %{code})",
+      invalidResponse: "Baidu Netdisk returned an incomplete response",
+      invalidPath: "The directory must be under /apps/app-name",
+      directory: "App directory",
+      code: "Authorization code",
+      connect: "Confirm authorization",
+      connected: "Connected to Baidu Netdisk",
+      reconnect: "Authorize again",
+      openAuthorization: "Open Baidu authorization",
     },
 
     /* ---- 同步状态 ---- */
@@ -53,6 +93,11 @@ export const enSync: CatalogOf<typeof zhSync> = {
     uploaded: "Backup uploaded",
     restored: "Data restored",
     remoteMissing: "No backup on the server yet",
+
+    uploadConfirmTitle: "Replace cloud backup?",
+    uploadConfirmBody:
+      "This replaces the existing cloud backup with data from this device. It cannot be undone.",
+    uploadConfirm: "Replace and upload",
 
     restoreTitle: "Restore backup",
     restoreBody:

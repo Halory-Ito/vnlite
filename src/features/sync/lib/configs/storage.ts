@@ -20,7 +20,7 @@ const CONFIGS_KEY = "vnlite.sync.configs";
 /** 当前使用的配置 id */
 const ACTIVE_KEY = "vnlite.sync.active";
 
-const PROVIDER_IDS = new Set<SyncProviderId>(["webdav"]);
+const PROVIDER_IDS = new Set<SyncProviderId>(["webdav", "baidunetdisk", "quark"]);
 
 /* -------------------------------------------------------------------------- */
 /* 读 / 写                                                                     */
