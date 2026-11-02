@@ -11,6 +11,19 @@
  */
 
 import { Database } from "bun:sqlite";
+import {
+  HOME_SECTION_IDS,
+  homeSectionRows,
+  moveHomeSection,
+  normalizeHomeLayout,
+} from "@/features/home/lib/home-layout";
+import { contributionWeeks } from "@/features/home/lib/heatmap-calendar";
+import {
+  dailyPlaySummary,
+  heatLevel,
+  localDayKey,
+  yearlyFinished,
+} from "@/features/home/lib/play-summary";
 
 import type { Producer, UListItem } from "@/lib/api/types";
 import * as accountDao from "@/lib/db/dao/account";
@@ -1959,6 +1972,126 @@ async function main(): Promise<void> {
     const snapshot = getTagNames();
     await recordTagNames([{ id: "g10001", name: "奇幻" }]);
     assert(getTagNames() === snapshot, "重复同名记录不应变更状态");
+  });
+
+  await check("首页游玩聚合与年度目标", () => {
+    const defaultLayout = normalizeHomeLayout(undefined);
+    assert(
+      defaultLayout.length === HOME_SECTION_IDS.length &&
+        homeSectionRows(defaultLayout)
+          .map((row) => row.join(","))
+          .join("|") === "quote|today,annual|heatmap",
+      "默认仅显示每日一言、并排目标和热力图"
+    );
+    const custom = normalizeHomeLayout([
+      { id: "quote", visible: false },
+      { id: "quote" },
+      { id: "unknown" },
+      null,
+      { id: "annual", visible: true },
+    ]);
+    assert(
+      custom[0]!.id === "quote" && !custom[0]!.visible && custom[1]!.id === "annual",
+      "保留自定义顺序与关闭状态，去重并补齐新组件"
+    );
+    assert(
+      new Set(custom.map((item) => item.id)).size === HOME_SECTION_IDS.length,
+      "非法组件不进入布局"
+    );
+    const legacyLayout = normalizeHomeLayout([{ id: "discover", visible: false }]);
+    assert(
+      legacyLayout[0]?.id === "calendar" &&
+        !legacyLayout[0].visible &&
+        legacyLayout[1]?.id === "discover" &&
+        !legacyLayout[1].visible,
+      "旧日历入口拆分后保留位置及关闭状态"
+    );
+    const moved = moveHomeSection(defaultLayout, "annual", -1);
+    assert(moved[1]!.id === "annual" && defaultLayout[1]!.id === "today", "移动位置且不修改原配置");
+    assert(moveHomeSection(defaultLayout, "quote", -1)[0]!.id === "quote", "第一项不可继续上移");
+    assert(
+      moveHomeSection(defaultLayout, "released", 1).at(-1)!.id === "released",
+      "最后一项不可继续下移"
+    );
+    assert(homeSectionRows(moved)[1]!.join() === "annual,today", "目标相邻时按配置顺序并排");
+    assert(
+      homeSectionRows(defaultLayout.map((item) => ({ id: item.id, visible: false }))).length === 0,
+      "支持关闭所有首页组件"
+    );
+    const separated = normalizeHomeLayout([{ id: "today" }, { id: "quote" }, { id: "annual" }]);
+    assert(
+      homeSectionRows(separated)
+        .slice(0, 3)
+        .every((row) => row.length === 1),
+      "不跨过其他组件配对目标卡片"
+    );
+    assert(
+      migratePreferences({ homeLayout: custom }).homeLayout[0]!.visible === false,
+      "备份迁移保留首页配置"
+    );
+    for (const year of [2023, 2024, 2026, 2028]) {
+      const weeks = contributionWeeks(year);
+      const dates = weeks.flatMap((week) => week.days).filter((date) => date !== null);
+      assert(dates.length === (year % 4 === 0 ? 366 : 365), "全年热力图覆盖平年与闰年");
+      assert(new Set(dates).size === dates.length, "日期不重复");
+      assert(dates[0] === `${year}-01-01` && dates.at(-1) === `${year}-12-31`, "首尾日期完整");
+      assert(
+        weeks.every((week) => week.days.length === 7),
+        "每周七行"
+      );
+      assert(weeks[0]!.days[new Date(year, 0, 1).getDay()] === `${year}-01-01`, "星期对齐");
+      assert(weeks.filter((week) => week.month !== null).length === 12, "月份轴十二个月");
+    }
+    assert(migratePreferences({}).dailyPlayGoalMinutes === 60, "旧用户每日目标默认 60 分钟");
+    assert(
+      migratePreferences({ dailyPlayGoalMinutes: 90 }).dailyPlayGoalMinutes === 90,
+      "保留自定义每日目标"
+    );
+    for (const value of [0, -1, 1441, 1.5, "60", null, Infinity]) {
+      assert(
+        migratePreferences({ dailyPlayGoalMinutes: value }).dailyPlayGoalMinutes === 60,
+        "非法每日目标回默认"
+      );
+    }
+    assert(
+      migratePreferences({ dailyPlayGoalMinutes: 1440 }).dailyPlayGoalMinutes === 1440,
+      "支持全天目标上限"
+    );
+    const startedAt = new Date(2024, 1, 29, 23, 30).getTime();
+    const rows = [
+      { id: 1, vnId: "v1", startedAt, endedAt: startedAt + 3600000, durationMs: 1800000 },
+      { id: 2, vnId: "v1", startedAt, endedAt: startedAt + 60000, durationMs: 60000 },
+      { id: 3, vnId: "v2", startedAt, endedAt: startedAt + 60000, durationMs: 60000 },
+    ];
+    const day = dailyPlaySummary(rows).get("2024-02-29");
+    assert(
+      day?.ms === 1920000 && day.count === 3 && day.games.size === 2,
+      "会话开始日聚合，累计有效时长并去重作品"
+    );
+    assert(dailyPlaySummary([]).size === 0, "空记录");
+    assert(localDayKey(new Date(2025, 0, 1)) === "2025-01-01", "本地日期跨年与补零");
+    assert(
+      [0, 1, 1800000, 3600000, 7200000].map(heatLevel).join() === "0,1,2,3,4",
+      "热力图等级边界"
+    );
+    const items = [
+      { id: "v1", finished: "2024-02-29", labels: [{ id: 2 }] },
+      { id: "v2", finished: "2023-12-31", labels: [{ id: 2 }] },
+      { id: "v3", finished: null, labels: [{ id: 2 }] },
+      { id: "v4", finished: "2024-01-01", labels: [{ id: 1 }] },
+    ] as UListItem[];
+    assert(
+      yearlyFinished([...items, items[0]!], 2024) === 1,
+      "完成数要求目标年份、已完成标签与作品去重"
+    );
+    const goals = migratePreferences({
+      annualGameGoals: { "2026": 24, "2025": -1, bad: 10, "2024": "20" },
+    }).annualGameGoals;
+    assert(goals["2026"] === 24 && Object.keys(goals).length === 1, "年度目标迁移过滤非法值");
+    assert(
+      Object.keys(migratePreferences({}).annualGameGoals).length === 0,
+      "未设置年度目标时不生成自定义记录，界面使用默认目标"
+    );
   });
 
   /* ---- 结果 ---- */

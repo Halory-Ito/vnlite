@@ -8,6 +8,7 @@
  */
 
 import { kv } from "./key-value";
+import { normalizeHomeLayout, type HomeSectionPreference } from "@/features/home/lib/home-layout";
 import type { Language } from "@/lib/i18n/translate";
 import {
   BACKGROUND_BLUR_RANGE,
@@ -97,7 +98,12 @@ export type CardField = (typeof CARD_FIELD)[number];
  */
 export type VnViewMode = "grid" | "list";
 
+export const DEFAULT_ANNUAL_GAME_GOAL = 10;
+
 export interface Preferences {
+  homeLayout: HomeSectionPreference[];
+  dailyPlayGoalMinutes: number;
+  annualGameGoals: Record<string, number>;
   /** NSFW 图片处理，默认 blur */
   nsfwMode: NsfwMode;
   /**
@@ -160,6 +166,9 @@ export interface Preferences {
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
+  homeLayout: normalizeHomeLayout(undefined),
+  dailyPlayGoalMinutes: 60,
+  annualGameGoals: {},
   nsfwMode: "blur",
   language: "system",
   vnViewMode: "grid",
@@ -213,6 +222,28 @@ export async function loadPreferences(): Promise<Preferences> {
  */
 export function migratePreferences(stored: Record<string, unknown>): Preferences {
   const next: Preferences = { ...DEFAULT_PREFERENCES, ...(stored as Partial<Preferences>) };
+  next.homeLayout = normalizeHomeLayout(stored.homeLayout);
+  next.dailyPlayGoalMinutes =
+    typeof stored.dailyPlayGoalMinutes === "number" &&
+    Number.isInteger(stored.dailyPlayGoalMinutes) &&
+    stored.dailyPlayGoalMinutes >= 1 &&
+    stored.dailyPlayGoalMinutes <= 1440
+      ? stored.dailyPlayGoalMinutes
+      : DEFAULT_PREFERENCES.dailyPlayGoalMinutes;
+  next.annualGameGoals = {};
+  if (stored.annualGameGoals && typeof stored.annualGameGoals === "object") {
+    for (const [year, goal] of Object.entries(stored.annualGameGoals)) {
+      if (
+        /^\d{4}$/.test(year) &&
+        typeof goal === "number" &&
+        Number.isInteger(goal) &&
+        goal > 0 &&
+        goal <= 9999
+      ) {
+        next.annualGameGoals[year] = goal;
+      }
+    }
+  }
 
   /*
    * 视图模式只认 grid / list，老数据没有这一项或存了脏值 → 回默认的网格。

@@ -2,7 +2,7 @@
  * 一份同步配置（= 一台服务器的认证信息）。
  *
  * 「同步」页支持**多份配置**：每份配置自己一套凭据、自己的备份文件，
- * 互不干扰（坚果云一份、OneDrive 一份）。
+ * 互不干扰（坚果云一份、自建 Nextcloud 一份）。
  */
 
 import type { ProviderOptions, SyncProviderId } from "../providers/types";

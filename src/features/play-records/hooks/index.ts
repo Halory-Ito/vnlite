@@ -29,9 +29,10 @@ export function usePlaySessions(vnId: string) {
 }
 
 /** 全部作品的游玩记录（记录统计页聚合用） */
-export function useAllPlaySessions() {
+export function useAllPlaySessions(enabled = true) {
   return useQuery({
     queryKey: queryKeys.playRecords.allSessions(),
+    enabled,
     queryFn: getAllPlaySessions,
     // 本地库读取即时完成，不必缓存
     staleTime: 0,

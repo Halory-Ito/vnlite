@@ -45,6 +45,7 @@ export interface CalendarListViewProps {
   /** 一页的宽度（平板上限 560 - 左右 padding） */
   calendarWidth: number;
   listRef?: Ref<CalendarListHandle>;
+  scrollEnabled?: boolean;
 }
 
 /**
@@ -76,6 +77,7 @@ export const CalendarListView = memo(function CalendarListView({
   onMonthChange,
   calendarWidth,
   listRef,
+  scrollEnabled = true,
 }: CalendarListViewProps): JSX.Element {
   const { t } = useTranslation();
   const accent = useThemeColor("accent");
@@ -111,6 +113,7 @@ export const CalendarListView = memo(function CalendarListView({
           firstDay={0}
           hideExtraDays
           pagingEnabled
+          scrollEnabled={scrollEnabled}
           animateScroll={false}
           showScrollIndicator={false}
           theme={THEME}

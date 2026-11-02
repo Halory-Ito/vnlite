@@ -80,6 +80,13 @@ export default function MeScreen(): JSX.Element {
 
         {/* 记录统计：收藏清单 + 游玩数据的图表页 */}
         <SettingsItem
+          icon="house"
+          label={t("home.layoutTitle")}
+          onPress={() => router.push("/settings/home-layout")}
+        />
+        <Divider className="mx-4" />
+
+        <SettingsItem
           icon="chartPie"
           label={t("me.records")}
           onPress={() => router.push("/stats")}
