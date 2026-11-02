@@ -30,6 +30,15 @@
 - [x] 全项目图标统一迁移到 `components/Icon`（19 个图标：Tab 栏 / 返回箭头 / 首页入口 /
       筛选 / 外链 / 查看器关闭），`@expo/vector-icons` 已从依赖里移除
       （Android bundle 6.7 MB → 6.3 MB，导出资源里的 Ionicons 字体全部消失）
+- [x] 换新 icon / adaptive icon / 横竖屏 splash（2026-11-02，樱花插画）：
+      `icon` 与 `android.adaptiveIcon.foregroundImage` 都用 `assets/images/icon.png`（1024²）；
+      启动图不再用「底色 + 居中小图标」——竖屏 `splash-screen-vertical.png`（941×1672），
+      横屏 `splash-screen-horizon.png`（1672×941），`centerCrop` / `scaleAspectFill` 铺满，
+      底色 `#fcbfee` 只兜边 - [x] `plugins/with-orientation-splash.js`：Android 在系统圆形图标退场后盖全屏图
+      （`drawable-nodpi` 两张，按当前方向选）；iOS 改写 storyboard，
+      compact height 用横屏图，其余用竖屏图 - [x] `orientation` 改为 `default`，否则横屏启动图永远不会被系统选中 - [ ] iOS iPad 横屏：Launch Screen 的 size class 分不出 iPad 横竖屏
+      （都是 regular × regular），系统启动图会用竖屏图裁切；
+      Android 平板横屏不受这个限制
 
 ### Type 0.2 · 数据与网络层
 
@@ -1532,6 +1541,8 @@
 
 ## Module 12 · 多份同步配置 + OneDrive（2026-10-27）
 
+> ⚠️ 2026-11-02：OneDrive 已下线，同步只保留 WebDAV（见 Module 16）。
+
 > Master 要求：① 每台服务器的认证信息当成**一份配置**，支持多份并可以切换；
 > ② 新建配置时用 `Select` 从服务里挑一家（WebDAV / OneDrive / GoogleDrive / 夸克网盘…），
 > 目前只有 WebDAV，这次补上 **OneDrive**；③ 每份配置做成一张**卡片**：
@@ -1868,3 +1879,28 @@ features/<module>/
       图片缓存不再只增不减
 - [ ] 标签详情 / 角色相关作品仍是 `ScrollView + map`（最多 100 条），
       现在是小图（~50 KB/张）可接受，后续再虚拟化
+
+---
+
+## Module 16 · 同步只保留 WebDAV（2026-11-02）
+
+> Master 要求：同步服务**只保留 WebDAV**，其余网盘全部移除。
+> Module 12 里的 OneDrive / Google Drive / 夸克网盘相关实现随之下线。
+
+### Type 16.1 · 供应商收敛
+
+- [x] `lib/providers/types.ts` — `SyncProviderId` 收窄为 `"webdav"`
+- [x] `lib/providers/registry.ts` — `SYNC_PROVIDERS` / `IMPLEMENTED` 只剩 WebDAV
+- [x] `lib/configs/storage.ts` — `PROVIDER_IDS` 只认 `webdav`（旧配置里的其他服务读取时按坏数据丢弃）
+- [x] 删除 `lib/providers/onedrive/`（oauth / client / file / endpoints / provider）
+- [x] 删除 `components/provider-forms/onedrive-connect.tsx`、`onedrive-fields.tsx`
+- [x] `components/sync-config-form.tsx` — 去掉 OneDrive 分支，表单只剩 WebDAV 字段
+- [x] `lib/providers/avatar.ts` — 头像上传只走 WebDAV
+- [x] `lib/configs/store.ts` — 删除配置时不再需要清理 OneDrive 访问令牌
+
+### Type 16.2 · 国际化 / 冒烟
+
+- [x] zh / en `sync` 命名空间：`provider` 只留 `webdav`，删除整个 `onedrive` 文案块
+- [x] `scripts/smoke-db.ts` — 去掉 OneDrive 客户端与供应商冒烟，配置读写用例改用两份 WebDAV 配置
+- [x] `typecheck` / `lint` / `format:check` / `smoke:db` 全绿
+

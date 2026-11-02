@@ -3,7 +3,7 @@
     "name": "vnlite",
     "slug": "vnlite",
     "version": "1.4.3",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "heroui-native-app",
     "userInterfaceStyle": "automatic",
@@ -16,8 +16,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#fcbfee"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.halory.vnlite"
@@ -30,11 +30,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "imageWidth": 200,
+          "backgroundColor": "#fcbfee"
         }
       ],
+      "./plugins/with-orientation-splash",
       "expo-status-bar",
       "expo-image",
       "expo-sqlite",

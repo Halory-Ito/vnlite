@@ -1,5 +1,5 @@
 /**
- * English · sync module (multiple sync configs + WebDAV / OneDrive backup sync).
+ * English · sync module (multiple sync configs + WebDAV backup sync).
  *
  * 接入点：`features/sync/*`（"Me → Sync" screen）。
  */
@@ -40,9 +40,6 @@ export const enSync: CatalogOf<typeof zhSync> = {
     /* ---- 供应商 ---- */
     provider: {
       webdav: "WebDAV",
-      onedrive: "OneDrive",
-      googleDrive: "Google Drive",
-      quark: "Quark Drive",
     },
 
     /* ---- 同步状态 ---- */
@@ -66,30 +63,6 @@ export const enSync: CatalogOf<typeof zhSync> = {
     itemFavorite: "%{count} favorites",
     itemPlaySession: "%{count} play records",
     itemMarks: "%{count} walkthroughs marked",
-
-    /* ---- OneDrive ---- */
-    onedrive: {
-      clientIdLabel: "Application ID",
-      clientIdPlaceholder: "Client ID of your Azure app registration",
-      clientIdHint:
-        "Create an app registration in Azure, enable public client flows, then paste the application ID here",
-      clientIdRequired: "Enter the application ID",
-      connect: "Connect OneDrive",
-      reconnect: "Switch account",
-      disconnect: "Disconnect",
-      connecting: "Waiting for approval…",
-      deviceCode: "Device code %{code}",
-      deviceCodeHint: "Enter this code on the page that opens, then sign in",
-      openAuthPage: "Open the sign-in page",
-      authFailed: "Authorization failed",
-      authExpired: "The code expired, connect again",
-      authDenied: "You cancelled the authorization",
-      notConnected: "No OneDrive account connected yet",
-      tokenExpired: "Authorization expired, connect again",
-      forbidden: "No permission for this file",
-      publicClientDisabled: "This Azure app has public client flows disabled",
-      connected: "Connected %{email}",
-    },
 
     /* ---- 网络错误 ---- */
     unauthorized: "Wrong username or password",

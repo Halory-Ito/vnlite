@@ -138,14 +138,6 @@ import {
   isProviderReady,
   SYNC_PROVIDERS,
 } from "@/features/sync/lib/providers/registry";
-import type { ProviderContext, SyncSecretStore } from "@/features/sync/lib/providers/types";
-import { ONEDRIVE_PROVIDER } from "@/features/sync/lib/providers/onedrive/provider";
-import { ONEDRIVE_ENDPOINTS } from "@/features/sync/lib/providers/onedrive/endpoints";
-import {
-  getAvatar as getOneDriveAvatar,
-  getBackup as getOneDriveBackup,
-  putBackup as putOneDriveBackup,
-} from "@/features/sync/lib/providers/onedrive/client";
 import { readMarks, writeMarks } from "@/features/walkthrough/lib/marks";
 import { registerStore } from "@/lib/storage/key-value";
 import { diffCatalogKeys, flattenCatalog } from "@/lib/i18n/catalog-utils";
@@ -1543,9 +1535,9 @@ async function main(): Promise<void> {
       },
       {
         id: "c2",
-        name: "OneDrive",
-        provider: "onedrive",
-        options: { clientId: "app", accountEmail: "a@b.c" },
+        name: "自建 Nextcloud",
+        provider: "webdav",
+        options: { url: "https://dav.example.org/dav", username: "me" },
         lastSyncAt: 222,
         createdAt: 2,
       },
@@ -1576,10 +1568,8 @@ async function main(): Promise<void> {
   });
 
   await check("供应商：清单 / 校验", async () => {
-    assert(SYNC_PROVIDERS.length === 4, "选择列表应有 4 个服务");
-    assert(isProviderReady("webdav") && isProviderReady("onedrive"), "WebDAV / OneDrive 已实现");
-    assert(!isProviderReady("googledrive") && !isProviderReady("quark"), "另两家还没实现");
-    assert(getProvider("googledrive") === null, "没实现的供应商拿不到实现");
+    assert(SYNC_PROVIDERS.length === 1, "选择列表只有 WebDAV 一个服务");
+    assert(isProviderReady("webdav"), "WebDAV 已实现");
 
     const webdav = getProvider("webdav");
     const bad = webdav?.validate({ url: "ftp://x" });
@@ -1591,21 +1581,6 @@ async function main(): Promise<void> {
       "地址应被规范化（去末尾斜杠）"
     );
     assert(good?.ok && good.options.username === "u", "用户名应去掉空白");
-
-    const oneDrive = getProvider("onedrive");
-    const notConnected = oneDrive?.validate({ clientId: "app" });
-    assert(notConnected !== undefined && !notConnected.ok, "没连账号应校验失败");
-    const connected = oneDrive?.validate({
-      clientId: "app",
-      accountEmail: "a@b.c",
-      accountName: "A",
-    });
-    assert(connected?.ok === true, "连上账号后应通过");
-    assert(
-      oneDrive?.validate({ clientId: "  ", accountEmail: "a@b.c" }).ok === false,
-      "没有应用 ID 应校验失败"
-    );
-    assert(ONEDRIVE_PROVIDER.meta.id === "onedrive", "OneDrive 供应商 id 应是 onedrive");
   });
 
   await check("密钥 key：按配置 id 隔离", async () => {
@@ -1614,112 +1589,6 @@ async function main(): Promise<void> {
     assert(a !== b, "不同配置的密钥 key 应不同");
     assert(!a.includes("."), "key 不能带点（Android Keystore）");
     assert(a.includes("cfg1"), "key 里应带配置 id");
-  });
-
-  await check("OneDrive 客户端：建目录 / PUT 上传 / GET 下载 / 老备份回退", async () => {
-    const files = new Map<string, string>();
-    let auth: string | null = null;
-    let folderCreated = false;
-    const server = Bun.serve({
-      port: 0,
-      async fetch(request) {
-        const url = new URL(request.url);
-        auth = request.headers.get("Authorization");
-        if (url.pathname.endsWith("/token")) {
-          return new Response(
-            JSON.stringify({ access_token: "tok", refresh_token: "rt", expires_in: 3600 }),
-            { headers: { "Content-Type": "application/json" } }
-          );
-        }
-        // 查备份目录
-        if (url.pathname.endsWith("/root:/vnlite") && request.method === "GET") {
-          return folderCreated
-            ? new Response(JSON.stringify({ name: "vnlite" }), {
-                headers: { "Content-Type": "application/json" },
-              })
-            : new Response(null, { status: 404 });
-        }
-        // 建备份目录
-        if (url.pathname.endsWith("/root/children") && request.method === "POST") {
-          folderCreated = true;
-          return new Response(JSON.stringify({ name: "vnlite" }), { status: 201 });
-        }
-        if (request.method === "PUT") {
-          files.set(url.pathname, await request.text());
-          return new Response(
-            JSON.stringify({
-              size: 12,
-              lastModifiedDateTime: "2026-10-21T07:30:00.000Z",
-            }),
-            { headers: { "Content-Type": "application/json" } }
-          );
-        }
-        if (request.method === "GET") {
-          const body = files.get(url.pathname);
-          if (body === undefined) return new Response(null, { status: 404 });
-          return new Response(body, { headers: { "Content-Length": String(body.length) } });
-        }
-        return new Response(null, { status: 405 });
-      },
-    });
-
-    const originalGraph = ONEDRIVE_ENDPOINTS.graph;
-    const originalLogin = ONEDRIVE_ENDPOINTS.login;
-    ONEDRIVE_ENDPOINTS.graph = `http://127.0.0.1:${server.port}/v1.0`;
-    ONEDRIVE_ENDPOINTS.login = `http://127.0.0.1:${server.port}/login`;
-    const secrets: SyncSecretStore = {
-      get: async (key) => (key === "refreshToken" ? "rt" : null),
-      set: async () => {},
-      remove: async () => {},
-    };
-    const ctx: ProviderContext = {
-      provider: "onedrive",
-      configId: "od1",
-      options: { clientId: "app" },
-      secrets,
-    };
-
-    try {
-      const info = await putOneDriveBackup(ctx, JSON.stringify({ hello: "world" }));
-      assert(auth === "Bearer tok", `认证头不对：${auth}`);
-      assert(folderCreated, "应先建 vnlite 目录");
-      assert(
-        files.has("/v1.0/me/drive/root:/vnlite/vnlite-backup.json:/content"),
-        `备份应写进 vnlite 目录，实际：${[...files.keys()].join(", ")}`
-      );
-      assert(info.size === 12, `大小应取 Graph 返回的，实际 ${info.size}`);
-      assert(info.modifiedAt === Date.parse("2026-10-21T07:30:00.000Z"), "应解析出修改时间");
-
-      const result = await getOneDriveBackup(ctx);
-      assert(result !== null, "应能下载回来");
-      assert(
-        (JSON.parse(result?.body ?? "{}") as { hello?: string }).hello === "world",
-        "内容应一致"
-      );
-
-      // 老版本存在同级目录的备份 → 也能读到
-      files.set(
-        "/v1.0/me/drive/root:/vnlite-backup.json:/content",
-        JSON.stringify({ hello: "legacy" })
-      );
-      files.delete("/v1.0/me/drive/root:/vnlite/vnlite-backup.json:/content");
-      const legacy = await getOneDriveBackup(ctx);
-      assert(
-        (JSON.parse(legacy?.body ?? "{}") as { hello?: string }).hello === "legacy",
-        "应回退到老位置的备份"
-      );
-
-      // 云盘上没有那个文件 → null（不是抛错）
-      files.clear();
-      const missing = await getOneDriveBackup(ctx);
-      assert(missing === null, "没有文件时应返回 null");
-      const missingAvatar = await getOneDriveAvatar(ctx);
-      assert(missingAvatar === null, "没有头像时应返回 null");
-    } finally {
-      ONEDRIVE_ENDPOINTS.graph = originalGraph;
-      ONEDRIVE_ENDPOINTS.login = originalLogin;
-      server.stop(true);
-    }
   });
 
   await check("作品评价解析：卡片字段 / Read more 截断 / 坏卡片丢弃", async () => {

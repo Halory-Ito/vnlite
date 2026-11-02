@@ -1,5 +1,5 @@
 /**
- * 简体中文 · sync 模块（多份同步配置 + WebDAV / OneDrive 备份同步）。
+ * 简体中文 · sync 模块（多份同步配置 + WebDAV 备份同步）。
  *
  * 接入点：`features/sync/*`（「我的 → 同步」页）。
  */
@@ -36,9 +36,6 @@ export const zhSync = {
     /* ---- 供应商 ---- */
     provider: {
       webdav: "WebDAV",
-      onedrive: "OneDrive",
-      googleDrive: "Google Drive",
-      quark: "夸克网盘",
     },
 
     /* ---- 同步状态 ---- */
@@ -62,29 +59,6 @@ export const zhSync = {
     itemFavorite: "收藏 %{count} 条",
     itemPlaySession: "游玩 %{count} 条",
     itemMarks: "攻略标记 %{count} 篇",
-
-    /* ---- OneDrive ---- */
-    onedrive: {
-      clientIdLabel: "应用 ID",
-      clientIdPlaceholder: "Azure 应用注册的客户端 ID",
-      clientIdHint: "在 Azure 应用注册里建一个应用，打开「允许公共客户端流」，把应用 ID 填到这里",
-      clientIdRequired: "填一下应用 ID",
-      connect: "连接 OneDrive",
-      reconnect: "换个账号",
-      disconnect: "断开连接",
-      connecting: "等待授权…",
-      deviceCode: "设备码 %{code}",
-      deviceCodeHint: "在打开的页面里输入这串码，然后登录你的账号",
-      openAuthPage: "打开验证页面",
-      authFailed: "授权失败",
-      authExpired: "授权码过期了，重新连一次",
-      authDenied: "你取消了授权",
-      notConnected: "还没连接 OneDrive 账号",
-      tokenExpired: "授权已失效，重新连一次",
-      forbidden: "没有权限访问这个文件",
-      publicClientDisabled: "这个 Azure 应用没开「允许公共客户端流」",
-      connected: "已连接 %{email}",
-    },
 
     /* ---- 网络错误 ---- */
     unauthorized: "用户名或密码不对",

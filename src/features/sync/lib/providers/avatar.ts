@@ -8,17 +8,12 @@
 
 import type { File } from "expo-file-system";
 
-import { putAvatar as putOneDriveAvatar } from "@/features/sync/lib/providers/onedrive/file";
 import type { ProviderContext } from "./types";
 import { putAvatar as putWebDavAvatar } from "@/features/sync/lib/providers/webdav/file";
 import { webdavConfigOf } from "@/features/sync/lib/providers/webdav/provider";
 
 /** 上传本地头像到对应的网盘 */
 export async function putProviderAvatar(ctx: ProviderContext, file: File): Promise<void> {
-  if (ctx.provider === "onedrive") {
-    await putOneDriveAvatar(ctx, file);
-    return;
-  }
   if (ctx.provider === "webdav") {
     await putWebDavAvatar(await webdavConfigOf(ctx), file);
   }

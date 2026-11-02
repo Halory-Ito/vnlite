@@ -1,11 +1,10 @@
 /**
- * 同步供应商的抽象（WebDAV / OneDrive / …）。
+ * 同步供应商的抽象（目前只有 WebDAV）。
  *
  * ## 为什么要抽象
  *
- * 「同步」页要同时支持多家网盘：每家的认证方式、上传下载接口都不一样，
- * 但**备份包格式、恢复流程、界面**是同一套。所以这里把「怎么存」抽象成
- * 一个供应商接口，页面只认接口，不认具体是哪家。
+ * 「同步」页的备份包格式、恢复流程、界面是同一套，跟「怎么存」解耦：
+ * 页面只认供应商接口，以后要加别家只要补一个实现。
  *
  * ## 分层
  *
@@ -16,7 +15,7 @@
 import type { TranslationKey } from "@/lib/i18n/translate";
 
 /** 供应商 id */
-export type SyncProviderId = "webdav" | "onedrive" | "googledrive" | "quark";
+export type SyncProviderId = "webdav";
 
 /** 供应商元信息 */
 export interface SyncProviderMeta {

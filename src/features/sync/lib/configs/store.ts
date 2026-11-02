@@ -6,7 +6,6 @@
  * 订阅（同 `lib/storage/preferences` 的做法）。
  */
 
-import { forgetAccessToken } from "@/features/sync/lib/providers/onedrive/client";
 import { migrateLegacyConfig } from "./migrate";
 import { clearConfigSecrets } from "./secrets";
 import { readActiveId, readConfigs, writeActiveId, writeConfigs } from "./storage";
@@ -77,7 +76,6 @@ export async function removeConfig(id: string): Promise<void> {
   configs = configs.filter((item) => item.id !== id);
   await writeConfigs(configs);
   await clearConfigSecrets(id);
-  forgetAccessToken(id);
   if (activeId === id) {
     activeId = configs[0]?.id ?? null;
     await writeActiveId(activeId);

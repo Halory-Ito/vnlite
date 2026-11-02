@@ -15,7 +15,6 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { Muted } from "@/components/typo";
-import { OneDriveFields } from "@/features/sync/components/provider-forms/onedrive-fields";
 import { WebDavFields } from "@/features/sync/components/provider-forms/webdav-fields";
 import { secretStoreFor } from "@/features/sync/lib/configs/secrets";
 import { createConfigId, type SyncConfig } from "@/features/sync/lib/configs/types";
@@ -157,13 +156,7 @@ export function SyncConfigForm({
         />
       ) : null}
 
-      {providerId === "onedrive" ? (
-        <OneDriveFields configId={id} options={options} onChange={setOptions} />
-      ) : null}
-
-      {providerId !== "webdav" && providerId !== "onedrive" ? (
-        <Muted type="body-xs">{t("sync.providerNotReady")}</Muted>
-      ) : null}
+      {providerId !== "webdav" ? <Muted type="body-xs">{t("sync.providerNotReady")}</Muted> : null}
 
       {error ? (
         <Muted type="body-xs" className="text-danger-soft-foreground">
