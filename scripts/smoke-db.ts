@@ -536,6 +536,41 @@ async function main(): Promise<void> {
     assert(migratePreferences({ cardOpacity: "半透明" }).cardOpacity === 0.72, "非数字回默认");
   });
 
+  await check("Tab 切换动画：三档选择与旧布尔偏好迁移", () => {
+    assert(migratePreferences({}).tabBarAnimation === "settle", "旧数据应默认缓停");
+    assert(
+      migratePreferences({ tabBarAnimation: false }).tabBarAnimation === "off",
+      "旧关闭状态应映射为关闭"
+    );
+    assert(
+      migratePreferences({ tabBarAnimation: true }).tabBarAnimation === "settle",
+      "旧开启状态应映射为缓停"
+    );
+    assert(
+      migratePreferences({ tabBarAnimation: "bounce" }).tabBarAnimation === "bounce",
+      "回弹应保留"
+    );
+    assert(migratePreferences({ tabBarAnimation: "off" }).tabBarAnimation === "off", "关闭应保留");
+    assert(
+      migratePreferences({ tabBarAnimation: "wrong" }).tabBarAnimation === "settle",
+      "脏值回默认"
+    );
+  });
+
+  await check("底栏玻璃设置：旧偏好补默认值，数值夹取，样式兜底", () => {
+    const defaults = migratePreferences({});
+    assert(defaults.tabBarOpacity === 0.78 && defaults.tabBarBlur === 0, "旧偏好应补底栏默认值");
+    assert(migratePreferences({ tabBarStyle: "glass" }).tabBarStyle === "glass", "玻璃样式应保留");
+    assert(
+      migratePreferences({ tabBarStyle: "unknown" }).tabBarStyle === "default",
+      "未知样式应回退"
+    );
+    assert(migratePreferences({ tabBarOpacity: -1 }).tabBarOpacity === 0, "透明度下限应夹取");
+    assert(migratePreferences({ tabBarOpacity: 2 }).tabBarOpacity === 1, "透明度上限应夹取");
+    assert(migratePreferences({ tabBarBlur: 180 }).tabBarBlur === 100, "模糊度上限应夹取");
+    assert(migratePreferences({ tabBarBlur: "high" }).tabBarBlur === 0, "模糊度脏值应回默认");
+  });
+
   await check("清单标签本地筛选：filterByLabel（切标签不再重新请求）", () => {
     const items = [
       makeItem("v1", { labels: [{ id: 1, label: "Playing" }] }),

@@ -165,6 +165,17 @@ export const zhCore = {
 
     cardSection: "卡片",
     cardOpacity: "卡片透明度",
+    tabBarSection: "导航栏",
+    tabBarStyle: "底部栏样式",
+    tabBarStyleDocked: "贴底",
+    tabBarStyleCapsule: "胶囊",
+    tabBarStyleGlass: "液态玻璃",
+    tabBarAnimation: "切换动画",
+    tabBarOpacity: "底栏不透明度",
+    tabBarBlur: "底栏模糊度",
+    tabBarAnimationOff: "关闭",
+    tabBarAnimationBounce: "回弹",
+    tabBarAnimationSettle: "缓停",
 
     contentTitle: "内容显示",
     nsfw: "成人内容",
@@ -174,6 +185,8 @@ export const zhCore = {
     spoiler: "剧透保护",
     spoilerHint: "开启后攻略页签的结局名、达成条件与步骤内容默认打码，点一下才显示",
     spoilerHide: "隐藏攻略内容",
+    vnTitles: "作品名称",
+    showVnOriginalTitle: "显示作品原名",
     pageSize: "每页条数",
 
     accountTitle: "账号",

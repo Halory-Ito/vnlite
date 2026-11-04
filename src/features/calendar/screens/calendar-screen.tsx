@@ -3,8 +3,7 @@
  *
  * ## 交互
  *
- * - 上半屏是**月历**（`react-native-calendars` 的 `CalendarList`，周日开头），
- *   有发售的日期带小圆点；**上下拖动**切月，相邻月份预先在列表里
+ * - 月历按周日开头，有发售的日期带小圆点；使用月份按钮切月
  * - 切月**不会自动选中**某一天：今天描空心圆，只有用户点过的日期才是实心圆
  * - 右上角「跳转」可以输入任意年月日，跳过去并选中那一天
  * - 点某一天，下半屏才列出那天发售的作品；没点之前留空
@@ -21,11 +20,9 @@ import type { FlashListRef } from "@shopify/flash-list";
 import { Button } from "heroui-native";
 import type { JSX } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useWindowDimensions, View } from "react-native";
-import type { DateData } from "react-native-calendars";
+import { ScrollView, useWindowDimensions, View } from "react-native";
 
 import { BackBar } from "@/components/back-bar";
-import { Paragraph } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import { isValidDate } from "@/utils/date";
@@ -33,7 +30,7 @@ import { todayIso } from "@/utils/format";
 
 import {
   CalendarListView,
-  type CalendarListHandle,
+  type CalendarDate,
   type CalendarMarkedDates,
 } from "@/features/calendar/components/calendar-list";
 import { CalendarMonthList } from "@/features/calendar/components/calendar-month-list";
@@ -45,25 +42,21 @@ import {
   currentMonth,
   groupByDay,
   monthKey,
-  monthsAfterMonth,
-  monthsBeforeMonth,
   type MonthRef,
 } from "@/features/calendar/lib/calendar";
 
 export default function CalendarScreen(): JSX.Element {
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isWide = width >= 700 || (width > height && width >= 600);
+  const compact = width > height;
   const [month, setMonth] = useState<MonthRef>(() => currentMonth());
-  /** 列表挂载时的月份：之后用户怎么滚都不回写 `current`，否则会把列表拽回去 */
-  const [initial] = useState<MonthRef>(() => month);
-  const initialMonth = `${monthKey(initial)}-01`;
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpDate, setJumpDate] = useState("");
-  const calendarRef = useRef<CalendarListHandle>(null);
   const listRef = useRef<FlashListRef<VnSummary>>(null);
   const query = useMonthReleases(month);
-  /** 左右各预取一个月（只第一页）：滑到相邻月份时圆点已经在了 */
+  /** 左右各预取一个月（只第一页）：切月时圆点可以立即显示 */
   const prevQuery = useMonthReleases(clampMonth(addMonths(month, -1)));
   const nextQuery = useMonthReleases(clampMonth(addMonths(month, 1)));
   const { fetchNextPage, hasNextPage, isFetchingNextPage, isError } = query;
@@ -115,7 +108,7 @@ export default function CalendarScreen(): JSX.Element {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, []);
 
-  /** 日历 / 读屏 / 跳转都会改月份：用 ref 去重，回调本身保持稳定 */
+  /** 月份按钮 / 读屏 / 跳转都会改月份：用 ref 去重 */
   const monthRef = useRef(month);
   useEffect(() => {
     monthRef.current = month;
@@ -132,7 +125,7 @@ export default function CalendarScreen(): JSX.Element {
   );
 
   const pickDay = useCallback(
-    (day: DateData): void => {
+    (day: CalendarDate): void => {
       setSelectedDay(day.dateString);
       resetList();
     },
@@ -141,7 +134,6 @@ export default function CalendarScreen(): JSX.Element {
 
   const shiftMonth = (delta: number): void => {
     const next = clampMonth(addMonths(month, delta));
-    calendarRef.current?.scrollToMonth(`${monthKey(next)}-01`);
     changeMonth(next);
   };
 
@@ -164,7 +156,6 @@ export default function CalendarScreen(): JSX.Element {
     } else {
       setSelectedDay(null);
     }
-    calendarRef.current?.scrollToMonth(`${monthKey(target)}-01`);
     changeMonth(target);
     resetList();
     setJumpOpen(false);
@@ -174,48 +165,54 @@ export default function CalendarScreen(): JSX.Element {
     <View className="flex-1">
       <BackBar title={t("calendar.title")} />
 
-      {/* 月份标题 + 跳转；切月靠上下拖动，不放左右箭头 */}
-      <View className="flex-row items-center justify-between px-4 pb-2">
-        <Paragraph className="font-semibold">
-          {t("calendar.monthTitle", { year: month.year, month: month.month })}
-        </Paragraph>
+      <View className="flex-row justify-end px-4 pb-2">
         <Button size="sm" variant="ghost" onPress={openJump}>
           <Button.Label>{t("calendar.jump")}</Button.Label>
         </Button>
       </View>
 
-      <View
-        style={{ width: "100%", maxWidth: 560, alignSelf: "center" }}
-        className="px-4"
-        accessibilityActions={[
-          { name: "increment", label: t("calendar.nextMonth") },
-          { name: "decrement", label: t("calendar.prevMonth") },
-        ]}
-        onAccessibilityAction={(event) => {
-          shiftMonth(event.nativeEvent.actionName === "increment" ? 1 : -1);
-        }}
-      >
-        <CalendarListView
-          initialMonth={initialMonth}
-          pastScrollRange={monthsBeforeMonth(initial)}
-          futureScrollRange={monthsAfterMonth(initial)}
-          calendarWidth={Math.min(width, 560) - 32}
-          markedDates={markedDates}
-          onDayPress={pickDay}
-          onMonthChange={changeMonth}
-          listRef={calendarRef}
-        />
-      </View>
+      <View className="flex-1" style={{ flexDirection: isWide ? "row" : "column" }}>
+        <View
+          style={{
+            width: isWide ? "50%" : "100%",
+            maxWidth: isWide ? 640 : 560,
+            alignSelf: isWide ? "stretch" : "center",
+          }}
+          className="px-4"
+          accessibilityActions={[
+            { name: "increment", label: t("calendar.nextMonth") },
+            { name: "decrement", label: t("calendar.prevMonth") },
+          ]}
+          onAccessibilityAction={(event) => {
+            shiftMonth(event.nativeEvent.actionName === "increment" ? 1 : -1);
+          }}
+        >
+          <ScrollView style={isWide ? { flex: 1 } : { flexGrow: 0, flexShrink: 0 }}>
+            <CalendarListView
+              month={month}
+              markedDates={markedDates}
+              onDayPress={pickDay}
+              onMonthChange={changeMonth}
+              compact={compact}
+            />
+          </ScrollView>
+        </View>
 
-      <CalendarMonthList
-        items={dayItems}
-        activeDay={activeDay}
-        isLoading={monthLoading}
-        isError={query.isError}
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        listRef={listRef}
-      />
+        <View
+          className={`flex-1 bg-surface-secondary ${isWide ? "border-l border-separator" : "mt-3 border-t border-separator"}`}
+          style={isWide ? { minWidth: 0, height: "100%" } : undefined}
+        >
+          <CalendarMonthList
+            items={dayItems}
+            activeDay={activeDay}
+            isLoading={monthLoading}
+            isError={query.isError}
+            error={query.error}
+            onRetry={() => void query.refetch()}
+            listRef={listRef}
+          />
+        </View>
+      </View>
 
       <JumpDialog
         isOpen={jumpOpen}

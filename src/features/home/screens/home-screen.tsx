@@ -7,12 +7,14 @@ import { HomePlayStats } from "@/features/home/components/home-play-stats";
 import { QuoteCard } from "@/features/home/components/quote-card";
 import { RandomVnCard } from "@/features/home/components/random-vn-card";
 import { homeSectionRows } from "@/features/home/lib/home-layout";
+import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
 import { usePreferences } from "@/hooks/use-preferences";
 
 export default function HomeScreen() {
   const { homeLayout } = usePreferences();
+  const bottomPadding = useTabContentPadding();
   return (
-    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bottomPadding }}>
       {homeSectionRows(homeLayout).map((row) => {
         const id = row[0]!;
         const key = row.join(":");

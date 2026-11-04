@@ -1,6 +1,6 @@
 import { Button, Input, Label, TextField } from "heroui-native";
 import { useEffect, useRef, useState } from "react";
-import { View } from "react-native";
+import { useWindowDimensions, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { toQR } from "toqr";
 import { Muted } from "@/components/typo";
@@ -11,6 +11,8 @@ import { startLogin, finishLogin, type QuarkLogin } from "../../lib/providers/qu
 import { openQuarkAuthorization } from "../../lib/providers/quark/authorization-link";
 
 function LoginQr({ url, label }: { url: string; label: string }) {
+  const { width } = useWindowDimensions();
+  const qrSize = Math.min(208, Math.max(176, width - 64));
   const cells = toQR(url),
     size = Math.sqrt(cells.length);
   let path = "";
@@ -18,7 +20,7 @@ function LoginQr({ url, label }: { url: string; label: string }) {
     if (dark) path += `M${(index % size) + 4},${Math.floor(index / size) + 4}h1v1h-1z`;
   });
   return (
-    <View className="w-full max-w-64 self-center aspect-square" accessibilityLabel={label}>
+    <View style={{ width: qrSize, height: qrSize, alignSelf: "center" }} accessibilityLabel={label}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${size + 8} ${size + 8}`}>
         <Path d={`M0 0h${size + 8}v${size + 8}H0z`} fill="white" />
         <Path d={path} fill="black" />

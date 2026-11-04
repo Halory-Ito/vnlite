@@ -365,7 +365,7 @@ export function queryRandomQuote(signal?: AbortSignal): Promise<QueryResponse<Qu
     {
       filters: ["random", "=", 1] as unknown as Predicate,
       fields:
-        "id,quote,score,vn.id,vn.title,vn.released,character.id,character.name,character.original",
+        "id,quote,score,vn.id,vn.title,vn.alttitle,vn.titles.lang,vn.titles.title,vn.titles.main,vn.released,character.id,character.name,character.original",
       results: 1,
     },
     { signal }
@@ -389,7 +389,7 @@ export function queryQuotes(options: {
     {
       filters,
       fields:
-        "id,quote,score,vn.id,vn.title,vn.released,character.id,character.name,character.original",
+        "id,quote,score,vn.id,vn.title,vn.alttitle,vn.titles.lang,vn.titles.title,vn.titles.main,vn.released,character.id,character.name,character.original",
       sort: "score",
       reverse: true,
       results: clampResults(options.results ?? 25),

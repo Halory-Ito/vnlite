@@ -1,83 +1,104 @@
 import { Tabs } from "expo-router";
+import { BottomTabBar } from "expo-router/build/layouts/Tabs";
 import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
-import type { ColorValue } from "react-native";
+import { useWindowDimensions, type ColorValue } from "react-native";
+import { useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/icon";
+import { TabButton } from "@/features/navigation/components/tab-button";
+import {
+  TabIndicatorBackground,
+  TabIndicatorProvider,
+} from "@/features/navigation/components/tab-indicator";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
-import { withAlpha } from "@/theme/color";
+import { resolveMode } from "@/theme/themes";
 
-/**
- * Tab 栏底色的最低不透明度。
- * 0.72 是试出来的下限：再透背景图就会看不清选中态文字。
- */
-const TAB_BAR_MIN_ALPHA = 0.72;
+/** 栏内容高度（图标 + 文字 + 胶囊内边距），两种样式共用。 */
+const TAB_BAR_CONTENT_HEIGHT = 64;
 
 function TabIcon({ name, color }: { name: IconName; color: ColorValue }): JSX.Element {
   return <Icon name={name} size={24} color={color} />;
 }
 
-/**
- * 底部 Tab 栏。
- *
- * ⚠️ 这里的颜色**必须显式传**，不能指望主题自动生效：
- * 底部 Tab 栏是 react-navigation 渲染的，它读的是 `NavigationContainer`
- * 的 theme，跟 Uniwind/HeroUI 的 CSS 变量是两套体系。
- * 不传的话永远是默认的蓝底白字，换主题时这里不会跟着变。
- *
- * ## 选中态为什么这样画
- *
- * 之前是「整格铺一层 `surface` 50% 色块」—— 看上去像一块糊上去的灰板，
- * 四个角还是方的，跟圆角 UI 完全不搭，Master 直接否了。
- *
- * 现在改成**选中块 + 品牌色图标**：
- *   - 底色用 `--segment`，也就是 `Tabs` / `SegmentedControl` 选中态用的同一套色阶，
- *     全 App 的「选中」语言统一
- *   - 图标与文字用 `--segment-foreground`（派生为品牌 accent），一眼看出选中的是哪个
- *
- * 底色用 `withAlpha(background, …)` 而不是纯色：不透明的话这条栏
- * 会把背景图拦腰截断，看上去像「只有列表页有背景图」。
- */
+/** 底部 Tab 栏：贴底 / 悬浮胶囊。 */
 export default function TabsLayout(): JSX.Element {
-  const background = useThemeColor("background");
   const muted = useThemeColor("muted");
-  const segment = useThemeColor("segment");
   const segmentForeground = useThemeColor("segment-foreground");
-  const maskOpacity = usePreferences().backgroundOpacity;
+  const preferences = usePreferences();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const systemScheme = useColorScheme();
+
+  const isCapsule = preferences.tabBarStyle !== "default";
+  const isDark = resolveMode(preferences.colorScheme, systemScheme) === "dark";
+
+  const capsuleWidth = Math.min(windowWidth - 24, Math.max(windowWidth * 0.84, 296), 380);
+  const capsuleMargin = Math.max((windowWidth - capsuleWidth) / 2, 20);
+
+  const barStyle = {
+    position: "absolute" as const,
+    bottom: isCapsule ? Math.max(insets.bottom, 12) : 0,
+    backgroundColor: "transparent",
+    borderTopWidth: 0,
+    borderTopColor: "transparent",
+    elevation: 0,
+    shadowOpacity: 0,
+    paddingHorizontal: 6,
+    ...(isCapsule
+      ? {
+          start: capsuleMargin,
+          end: capsuleMargin,
+          left: capsuleMargin,
+          right: capsuleMargin,
+          width: capsuleWidth,
+          height: TAB_BAR_CONTENT_HEIGHT,
+          paddingBottom: 0,
+          paddingTop: 0,
+          borderRadius: TAB_BAR_CONTENT_HEIGHT / 2,
+          overflow: "hidden" as const,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.12,
+          shadowRadius: 12,
+          elevation: 6,
+        }
+      : {
+          height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+          paddingTop: 0,
+          paddingBottom: insets.bottom,
+        }),
+  };
 
   return (
     <Tabs
+      tabBar={(props) => (
+        <TabIndicatorProvider
+          index={props.state.index}
+          count={props.state.routes.length}
+          animation={preferences.tabBarAnimation}
+          style={preferences.tabBarStyle}
+          opacity={preferences.tabBarOpacity}
+          blur={preferences.tabBarBlur}
+          dark={isDark}
+        >
+          <BottomTabBar {...props} />
+        </TabIndicatorProvider>
+      )}
       screenOptions={{
         headerShown: false,
-        /*
-         * ⚠️ `sceneStyle` 必须显式给 `transparent`，否则背景图看不见。
-         *
-         * expo-router 内部每个 Tab 场景都包了一层 `<Background>`，它把
-         * `backgroundColor: colors.background` 放在 style 数组的**第一项**
-         * （`expo-router/build/react-navigation/elements/Background.js`），
-         * 而那个 `colors` 来自 expo-router 自己的主题，跟我们的
-         * Uniwind / HeroUI 变量完全是两套体系 —— 不覆盖的话每个 Tab 都会被
-         * 刷成一层不透明底色，把 `ThemeProvider` 铺在最底层的背景图盖死。
-         *
-         * 之所以覆盖得住：style 数组里**靠后**的项赢，
-         * 而 `sceneStyle` 正好被拼在默认底色之后。
-         *
-         * 同理，`Stack` 的 `contentStyle` 也必须给 `transparent`（见 `_layout.tsx`）。
-         */
         sceneStyle: { backgroundColor: "transparent" },
         tabBarActiveTintColor: segmentForeground,
         tabBarInactiveTintColor: muted,
-        tabBarActiveBackgroundColor: segment,
+        tabBarLabelPosition: "below-icon",
+        tabBarActiveBackgroundColor: "transparent",
         tabBarInactiveBackgroundColor: "transparent",
-        tabBarStyle: {
-          backgroundColor: withAlpha(
-            background,
-            TAB_BAR_MIN_ALPHA + maskOpacity * (1 - TAB_BAR_MIN_ALPHA)
-          ),
-          borderTopColor: "transparent",
-        },
+        tabBarButton: (props) => <TabButton {...props} />,
+        tabBarBackground: () => <TabIndicatorBackground />,
+        tabBarStyle: barStyle,
       }}
     >
       <Tabs.Screen

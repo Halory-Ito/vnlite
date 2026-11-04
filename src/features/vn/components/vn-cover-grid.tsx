@@ -27,10 +27,11 @@ import { Pressable, View, useWindowDimensions, type RefreshControlProps } from "
 import { CoverImage } from "@/components/cover-image";
 import { imageGate, useNsfwMode } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
-import type { Image } from "@/lib/api/types";
+import type { Image, Title } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
 import { coverGridColumns } from "@/utils/grid";
 import { coverUrl } from "@/utils/format";
+import { getVnDisplayTitle } from "@/features/vn/lib/display-title";
 
 /** 网格布局：列数随屏幕、格子间距 8、左右外边距 16 */
 const GAP = 8;
@@ -42,6 +43,7 @@ const COVER_RATIO = [256, 362] as const;
 export interface CoverGridEntry {
   id: string;
   title: string;
+  titles?: Title[];
   image?: Image;
 }
 
@@ -134,7 +136,7 @@ function GridTile({
   nsfwMode: NsfwMode;
   onPress: (id: string) => void;
 }): JSX.Element {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const image = entry.image;
   const cover = (
     <CoverImage
@@ -143,7 +145,9 @@ function GridTile({
       height={COVER_RATIO}
       sexual={image?.sexual}
       violence={image?.violence}
-      accessibilityLabel={t("home.coverLabel", { title: entry.title })}
+      accessibilityLabel={t("home.coverLabel", {
+        title: getVnDisplayTitle(entry, locale === "zh"),
+      })}
       onPress={() => onPress(entry.id)}
     />
   );
@@ -155,7 +159,9 @@ function GridTile({
         <Pressable
           onPress={() => onPress(entry.id)}
           accessibilityRole="button"
-          accessibilityLabel={t("home.coverHiddenLabel", { title: entry.title })}
+          accessibilityLabel={t("home.coverHiddenLabel", {
+            title: getVnDisplayTitle(entry, locale === "zh"),
+          })}
         >
           {cover}
         </Pressable>

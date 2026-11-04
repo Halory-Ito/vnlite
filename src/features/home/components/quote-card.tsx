@@ -11,6 +11,7 @@ import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import { vnCopyText } from "@/utils/copy-text";
 import { queryRandomQuote } from "@/lib/api/endpoints/vn";
+import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import { readDailyQuote, writeDailyQuote } from "@/lib/storage/daily-quote";
 import { todayIso } from "@/utils/format";
 
@@ -74,7 +75,7 @@ export function QuoteCard(): JSX.Element | null {
             accessibilityHint={t("home.quoteCopyHint")}
           >
             <Muted type="body-sm" className="text-link">
-              — {data.vn.title}
+              <VnDisplayTitle vn={data.vn} original={data.vn.alttitle} />
             </Muted>
           </Pressable>
         ) : null}

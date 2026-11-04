@@ -1,8 +1,5 @@
 /**
- * 日历顶部的一周星期名（固定在翻页器上方，不随月份页滚动）。
- *
- * `react-native-calendars` 默认把月份标题和星期名一起塞进每页的 header；
- * 这里改成列表外固定的一行，月份标题在页面外面（右上角还有「跳转」）。
+ * 月历顶部的星期名。
  */
 
 import type { JSX } from "react";
@@ -21,10 +18,13 @@ export function CalendarWeekHeader(): JSX.Element {
   const labels = t("calendar.weekdays").split(",");
 
   return (
-    <View className="flex-row" style={{ height: WEEK_HEADER_HEIGHT }}>
+    <View
+      className="mb-1 flex-row border-b border-separator pb-2"
+      style={{ height: WEEK_HEADER_HEIGHT + 8 }}
+    >
       {WEEKDAY_KEYS.map((key, index) => (
-        <View key={key} style={{ width: `${100 / 7}%` }} className="items-center justify-center">
-          <Muted type="body-xs" className="text-[10px] opacity-70">
+        <View key={key} className="flex-1 items-center justify-center">
+          <Muted type="body-xs" className="text-xs font-semibold">
             {labels[index] ?? ""}
           </Muted>
         </View>

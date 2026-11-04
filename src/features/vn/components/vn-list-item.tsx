@@ -8,11 +8,12 @@ import type { JSX, ReactNode } from "react";
 import { Pressable, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
-import { Muted, Paragraph } from "@/components/typo";
+import { Muted } from "@/components/typo";
 import { PlatformBadges, RatingBadge } from "@/components/ui";
 import { useCopyProps } from "@/hooks/use-copy";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
+import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import type { VnSummary } from "@/lib/api/types";
 import type { CardField } from "@/lib/storage/preferences";
 import { vnCopyText } from "@/utils/copy-text";
@@ -43,7 +44,8 @@ export function VnListItem({
   fields,
 }: VnListItemProps): JSX.Element {
   const { t } = useTranslation();
-  const preferred = usePreferences().cardFields;
+  const preferences = usePreferences();
+  const preferred = preferences.cardFields;
   const show = (field: CardField): boolean => (fields ?? preferred).includes(field);
   // 长按整行复制作品名 —— 浏览 / 搜索 / 标签 / 清单的列表都靠这一处
   const copyable = useCopyProps(vnCopyText(vn), { preview: vn.title });
@@ -77,9 +79,7 @@ export function VnListItem({
       <View className="flex-1 justify-center gap-1 py-0.5">
         {/* `selectable={false}`：标题属于「整行可点」那一层，长按由行自己接管（复制作品名），
             别让系统选区把手势抢走 */}
-        <Paragraph className="line-clamp-2 font-medium" selectable={false}>
-          {vn.title}
-        </Paragraph>
+        <VnDisplayTitle vn={vn} className="line-clamp-2 font-medium" numberOfLines={2} />
 
         {hasMeta ? (
           <View className="flex-row flex-wrap items-center gap-x-2 gap-y-0.5">

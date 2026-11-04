@@ -21,9 +21,11 @@
  */
 
 import { useThemeColor } from "heroui-native";
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
+import { BlurTargetView } from "expo-blur";
 import type { JSX } from "react";
-import { StyleSheet, View, type ImageSourcePropType } from "react-native";
+import type { ComponentRef, RefObject } from "react";
+import { StyleSheet, View } from "react-native";
 
 import {
   DEFAULT_BACKGROUND_POSITION,
@@ -32,8 +34,9 @@ import {
 } from "@/theme/background";
 
 export interface AppBackgroundProps {
+  targetRef?: RefObject<ComponentRef<typeof View> | null>;
   /** 本地 asset（require 的结果）或远程 URL；null = 不渲染图片层 */
-  source: ImageSourcePropType | string | null;
+  source: ImageSource | number | string | null;
   /** 遮罩不透明度 0–1 */
   opacity: number;
   /** 图片模糊半径（pt），0 = 不模糊 */
@@ -49,6 +52,7 @@ export interface AppBackgroundProps {
 const FILL = StyleSheet.absoluteFill;
 
 export function AppBackground({
+  targetRef,
   source,
   opacity,
   blur,
@@ -59,7 +63,7 @@ export function AppBackground({
 
   return (
     // pointerEvents="none"：整组都是装饰，必须让触摸穿透到下面的内容
-    <View style={FILL} pointerEvents="none">
+    <BlurTargetView ref={targetRef} style={FILL} pointerEvents="none">
       {/* 1. 底色层：永远在最底，保证上层容器可以放心透明 */}
       <View style={[FILL, { backgroundColor: background }]} />
 
@@ -84,6 +88,6 @@ export function AppBackground({
 
       {/* 3. 遮罩层：把图片往底色方向拉，foreground 与底色的对比度才可控 */}
       {opacity > 0 ? <View style={[FILL, { backgroundColor: background, opacity }]} /> : null}
-    </View>
+    </BlurTargetView>
   );
 }

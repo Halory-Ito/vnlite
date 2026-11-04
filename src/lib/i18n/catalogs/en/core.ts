@@ -162,6 +162,17 @@ export const enCore: CatalogOf<typeof zhCore> = {
 
     cardSection: "Cards",
     cardOpacity: "Card opacity",
+    tabBarSection: "Navigation bar",
+    tabBarStyle: "Bottom tab style",
+    tabBarStyleDocked: "Docked",
+    tabBarStyleCapsule: "Capsule",
+    tabBarStyleGlass: "Liquid glass",
+    tabBarAnimation: "Tab animation",
+    tabBarOpacity: "Bar opacity",
+    tabBarBlur: "Bar blur",
+    tabBarAnimationOff: "Off",
+    tabBarAnimationBounce: "Bounce",
+    tabBarAnimationSettle: "Settle",
 
     contentTitle: "Content",
     nsfw: "Adult content",
@@ -172,6 +183,8 @@ export const enCore: CatalogOf<typeof zhCore> = {
     spoilerHint:
       "Masks ending names, unlock conditions and step text in the walkthrough tab until you tap them",
     spoilerHide: "Hide walkthrough content",
+    vnTitles: "Visual novel titles",
+    showVnOriginalTitle: "Show original title",
     pageSize: "Items per page",
 
     accountTitle: "Account",

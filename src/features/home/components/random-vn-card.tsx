@@ -7,6 +7,7 @@ import { Muted, Paragraph } from "@/components/typo";
 import { useCopyProps } from "@/hooks/use-copy";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
+import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import { vnCopyText } from "@/utils/copy-text";
@@ -124,7 +125,7 @@ function RandomVnRow({ vn, onPress }: { vn: VnSummary; onPress: () => void }): J
           <View className="flex-1 justify-center">
             {/* 整行可点：长按由行自己接管（复制作品名），标题不弹系统选区 */}
             <Paragraph className="line-clamp-2" selectable={false}>
-              {vn.title}
+              <VnDisplayTitle vn={vn} numberOfLines={2} />
             </Paragraph>
             <Muted type="body-xs">
               {formatReleased(vn.released)} · {languageLabel(vn.olang)} · {formatRating(vn.rating)}

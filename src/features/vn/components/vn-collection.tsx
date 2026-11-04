@@ -57,7 +57,12 @@ export function VnCollection({ mode, items, onPressItem, footer }: VnCollectionP
   if (mode === "grid") {
     return (
       <VnCoverGrid
-        entries={items.map((vn) => ({ id: vn.id, title: vn.title, image: vn.image }))}
+        entries={items.map((vn) => ({
+          id: vn.id,
+          title: vn.title,
+          titles: vn.titles,
+          image: vn.image,
+        }))}
         onPressItem={onPressItem}
         footer={footer}
       />

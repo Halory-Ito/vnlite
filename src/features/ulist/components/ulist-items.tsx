@@ -16,6 +16,7 @@ import type { JSX, ReactElement } from "react";
 import { RefreshControl, View } from "react-native";
 
 import { Separator } from "@/components/separator";
+import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
 import { Muted } from "@/components/typo";
 import { VnCoverGrid } from "@/features/vn/components/vn-cover-grid";
 import { useTranslation } from "@/hooks/use-translation";
@@ -48,6 +49,7 @@ export function UlistItems({
   footer,
 }: UlistItemsProps): JSX.Element {
   const { t } = useTranslation();
+  const bottomPadding = useTabContentPadding();
   const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />;
   // 「加载更多…」与调用方的附加内容（筛选说明）互斥显示，避免两块提示叠在一起
   const bottom: ReactElement | null = isFetchingNextPage ? (
@@ -66,12 +68,13 @@ export function UlistItems({
         entries={items.map((item) => ({
           id: item.id,
           title: item.vn?.title ?? item.id,
+          titles: item.vn?.titles,
           image: item.vn?.image,
         }))}
         onPressItem={onPressItem}
         onEndReached={onEndReached}
         refreshControl={refreshControl}
-        footer={bottom}
+        footer={<View style={{ paddingBottom: bottomPadding }}>{bottom}</View>}
       />
     );
   }
@@ -87,6 +90,7 @@ export function UlistItems({
       onEndReachedThreshold={0.6}
       refreshControl={refreshControl}
       ListFooterComponent={bottom}
+      contentContainerStyle={{ paddingBottom: bottomPadding }}
     />
   );
 }

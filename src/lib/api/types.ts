@@ -367,7 +367,7 @@ export interface Quote {
   id: string;
   quote: string;
   score?: number;
-  vn?: { id: string; title: string; released?: string; image?: Image };
+  vn?: VnSummary;
   character?: { id: string; name: string; original?: string };
 }
 

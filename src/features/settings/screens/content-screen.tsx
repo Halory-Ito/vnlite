@@ -57,6 +57,25 @@ export default function ContentScreen(): JSX.Element {
         </ListGroup>
       </SettingsSection>
 
+      <SettingsSection title={t("settings.vnTitles")}>
+        <ListGroup style={groupSurface}>
+          <ListGroup.Item>
+            <ListGroup.ItemPrefix>
+              <Icon name="folderOpen" size={20} color={accent} />
+            </ListGroup.ItemPrefix>
+            <ListGroup.ItemContent>
+              <ListGroup.ItemTitle>{t("settings.showVnOriginalTitle")}</ListGroup.ItemTitle>
+            </ListGroup.ItemContent>
+            <ListGroup.ItemSuffix>
+              <Switch
+                isSelected={preferences.showVnOriginalTitle}
+                onSelectedChange={(value: boolean) => setPreference("showVnOriginalTitle", value)}
+              />
+            </ListGroup.ItemSuffix>
+          </ListGroup.Item>
+        </ListGroup>
+      </SettingsSection>
+
       <SettingsSection title={t("settings.pageSize")}>
         <TranslucentPanel>
           <SegmentedControl

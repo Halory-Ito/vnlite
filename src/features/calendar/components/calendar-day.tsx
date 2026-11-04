@@ -1,19 +1,7 @@
-/**
- * 日历里的一天（`react-native-calendars` 的自定义 `dayComponent`）。
- *
- * - 今天：空心圆
- * - 选中：主题色实心圆（数字用前景色）
- * - 今天且选中：实心圆 + 外圈
- * - 有发售：圆点
- *
- * 尺寸 / 圆角都显式写在 `style` 里，不依赖 class 编译结果；
- * 主题色与文案从 Context 拿，避免每个格子各订阅一次。
- */
-
-import type { JSX } from "react";
+﻿import type { JSX } from "react";
 import { memo } from "react";
 import { Pressable, View } from "react-native";
-import type { DateData } from "react-native-calendars";
+import type { CalendarDate } from "./calendar-list";
 
 import { Paragraph } from "@/components/typo";
 import { withAlpha } from "@/theme/color";
@@ -24,22 +12,30 @@ import { DAY_CELL_HEIGHT } from "./calendar-layout";
 
 const CIRCLE_SIZE = 36;
 const RING_SIZE = 40;
+const DOT_SIZE = 4;
 
-/** `markedDates` 里我们用到的字段 */
 interface DayMarking {
   marked?: boolean;
   selected?: boolean;
 }
 
 interface CalendarDayProps {
-  date?: DateData;
+  date?: CalendarDate;
   marking?: DayMarking;
-  onPress?: (date?: DateData) => void;
+  onPress?: (date: CalendarDate) => void;
+  compact?: boolean;
+  outsideMonth?: boolean;
 }
 
 export const CalendarDay = memo(
-  function CalendarDay({ date, marking, onPress }: CalendarDayProps): JSX.Element | null {
-    const { accent, accentForeground, dayLabel } = useCalendarDayTheme();
+  function CalendarDay({
+    date,
+    marking,
+    onPress,
+    compact = false,
+    outsideMonth = false,
+  }: CalendarDayProps): JSX.Element | null {
+    const { accent, accentForeground, dayLabel, defaultColor } = useCalendarDayTheme();
 
     if (!date) return null;
 
@@ -50,65 +46,68 @@ export const CalendarDay = memo(
     return (
       <Pressable
         onPress={() => onPress?.(date)}
+        disabled={outsideMonth}
         className="active:opacity-60"
         style={{
-          height: DAY_CELL_HEIGHT,
-          alignSelf: "stretch",
+          height: compact ? 42 : DAY_CELL_HEIGHT,
+          width: "100%",
           alignItems: "center",
           justifyContent: "center",
         }}
         accessibilityRole="button"
         accessibilityState={{ selected }}
         accessibilityLabel={dayLabel(date.day)}
+        accessibilityElementsHidden={outsideMonth}
       >
         <View
-          className="items-center justify-center"
+          className="items-center justify-center rounded-full"
           style={{
-            width: RING_SIZE,
-            height: RING_SIZE,
-            borderRadius: RING_SIZE / 2,
+            width: compact ? 30 : RING_SIZE,
+            height: compact ? 30 : RING_SIZE,
+            borderRadius: 9999,
             ...(isToday ? { borderWidth: 1, borderColor: withAlpha(accent, 0.65) } : null),
           }}
         >
           <View
-            className="items-center justify-center"
+            className="items-center justify-center rounded-full"
             style={{
-              width: CIRCLE_SIZE,
-              height: CIRCLE_SIZE,
-              borderRadius: CIRCLE_SIZE / 2,
+              width: compact ? 26 : CIRCLE_SIZE,
+              height: compact ? 26 : CIRCLE_SIZE,
+              borderRadius: 9999,
               backgroundColor: selected ? accent : "transparent",
             }}
           >
             <Paragraph
               className="text-[13px]"
-              style={{ color: selected ? accentForeground : isToday ? accent : undefined }}
+              style={{
+                color: selected ? accentForeground : isToday ? accent : defaultColor,
+                opacity: outsideMonth ? 0.3 : 1,
+              }}
               selectable={false}
             >
               {date.day}
             </Paragraph>
           </View>
         </View>
-        {/* 有发售的日子点一个小圆点 */}
         <View
           style={{
-            marginTop: 2,
-            width: 4,
-            height: 4,
-            borderRadius: 2,
-            backgroundColor: marked ? accent : "transparent",
-            opacity: selected ? 0 : 1,
+            position: "absolute",
+            bottom: compact ? 1 : 2,
+            width: DOT_SIZE,
+            height: DOT_SIZE,
+            borderRadius: 9999,
+            backgroundColor: marked && !outsideMonth ? accent : "transparent",
+            flexShrink: 0,
           }}
         />
       </Pressable>
     );
   },
-  /**
-   * 库每次渲染都会给新的 `date` 对象；只比真正会变的东西，
-   * 避免加载分页 / 选中别的日期时把 42 个格子全重渲染。
-   */
   (prev, next) =>
     prev.date?.dateString === next.date?.dateString &&
     prev.marking?.marked === next.marking?.marked &&
     prev.marking?.selected === next.marking?.selected &&
+    prev.compact === next.compact &&
+    prev.outsideMonth === next.outsideMonth &&
     prev.onPress === next.onPress
 );

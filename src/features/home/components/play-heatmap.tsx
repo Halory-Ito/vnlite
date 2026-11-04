@@ -25,7 +25,7 @@ export function PlayHeatmap({
   const [selected, setSelected] = useState<string | null>(null);
   const [width, setWidth] = useState(0);
   const weeks = useMemo(() => contributionWeeks(year), [year]);
-  const cell = Math.min(16, Math.max(12, Math.floor(width / weeks.length) - 3));
+  const cell = width > 0 ? Math.max(6, Math.floor(width / weeks.length) - 3) : 12;
   const weekdays = t("calendar.weekdays").split(",");
   const today = localDayKey(now);
   function move(amount: number) {

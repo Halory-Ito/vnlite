@@ -15,7 +15,7 @@
  */
 
 import type { ColorSchemePreference } from "@/lib/storage/preferences";
-import type { ImageSourcePropType } from "react-native";
+import type { ImageSource } from "expo-image";
 
 import { parseColor, shade, toHex } from "./color";
 import { CUSTOM_THEME_ID, DEFAULT_CUSTOM_THEME, type CustomThemeColors } from "./custom-theme";
@@ -29,7 +29,7 @@ export interface ThemeDefinition {
   /** 品牌辅色 */
   secondary: string;
   /** 背景图 */
-  background: ImageSourcePropType;
+  background: number | ImageSource;
 }
 
 /**
@@ -37,7 +37,7 @@ export interface ThemeDefinition {
  * 不能写成 `require(\`.../${seed.image}.jpg\`)` —— 动态路径 Metro 解析不到，
  * 运行时会崩。改任何一个文件名都要同步改这里。
  */
-const IMAGES: Record<string, ImageSourcePropType> = {
+const IMAGES: Record<string, number> = {
   agl: require("@/assets/images/themes/agl.jpg"),
   air: require("@/assets/images/themes/air.jpg"),
   carnvl: require("@/assets/images/themes/carnvl.jpg"),

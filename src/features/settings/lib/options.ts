@@ -10,7 +10,12 @@
 
 import type { SegmentedOption } from "@/components/segmented-control";
 import type { Language, TranslationKey } from "@/lib/i18n/translate";
-import type { ColorSchemePreference, NsfwMode } from "@/lib/storage/preferences";
+import type {
+  ColorSchemePreference,
+  NsfwMode,
+  TabBarAnimation,
+  TabBarStyle,
+} from "@/lib/storage/preferences";
 
 export interface SettingsOption<T extends string> {
   value: T;
@@ -21,6 +26,18 @@ export const NSFW_OPTIONS: SettingsOption<NsfwMode>[] = [
   { value: "hide", labelKey: "settings.nsfwHide" },
   { value: "blur", labelKey: "settings.nsfwBlur" },
   { value: "show", labelKey: "settings.nsfwShow" },
+];
+
+export const TAB_BAR_STYLE_OPTIONS: SettingsOption<TabBarStyle>[] = [
+  { value: "default", labelKey: "settings.tabBarStyleDocked" },
+  { value: "capsule", labelKey: "settings.tabBarStyleCapsule" },
+  { value: "glass", labelKey: "settings.tabBarStyleGlass" },
+];
+
+export const TAB_BAR_ANIMATION_OPTIONS: SettingsOption<TabBarAnimation>[] = [
+  { value: "off", labelKey: "settings.tabBarAnimationOff" },
+  { value: "bounce", labelKey: "settings.tabBarAnimationBounce" },
+  { value: "settle", labelKey: "settings.tabBarAnimationSettle" },
 ];
 
 export const SCHEME_OPTIONS: SettingsOption<ColorSchemePreference>[] = [

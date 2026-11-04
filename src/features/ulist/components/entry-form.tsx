@@ -14,9 +14,10 @@ import { Pressable, ScrollView, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
 import { DateOtpField } from "@/components/date-otp-field";
-import { Muted, Paragraph } from "@/components/typo";
+import { Muted } from "@/components/typo";
 import { RatingBadge } from "@/components/ui";
 import { useTranslation } from "@/hooks/use-translation";
+import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import { ApiError } from "@/lib/api/errors";
 import type { UListItem, UListLabel } from "@/lib/api/types";
 import { dateRangeErrors } from "@/utils/date";
@@ -171,7 +172,11 @@ function EntryHeader({
           hitSlop={4}
         >
           {/* 站内链接色：标题现在同时是「进详情页」的入口 */}
-          <Paragraph className="line-clamp-2 text-sm font-medium text-link">{vn.title}</Paragraph>
+          <VnDisplayTitle
+            vn={vn}
+            className="line-clamp-2 text-sm font-medium text-link"
+            numberOfLines={2}
+          />
         </Pressable>
         <View className="flex-row flex-wrap items-center gap-2">
           <RatingBadge rating={vn.rating} votecount={vn.votecount} />

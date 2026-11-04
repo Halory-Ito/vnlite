@@ -19,6 +19,7 @@ import { ScrollView, View } from "react-native";
 
 import { SegmentedControl } from "@/components/segmented-control";
 import { DatabaseStats } from "@/features/stats/components/database-stats";
+import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
@@ -40,6 +41,7 @@ export function SearchScreen(): JSX.Element {
   const { t } = useTranslation();
   // 搜索框的底色跟卡片用同一个透明度，输入框也能透出背景图
   const fieldSurface = useTranslucentSurface();
+  const bottomPadding = useTabContentPadding();
   // 默认「作品」：绝大多数搜索意图是找作品
   const [scope, setScope] = useState<SearchScope>("vn");
   const [input, setInput] = useState("");
@@ -71,7 +73,11 @@ export function SearchScreen(): JSX.Element {
          */
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingBottom: bottomPadding,
+          }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

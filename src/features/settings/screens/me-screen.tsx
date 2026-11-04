@@ -15,6 +15,7 @@ import { ScrollView } from "react-native";
 
 import { Divider } from "@/components/separator";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
+import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
 import { SettingsItem } from "@/features/settings/components/settings-item";
 import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
@@ -30,6 +31,7 @@ export default function MeScreen(): JSX.Element {
   const { t } = useTranslation();
   const { toast } = useToast();
   const groupSurface = useTranslucentSurface();
+  const bottomPadding = useTabContentPadding();
   // 「外观」那行的读数是主题名，同步算出来即可，不用另存状态
   const theme = resolveTheme(
     preferences.themeId,
@@ -50,7 +52,7 @@ export default function MeScreen(): JSX.Element {
   };
 
   return (
-    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bottomPadding }}>
       <ProfileHeader />
 
       <ListGroup className="mx-4" style={groupSurface}>

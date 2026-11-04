@@ -12,9 +12,9 @@ import type { JSX } from "react";
 import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 
 import { CoverImage } from "@/components/cover-image";
-import { Muted } from "@/components/typo";
 import { imageGate, useNsfwMode } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
+import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import type { VnSummary } from "@/lib/api/types";
 import type { NsfwMode } from "@/lib/storage/preferences";
 import { coverUrl } from "@/utils/format";
@@ -93,9 +93,7 @@ function Card({
       ) : (
         cover
       )}
-      <Muted type="body-xs" numberOfLines={2}>
-        {vn.title}
-      </Muted>
+      <VnDisplayTitle vn={vn} numberOfLines={2} />
     </View>
   );
 }

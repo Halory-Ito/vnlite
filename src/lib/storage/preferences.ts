@@ -29,6 +29,9 @@ export type NsfwMode = "hide" | "blur" | "show";
  * 没有公开 API 强制；但 RN 的 `Appearance.setColorScheme()` 可以（仅影响 App 内，
  * 不改系统 UI），这是我们做手动切换的唯一入口。
  */
+export type TabBarStyle = "default" | "capsule" | "glass";
+export type TabBarAnimation = "off" | "bounce" | "settle";
+
 export type ColorSchemePreference = "system" | "light" | "dark";
 
 /**
@@ -116,6 +119,8 @@ export interface Preferences {
    * `grid` = 纯封面网格（默认），`list` = 带元信息的行。
    */
   vnViewMode: VnViewMode;
+  /** 显示标题数据库原文 */
+  showVnOriginalTitle: boolean;
   /** 每页条数，上限 100（Kana 硬限制） */
   pageSize: number;
   /** 浏览页排序（默认：人气降序） */
@@ -156,6 +161,14 @@ export interface Preferences {
    * 让用户自己在「背景图透出来」和「文字靠得住」之间找平衡。
    */
   cardOpacity: number;
+  /** 底部导航栏样式：贴底、胶囊、液态玻璃 */
+  tabBarStyle: TabBarStyle;
+  /** 底栏背景色层不透明度，0–1 */
+  tabBarOpacity: number;
+  /** 底栏背景模糊强度，0–16 */
+  tabBarBlur: number;
+  /** Tab 选中背景切换动画 */
+  tabBarAnimation: TabBarAnimation;
   /** 自定义主题的品牌色（`themeId === "custom"` 时生效） */
   customTheme: CustomThemeColors;
   /**
@@ -172,6 +185,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   nsfwMode: "blur",
   language: "system",
   vnViewMode: "grid",
+  showVnOriginalTitle: false,
   pageSize: 25,
   browseSort: { field: "votecount", reverse: true },
   cardFields: [...CARD_FIELD],
@@ -184,6 +198,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   backgroundBlur: 0,
   backgroundPosition: { ...DEFAULT_BACKGROUND_POSITION },
   cardOpacity: DEFAULT_CARD_OPACITY,
+  tabBarStyle: "default",
+  tabBarOpacity: 0.78,
+  tabBarBlur: 0,
+  tabBarAnimation: "settle",
   customTheme: { ...DEFAULT_CUSTOM_THEME },
   backgroundUrl: null,
 };
@@ -301,6 +319,18 @@ export function migratePreferences(stored: Record<string, unknown>): Preferences
 
   // 卡片透明度：0–1；老数据没有这一项 → 默认值
   next.cardOpacity = clampNumber(next.cardOpacity, 0, 1, DEFAULT_CARD_OPACITY);
+  // 已移除的 blur 及其他旧值回落到贴底样式。
+  next.tabBarStyle =
+    next.tabBarStyle === "capsule" || next.tabBarStyle === "glass" ? next.tabBarStyle : "default";
+  next.tabBarOpacity = clampNumber(next.tabBarOpacity, 0, 1, DEFAULT_PREFERENCES.tabBarOpacity);
+  next.tabBarBlur = clampNumber(next.tabBarBlur, 0, 16, DEFAULT_PREFERENCES.tabBarBlur);
+  const animation = stored.tabBarAnimation;
+  next.tabBarAnimation =
+    animation === false || animation === "off"
+      ? "off"
+      : animation === "bounce"
+        ? "bounce"
+        : "settle";
 
   // 卡片字段：旧数据没有这一项 → 全开；手改过的脏数据丢掉（空数组是合法的：只留标题+封面）
   next.cardFields = Array.isArray(next.cardFields)

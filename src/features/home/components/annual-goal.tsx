@@ -9,17 +9,20 @@ import { useTranslation } from "@/hooks/use-translation";
 import { DEFAULT_ANNUAL_GAME_GOAL, setPreference } from "@/lib/storage/preferences";
 import { GoalProgressRing } from "./goal-progress-ring";
 import { GoalRingSkeleton } from "./goal-ring-skeleton";
+import { TabletGoalBar } from "./tablet-goal-bar";
 
 export function AnnualGoal({
   year,
   finished,
   status,
   onRetry,
+  tablet = false,
 }: {
   year: number;
   finished: number;
   status: "ready" | "loading" | "error" | "guest";
   onRetry: () => void;
+  tablet?: boolean;
 }) {
   const { t } = useTranslation();
   const { annualGameGoals } = usePreferences();
@@ -45,7 +48,38 @@ export function AnnualGoal({
     <View className="flex-1 items-center gap-1">
       <H5 className="min-h-5 text-center text-sm">{t("home.yearGoal")}</H5>
       {status === "loading" ? (
-        <GoalRingSkeleton />
+        tablet ? (
+          <View className="w-full gap-3 py-3">
+            <View className="h-6 w-24 rounded-md bg-default-soft" />
+            <View className="h-3 w-full rounded-full bg-default-soft" />
+          </View>
+        ) : (
+          <GoalRingSkeleton />
+        )
+      ) : tablet ? (
+        <TabletGoalBar
+          value={status === "ready" ? finished : 0}
+          goal={goal}
+          label={t("home.yearGoal")}
+          progressText={
+            status === "ready"
+              ? t("home.goalProgress", { count: finished, goal })
+              : t(
+                  status === "guest"
+                    ? "home.goalLogin"
+                    : status === "error"
+                      ? "common.failed"
+                      : "common.loading"
+                )
+          }
+          mainText={status === "ready" ? `${finished} / ${goal}` : "—"}
+          detailText={t("home.finishedUnit")}
+          onPress={() => {
+            setValue(String(goal));
+            setFailed(false);
+            setOpen(true);
+          }}
+        />
       ) : (
         <GoalProgressRing
           onPress={() => {

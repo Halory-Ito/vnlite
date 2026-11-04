@@ -26,12 +26,13 @@
  */
 
 import type { JSX, ReactNode } from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useColorScheme, View } from "react-native";
 import { ScopedVariables, Uniwind } from "uniwind";
 import { File } from "expo-file-system";
 
 import { AppBackground } from "@/components/app-background";
+import { BlurTargetContext } from "@/features/navigation/lib/blur-target";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import { resolveTheme, getTokens, resolveMode } from "./themes";
@@ -105,6 +106,7 @@ function ThemeShell({
   showBackground: boolean;
   children: ReactNode;
 }): JSX.Element {
+  const blurTarget = useRef<React.ComponentRef<typeof View>>(null);
   const theme = resolveTheme(themeId);
   // 同步的文件存在性检查只做一次：每次渲染都问一次原生层没必要
   const custom = useMemo(
@@ -114,10 +116,18 @@ function ThemeShell({
   const source = showBackground ? (custom ?? theme.background) : null;
 
   return (
-    <View style={{ flex: 1 }}>
-      <AppBackground source={source} opacity={opacity} blur={blur} position={position} />
-      <View style={{ flex: 1 }}>{children}</View>
-    </View>
+    <BlurTargetContext.Provider value={blurTarget}>
+      <View style={{ flex: 1 }}>
+        <AppBackground
+          targetRef={blurTarget}
+          source={source}
+          opacity={opacity}
+          blur={blur}
+          position={position}
+        />
+        <View style={{ flex: 1 }}>{children}</View>
+      </View>
+    </BlurTargetContext.Provider>
   );
 }
 

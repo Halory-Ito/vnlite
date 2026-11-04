@@ -40,6 +40,9 @@ export const VN_LIST_FIELDS = [
   "id",
   "title",
   "alttitle",
+  "titles.lang",
+  "titles.title",
+  "titles.main",
   "olang",
   "devstatus",
   "released",
@@ -63,6 +66,9 @@ export const VN_LIST_FIELDS = [
 export const VN_COVER_CARD_FIELDS = [
   "id",
   "title",
+  "titles.lang",
+  "titles.title",
+  "titles.main",
   "image.thumbnail",
   "image.sexual",
   "image.violence",
@@ -77,6 +83,9 @@ export const VN_COVER_CARD_FIELDS = [
 export const VN_CALENDAR_RANKING_FIELDS = [
   "id",
   "title",
+  "titles.lang",
+  "titles.title",
+  "titles.main",
   "released",
   "rating",
   "votecount",
@@ -374,6 +383,9 @@ export const ULIST_FIELDS = [
   "vn.id",
   "vn.title",
   "vn.alttitle",
+  "vn.titles.lang",
+  "vn.titles.title",
+  "vn.titles.main",
   "vn.olang",
   "vn.released",
   "vn.rating",
@@ -402,6 +414,9 @@ export const USER_VOTE_FIELDS = [
   "started",
   "finished",
   "vn.title",
+  "vn.titles.lang",
+  "vn.titles.title",
+  "vn.titles.main",
 ] as const satisfies readonly FieldSpec<UListItem>[];
 
 /**
@@ -444,5 +459,8 @@ export const ULIST_TAG_FIELDS = [
 export const VN_PLAY_INFO_FIELDS = [
   "id",
   "title",
+  "titles.lang",
+  "titles.title",
+  "titles.main",
   "tags.id",
 ] as const satisfies readonly FieldSpec<VnSummary>[];

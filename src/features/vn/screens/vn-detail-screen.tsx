@@ -35,7 +35,7 @@ import { CoverImage } from "@/components/cover-image";
 import { Icon } from "@/components/icon";
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
-import { H3, Muted } from "@/components/typo";
+import { Muted } from "@/components/typo";
 import { StatBlock } from "@/components/ui";
 import { FavoriteButton } from "@/features/favorite/components/favorite-button";
 import { VnDiscussionsTab } from "@/features/discussion/components/vn-discussions-tab";
@@ -65,6 +65,7 @@ import { VnExtLinksTab } from "@/features/vn/components/vn-ext-links-tab";
 import { VnOverviewTab } from "@/features/vn/components/vn-overview-tab";
 import { VnQuotesTab } from "@/features/vn/components/vn-quotes-tab";
 import { VnRelationsTab } from "@/features/vn/components/vn-relations-tab";
+import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import { VnReleasesTab } from "@/features/vn/components/vn-releases-tab";
 import { VnScreenshotsTab } from "@/features/vn/components/vn-screenshots-tab";
 import { VnStaffTab } from "@/features/vn/components/vn-staff-tab";
@@ -303,8 +304,7 @@ function Header({
       />
       <View className="flex-1 gap-2">
         {/* 标题用 H3（比原来的 H2 小一号）：封面放大后，信息列要装得下更多行 */}
-        <H3 className="shrink">{vn.title}</H3>
-        {vn.alttitle ? <Muted type="body-xs">{vn.alttitle}</Muted> : null}
+        <VnDisplayTitle vn={vn} className="shrink font-semibold" />
 
         {/*
          * 值 chip 行：游玩状态 / 我的评分 / 发行日期 / 开发商（只第一个）。

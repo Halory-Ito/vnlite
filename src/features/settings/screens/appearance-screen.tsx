@@ -13,12 +13,18 @@ import type { JSX } from "react";
 
 import { SegmentedControl } from "@/components/segmented-control";
 import { TranslucentPanel } from "@/components/translucent-panel";
-import { Muted } from "@/components/typo";
+import { Muted, Paragraph } from "@/components/typo";
 import { BackgroundSettings } from "@/features/settings/components/background-settings";
+import { useDebouncedPreferenceCommit } from "@/features/settings/hooks/use-debounced-preference-commit";
 import { ColorField } from "@/features/settings/components/color-field";
 import { LabeledSlider } from "@/features/settings/components/labeled-slider";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
-import { SCHEME_OPTIONS, translateOptions } from "@/features/settings/lib/options";
+import {
+  SCHEME_OPTIONS,
+  TAB_BAR_ANIMATION_OPTIONS,
+  TAB_BAR_STYLE_OPTIONS,
+  translateOptions,
+} from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import {
@@ -37,6 +43,8 @@ export default function AppearanceScreen(): JSX.Element {
   // 主题 tile 的色块按**当前生效的模式**取色，而不是主题自带的明暗
   const mode = resolveMode(preferences.colorScheme, systemScheme);
   const customActive = preferences.themeId === CUSTOM_THEME_ID;
+  const commitTabBarOpacity = useDebouncedPreferenceCommit("tabBarOpacity");
+  const commitTabBarBlur = useDebouncedPreferenceCommit("tabBarBlur");
   const customTheme = resolveTheme(
     CUSTOM_THEME_ID,
     preferences.customTheme,
@@ -81,6 +89,47 @@ export default function AppearanceScreen(): JSX.Element {
         </View>
 
         {customActive ? <CustomThemeEditor /> : null}
+      </SettingsSection>
+
+      <SettingsSection title={t("settings.tabBarSection")}>
+        <SegmentedControl
+          options={translateOptions(TAB_BAR_STYLE_OPTIONS, t)}
+          value={preferences.tabBarStyle}
+          onChange={(value) => {
+            if (value === "glass" && preferences.tabBarBlur === 0) {
+              patchPreferences({ tabBarBlur: 8 });
+            }
+            void setPreference("tabBarStyle", value);
+          }}
+        />
+        <Paragraph className="mt-2 text-sm">{t("settings.tabBarAnimation")}</Paragraph>
+        <SegmentedControl
+          options={translateOptions(TAB_BAR_ANIMATION_OPTIONS, t)}
+          value={preferences.tabBarAnimation}
+          onChange={(value) => void setPreference("tabBarAnimation", value)}
+        />
+        <View className="mt-3 gap-4">
+          <LabeledSlider
+            label={t("settings.tabBarOpacity")}
+            value={preferences.tabBarOpacity}
+            minValue={0}
+            maxValue={1}
+            step={0.01}
+            displayScale={100}
+            unit="%"
+            onLiveChange={(value) => patchPreferences({ tabBarOpacity: value })}
+            onCommit={commitTabBarOpacity}
+          />
+          <LabeledSlider
+            label={t("settings.tabBarBlur")}
+            value={preferences.tabBarBlur}
+            minValue={0}
+            maxValue={16}
+            step={1}
+            onLiveChange={(value) => patchPreferences({ tabBarBlur: value })}
+            onCommit={commitTabBarBlur}
+          />
+        </View>
       </SettingsSection>
 
       <SettingsSection title={t("settings.cardSection")}>
