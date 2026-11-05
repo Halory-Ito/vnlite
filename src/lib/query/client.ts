@@ -68,6 +68,53 @@ export const queryClient = new QueryClient({
   },
 });
 
+export type CacheCategory =
+  | "vn"
+  | "character"
+  | "producer"
+  | "staff"
+  | "screenshots"
+  | "taxonomy"
+  | "community"
+  | "ranking"
+  | "other";
+
+const CATEGORY_KEYS: Record<CacheCategory, readonly string[]> = {
+  vn: ["vn"],
+  character: ["character"],
+  producer: ["producer"],
+  staff: ["staff"],
+  taxonomy: ["tag", "trait"],
+  community: ["user", "discussion", "review"],
+  ranking: ["ranking", "similar", "home", "database"],
+  other: ["quote", "catalog"],
+  screenshots: [],
+};
+
+export function getQueryCacheStats(): Record<CacheCategory, { count: number; bytes: number }> {
+  const result = Object.fromEntries(
+    Object.keys(CATEGORY_KEYS).map((key) => [key, { count: 0, bytes: 0 }])
+  ) as Record<CacheCategory, { count: number; bytes: number }>;
+  for (const query of queryClient.getQueryCache().getAll()) {
+    const category = (Object.keys(CATEGORY_KEYS) as CacheCategory[]).find((key) =>
+      CATEGORY_KEYS[key].includes(String(query.queryKey[0]))
+    );
+    if (!category) continue;
+    result[category].count += 1;
+    try {
+      result[category].bytes += new TextEncoder().encode(JSON.stringify(query.state.data)).length;
+    } catch {
+      /* non-serializable query data contributes no estimate */
+    }
+  }
+  return result;
+}
+
+export async function clearQueryCacheCategory(category: CacheCategory): Promise<void> {
+  const keys = CATEGORY_KEYS[category];
+  queryClient.removeQueries({ predicate: (query) => keys.includes(String(query.queryKey[0])) });
+}
+
 /** 设置页「清空业务数据缓存」用。保留 user 相关的键 */
 export async function clearContentCache(): Promise<void> {
   const keep = ["ulist", "account"];

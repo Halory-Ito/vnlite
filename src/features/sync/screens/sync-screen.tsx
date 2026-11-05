@@ -135,6 +135,7 @@ function restoreDescription(
     t("sync.itemPlaySession", { count: playSession.length }),
     t("sync.itemMarks", { count: Object.keys(marks).length }),
   ];
+  if (pending.assets?.background) lines.push(t("sync.itemBackground"));
   const time = pending.createdAt ? formatDateTime(pending.createdAt) : "—";
   return `${t("sync.restoreBody")}\n${t("sync.backupTime", { time })}\n${lines.join(" · ")}`;
 }

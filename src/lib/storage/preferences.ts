@@ -102,6 +102,7 @@ export type CardField = (typeof CARD_FIELD)[number];
 export type VnViewMode = "grid" | "list";
 
 export const DEFAULT_ANNUAL_GAME_GOAL = 10;
+export const IMAGE_RADIUS_RANGE = { min: 0, max: 24, step: 1 } as const;
 
 export interface Preferences {
   homeLayout: HomeSectionPreference[];
@@ -161,6 +162,8 @@ export interface Preferences {
    * 让用户自己在「背景图透出来」和「文字靠得住」之间找平衡。
    */
   cardOpacity: number;
+  /** 全局作品图片圆角（dp） */
+  imageRadius: number;
   /** 底部导航栏样式：贴底、胶囊、液态玻璃 */
   tabBarStyle: TabBarStyle;
   /** 底栏背景色层不透明度，0–1 */
@@ -198,6 +201,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   backgroundBlur: 0,
   backgroundPosition: { ...DEFAULT_BACKGROUND_POSITION },
   cardOpacity: DEFAULT_CARD_OPACITY,
+  imageRadius: 8,
   tabBarStyle: "default",
   tabBarOpacity: 0.78,
   tabBarBlur: 0,
@@ -319,6 +323,12 @@ export function migratePreferences(stored: Record<string, unknown>): Preferences
 
   // 卡片透明度：0–1；老数据没有这一项 → 默认值
   next.cardOpacity = clampNumber(next.cardOpacity, 0, 1, DEFAULT_CARD_OPACITY);
+  next.imageRadius = clampNumber(
+    stored.imageRadius,
+    IMAGE_RADIUS_RANGE.min,
+    IMAGE_RADIUS_RANGE.max,
+    DEFAULT_PREFERENCES.imageRadius
+  );
   // 已移除的 blur 及其他旧值回落到贴底样式。
   next.tabBarStyle =
     next.tabBarStyle === "capsule" || next.tabBarStyle === "glass" ? next.tabBarStyle : "default";

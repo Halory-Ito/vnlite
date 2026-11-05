@@ -9,7 +9,6 @@
  */
 
 import { zhBrowse } from "./browse";
-import { zhCalendar } from "./calendar";
 import { zhCatalog } from "./catalog";
 import { zhCore } from "./core";
 import { zhDiscussion } from "./discussion";
@@ -46,7 +45,6 @@ export const zh = {
   ...zhStats,
   ...zhSync,
   ...zhProfile,
-  ...zhCalendar,
   ...zhRanking,
   enums: { ...zhEnums },
   ...zhMisc,

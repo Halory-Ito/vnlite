@@ -134,9 +134,8 @@ function ThemeShell({
 /**
  * 本地背景图还在不在。
  *
- * 偏好会随 WebDAV 备份同步到新设备，但图片文件本身不会 —— 那份
- * `file://` 地址在新机上指向一个不存在的文件，直接渲染就是「背景全黑」。
- * 这里做一次存在性检查，不在就回落到主题自带背景。
+ * 偏好与背景附件会随备份同步到新设备。旧备份可能只有 `file://` 地址，
+ * 没有对应的本地文件；这里做存在性检查，不在就回落到主题自带背景。
  */
 function usableBackgroundUrl(url: string | null): string | null {
   if (!url) return null;

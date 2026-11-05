@@ -40,7 +40,6 @@
  * `blur` 档先糊住、**点一下图**才显示（不占用双击，双击留给缩放）。
  */
 
-import { Image } from "expo-image";
 import { useThemeColor } from "heroui-native";
 import { createContext, useCallback, useContext, useMemo, useState, type JSX } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -55,6 +54,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./icon";
 import { Muted } from "./typo";
+import { ManagedImage } from "@/features/settings/components/managed-image";
+import type { ImageCacheCategory } from "@/features/settings/lib/image-cache";
 import { useImageGate } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -70,6 +71,7 @@ export interface ViewerImage {
   violence?: number;
   /** 无障碍描述，如「封面」「截图 3」 */
   label?: string;
+  category?: ImageCacheCategory;
 }
 
 export interface ImageViewerProps {
@@ -293,9 +295,10 @@ function ViewerItem({
 
   return (
     <View style={size}>
-      <Image
-        source={image.url}
-        placeholder={image.thumbnail ? { uri: image.thumbnail } : undefined}
+      <ManagedImage
+        url={image.url}
+        category={image.category ?? "vn"}
+        placeholderUrl={image.thumbnail}
         placeholderContentFit="contain"
         style={size}
         contentFit="contain"

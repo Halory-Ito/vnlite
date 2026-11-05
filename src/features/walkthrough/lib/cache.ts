@@ -186,3 +186,18 @@ export async function clearWalkthroughCache(): Promise<void> {
       .map((key) => kv.remove(key))
   );
 }
+
+export async function getWalkthroughCacheStats(): Promise<{ count: number; bytes: number }> {
+  const keys = (await kv.keys()).filter(
+    (key) => key.startsWith("vnlite.walkthrough") && !key.startsWith(MARKS_PREFIX)
+  );
+  const values = await Promise.all(keys.map((key) => kv.get<unknown>(key)));
+  return {
+    count: keys.length,
+    bytes: values.reduce<number>(
+      (total, value) =>
+        total + (value == null ? 0 : new TextEncoder().encode(JSON.stringify(value)).length),
+      0
+    ),
+  };
+}

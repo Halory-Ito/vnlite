@@ -8,7 +8,6 @@
  */
 
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from "@shopify/flash-list";
-import { Image } from "expo-image";
 import type { JSX, ReactElement, ReactNode, Ref } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -20,6 +19,7 @@ import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnSummary } from "@/lib/api/types";
 import { coverUrl } from "@/utils/format";
+import { prefetchImages } from "@/features/settings/lib/image-cache";
 
 import { VnListItem } from "./vn-list-item";
 
@@ -75,7 +75,7 @@ export function VnInfiniteList({
       prefetched.current.add(url);
       fresh.push(url);
     }
-    if (fresh.length > 0) void Image.prefetch(fresh, "memory-disk");
+    if (fresh.length > 0) void prefetchImages(fresh, "vn");
   }, [items]);
 
   // 可放大的封面（没图的条目本来就没得看），顺便记下 id → 下标

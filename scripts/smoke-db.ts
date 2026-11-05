@@ -85,16 +85,6 @@ import {
 import { parseVnReviews } from "@/features/review/lib/scrape";
 import { excludeIds, pickSimilarTags } from "@/features/recommend/lib/recommend";
 import {
-  addMonths,
-  clampMonth,
-  daysInMonth,
-  groupByDay,
-  monthKey,
-  monthRange,
-  monthsAfterMonth,
-  monthsBeforeMonth,
-} from "@/features/calendar/lib/calendar";
-import {
   GETCHU_AWARDS,
   GETCHU_DEPT_ORDER,
   getchuEntriesFor,
@@ -133,6 +123,7 @@ import { applyBackupData, collectBackupData } from "@/features/sync/lib/package"
 import {
   getAvatar,
   getBackup,
+  getFile,
   joinUrl,
   normalizeServerUrl,
   putBackup,
@@ -536,6 +527,14 @@ async function main(): Promise<void> {
     assert(migratePreferences({ cardOpacity: "半透明" }).cardOpacity === 0.72, "非数字回默认");
   });
 
+  await check("图片圆角：默认值、合法值、越界夹取与脏值回退", () => {
+    assert(migratePreferences({}).imageRadius === 8, "旧数据应默认 8dp");
+    assert(migratePreferences({ imageRadius: 12 }).imageRadius === 12, "合法圆角值应保留");
+    assert(migratePreferences({ imageRadius: 40 }).imageRadius === 24, "超过上限应夹取到 24dp");
+    assert(migratePreferences({ imageRadius: -2 }).imageRadius === 0, "负数应夹取到 0dp");
+    assert(migratePreferences({ imageRadius: "round" }).imageRadius === 8, "非法值应回默认");
+  });
+
   await check("Tab 切换动画：三档选择与旧布尔偏好迁移", () => {
     assert(migratePreferences({}).tabBarAnimation === "settle", "旧数据应默认缓停");
     assert(
@@ -567,7 +566,7 @@ async function main(): Promise<void> {
     );
     assert(migratePreferences({ tabBarOpacity: -1 }).tabBarOpacity === 0, "透明度下限应夹取");
     assert(migratePreferences({ tabBarOpacity: 2 }).tabBarOpacity === 1, "透明度上限应夹取");
-    assert(migratePreferences({ tabBarBlur: 180 }).tabBarBlur === 100, "模糊度上限应夹取");
+    assert(migratePreferences({ tabBarBlur: 180 }).tabBarBlur === 16, "模糊度上限应夹取");
     assert(migratePreferences({ tabBarBlur: "high" }).tabBarBlur === 0, "模糊度脏值应回默认");
   });
 
@@ -1391,13 +1390,15 @@ async function main(): Promise<void> {
         preferences: { themeId: "air" },
         marks: { v1: { endings: [], steps: {} } },
       },
-      1234
+      1234,
+      { background: "vnlite-background-1234.jpg" }
     );
     const parsed = parseBackup(JSON.parse(JSON.stringify(payload)) as unknown);
     assert(parsed !== null, "自己打的包应能解析回来");
     assert(parsed?.data.history.length === 1, "历史条数不对");
     assert(parsed?.data.history[0]?.entryId === "v1", "条目 id 不对");
     assert(parsed?.createdAt === 1234, "打包时间不对");
+    assert(parsed?.assets?.background === "vnlite-background-1234.jpg", "背景附件名应保留");
 
     // 不是 vnlite 的包 → null
     assert(parseBackup({ app: "other", format: 1, data: {} }) === null, "别的应用的包应判非法");
@@ -1418,6 +1419,13 @@ async function main(): Promise<void> {
       },
     });
     assert(dirty?.data.history.length === 1, "只该留下完整的那一条");
+    const unsafeAsset = parseBackup({
+      app: "vnlite",
+      format: 2,
+      assets: { background: "../secret.jpg" },
+      data: {},
+    });
+    assert(unsafeAsset?.assets === undefined, "非法背景附件路径应丢弃");
   });
 
   await check("备份往返：打包 → 恢复（整体替换）", async () => {
@@ -1543,8 +1551,9 @@ async function main(): Promise<void> {
       fetch(request) {
         auth = request.headers.get("Authorization");
         const path = new URL(request.url).pathname;
-        // 只有 /dav/vnlite-avatar.jpg 存在，其余一律 404
-        if (path === "/dav/vnlite-avatar.jpg") return new Response(bytes);
+        // 头像与动态命名的背景附件存在，其余一律 404
+        if (path === "/dav/vnlite-avatar.jpg" || path === "/dav/vnlite/vnlite-background-42.jpg")
+          return new Response(bytes);
         return new Response(null, { status: 404 });
       },
     });
@@ -1560,6 +1569,8 @@ async function main(): Promise<void> {
       assert(downloaded.length === bytes.length, "字节数应一致");
       assert(downloaded[0] === 0xff && downloaded[4] === 0x01, "内容应一致");
       assert(auth === "Basic dTpw", `认证头不对：${auth}`);
+      const background = await getFile(config, "vnlite-background-42.jpg");
+      assert(background?.length === bytes.length, "应能按备份附件名下载背景图");
 
       const missing = await getAvatar({
         ...config,
@@ -1777,50 +1788,6 @@ async function main(): Promise<void> {
     assert(toTagEntries(undefined).length === 0, "没有数据时应返回空");
   });
 
-  await check("发售日历：翻月 / 月份区间 / 按天分组", async () => {
-    assert(
-      JSON.stringify(addMonths({ year: 2026, month: 12 }, 1)) ===
-        JSON.stringify({ year: 2027, month: 1 }),
-      "跨年翻月不对"
-    );
-    assert(
-      JSON.stringify(addMonths({ year: 2026, month: 1 }, -1)) ===
-        JSON.stringify({ year: 2025, month: 12 }),
-      "往前翻月不对"
-    );
-
-    assert(monthKey({ year: 2026, month: 3 }) === "2026-03", "月份 key 不对");
-    // 2024 年 2 月是闰月
-    assert(monthRange({ year: 2024, month: 2 }).to === "2024-02-29", "闰月最后一天应为 29 号");
-    assert(monthRange({ year: 2026, month: 1 }).from === "2026-01-01", "月初不对");
-
-    const groups = groupByDay([
-      { id: "v1", released: "2026-10-01" },
-      { id: "v2", released: "2026-10-01" },
-      { id: "v3", released: "2026-10-05" },
-      { id: "v4", released: "2026-10" },
-      { id: "v5", released: "TBA" },
-      { id: "v6", released: null },
-    ]);
-    assert(groups.length === 2, `应分成 2 天，实际 ${groups.length}`);
-    assert(groups[0]?.day === "2026-10-01" && groups[0].items.length === 2, "同一天应合并");
-    assert(groups[1]?.day === "2026-10-05", "第二天不对");
-
-    // 月历：闰月天数（库负责格子，这里只守日期区间与夹取）
-    assert(daysInMonth({ year: 2024, month: 2 }) === 29, "闰年 2 月应有 29 天");
-    assert(
-      JSON.stringify(clampMonth({ year: 1200, month: 1 })) ===
-        JSON.stringify({ year: 1950, month: 1 }),
-      "越界月份应夹到范围起点"
-    );
-    assert(monthsBeforeMonth({ year: 1950, month: 1 }) === 0, "起点之前不应还有月份");
-    assert(monthsAfterMonth({ year: 2100, month: 12 }) === 0, "终点之后不应还有月份");
-    assert(
-      monthsBeforeMonth({ year: 2026, month: 10 }) === (2026 - 1950) * 12 + 9,
-      "pastScrollRange 不对"
-    );
-  });
-
   await check("大赏数据：萌えゲーアワード（年份降序 / 层级 / 年代抽查）", async () => {
     assert(MOE_AWARDS.length >= 45, `萌系条目太少：${MOE_AWARDS.length}`);
     const seen = new Set<string>();
@@ -2018,8 +1985,8 @@ async function main(): Promise<void> {
       defaultLayout.length === HOME_SECTION_IDS.length &&
         homeSectionRows(defaultLayout)
           .map((row) => row.join(","))
-          .join("|") === "quote|today,annual|heatmap",
-      "默认仅显示每日一言、并排目标和热力图"
+          .join("|") === "quote|today,annual|heatmap|calendar",
+      "默认显示每日一言、并排目标、热力图和发售日历"
     );
     const custom = normalizeHomeLayout([
       { id: "quote", visible: false },
@@ -2037,12 +2004,17 @@ async function main(): Promise<void> {
       "非法组件不进入布局"
     );
     const legacyLayout = normalizeHomeLayout([{ id: "discover", visible: false }]);
+    assert(legacyLayout[0]?.id === "discover" && !legacyLayout[0].visible, "保留旧首页布局配置");
+    const removedCalendar = normalizeHomeLayout([
+      { id: "calendar", visible: true },
+      { id: "discover", visible: false },
+    ]);
     assert(
-      legacyLayout[0]?.id === "calendar" &&
-        !legacyLayout[0].visible &&
-        legacyLayout[1]?.id === "discover" &&
-        !legacyLayout[1].visible,
-      "旧日历入口拆分后保留位置及关闭状态"
+      removedCalendar[0]?.id === "calendar" &&
+        removedCalendar[0].visible &&
+        removedCalendar[1]?.id === "discover" &&
+        !removedCalendar[1].visible,
+      "保留日历及其他首页组件的顺序和显示设置"
     );
     const moved = moveHomeSection(defaultLayout, "annual", -1);
     assert(moved[1]!.id === "annual" && defaultLayout[1]!.id === "today", "移动位置且不修改原配置");

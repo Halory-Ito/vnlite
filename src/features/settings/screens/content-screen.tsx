@@ -7,7 +7,6 @@ import type { JSX } from "react";
 
 import { Icon } from "@/components/icon";
 import { SegmentedControl } from "@/components/segmented-control";
-import { TranslucentPanel } from "@/components/translucent-panel";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
 import { NSFW_OPTIONS, PAGE_SIZE_OPTIONS, translateOptions } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
@@ -24,16 +23,14 @@ export default function ContentScreen(): JSX.Element {
   return (
     <SettingsShell title={t("settings.contentTitle")}>
       <SettingsSection title={t("settings.nsfw")}>
-        <TranslucentPanel>
-          <SegmentedControl
-            options={translateOptions(NSFW_OPTIONS, t)}
-            value={preferences.nsfwMode}
-            onChange={(value) => void setPreference("nsfwMode", value)}
-          />
-        </TranslucentPanel>
+        <SegmentedControl
+          options={translateOptions(NSFW_OPTIONS, t)}
+          value={preferences.nsfwMode}
+          onChange={(value) => void setPreference("nsfwMode", value)}
+        />
       </SettingsSection>
 
-      <SettingsSection title={t("settings.spoiler")} hint={t("settings.spoilerHint")}>
+      <SettingsSection title={t("settings.spoiler")}>
         {/*
          * 这里手写 ListGroup.Item 而不是复用 `SettingsItem`：那个组件的右槽位
          * 画的是「读数 + 箭头」，给 Switch 就得整体换掉 `suffix`，
@@ -77,13 +74,11 @@ export default function ContentScreen(): JSX.Element {
       </SettingsSection>
 
       <SettingsSection title={t("settings.pageSize")}>
-        <TranslucentPanel>
-          <SegmentedControl
-            options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: size }))}
-            value={String(preferences.pageSize)}
-            onChange={(value) => void setPreference("pageSize", Number(value))}
-          />
-        </TranslucentPanel>
+        <SegmentedControl
+          options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: size }))}
+          value={String(preferences.pageSize)}
+          onChange={(value) => void setPreference("pageSize", Number(value))}
+        />
       </SettingsSection>
     </SettingsShell>
   );

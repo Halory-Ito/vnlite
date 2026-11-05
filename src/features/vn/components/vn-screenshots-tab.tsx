@@ -14,15 +14,15 @@
  */
 
 import { FlashList } from "@shopify/flash-list";
-import { Image } from "expo-image";
 import type { JSX } from "react";
 import { useMemo, useState } from "react";
 import { Pressable, useWindowDimensions, View } from "react-native";
 
 import { ImageViewer, type ViewerImage } from "@/components/image-viewer";
+import { ManagedImage } from "@/features/settings/components/managed-image";
 import { EmptyState } from "@/components/screen-state";
 import { Muted } from "@/components/typo";
-import { useImageGate } from "@/hooks/use-preferences";
+import { useImageGate, useImageRadius } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnDetail } from "@/lib/api/types";
 import { screenshotColumns } from "@/utils/grid";
@@ -57,6 +57,7 @@ export function VnScreenshotsTab({ vn }: { vn: VnDetail }): JSX.Element {
     () =>
       shots.map((shot, i) => ({
         url: shot.url,
+        category: "screenshots",
         thumbnail: shot.thumbnail,
         dims: shot.dims as [number, number] | undefined,
         sexual: shot.sexual,
@@ -135,6 +136,7 @@ function ScreenshotCard({
 }): JSX.Element {
   const { t } = useTranslation();
   const gate = useImageGate({ sexual, violence });
+  const imageRadius = useImageRadius();
 
   // aspectRatio + 固定宽度让卡片的盒子自己撑开，高度不需要算
   const raw = dims && dims[0] > 0 && dims[1] > 0 ? dims[0] / dims[1] : DEFAULT_RATIO;
@@ -144,7 +146,7 @@ function ScreenshotCard({
     return (
       <View
         className="items-center justify-center overflow-hidden rounded-lg bg-default-soft"
-        style={{ aspectRatio: ratio, width }}
+        style={{ aspectRatio: ratio, width, borderRadius: imageRadius }}
       >
         <Muted type="body-xs">{t("common.hiddenAdult")}</Muted>
       </View>
@@ -155,19 +157,19 @@ function ScreenshotCard({
     <Pressable
       onPress={onPress}
       className="overflow-hidden rounded-lg bg-default-soft active:opacity-80"
-      style={{ aspectRatio: ratio, width }}
+      style={{ aspectRatio: ratio, width, borderRadius: imageRadius }}
       accessibilityRole="imagebutton"
       accessibilityLabel={t("vn.screenshotHint")}
     >
-      <Image
-        source={url}
+      <ManagedImage
+        url={url}
+        category="screenshots"
         // 缩略图（136×102，约 8 KB）先铺上，原图解码完再盖上去
-        placeholder={thumbnail ? { uri: thumbnail } : undefined}
+        placeholderUrl={thumbnail}
         placeholderContentFit="cover"
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", borderRadius: imageRadius }}
         contentFit="cover"
         // 列表滚回去直接命中内存缓存，不再重新解码原图
-        cachePolicy="memory-disk"
         blurRadius={gate.blurred ? 18 : 0}
         transition={200}
         // 内容优先（原生没有 lazy/eager，只有优先级队列）

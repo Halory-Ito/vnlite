@@ -84,6 +84,7 @@ function CharacterRow({ character, muted }: { character: Character; muted: strin
       <Pressable className="flex-row items-center gap-3 px-4 py-2 active:opacity-60">
         <CoverImage
           url={coverUrl(character.image)}
+          category="character"
           width={48}
           height={[48, 64]}
           sexual={character.image?.sexual}

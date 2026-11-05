@@ -257,6 +257,7 @@ export function CharacterDetailScreen(): JSX.Element {
       cover={
         <CoverImage
           url={c?.image?.url}
+          category="character"
           width={110}
           height={[110, 147]}
           sexual={c?.image?.sexual}

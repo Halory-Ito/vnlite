@@ -162,7 +162,16 @@ async function fetchBackupAt(
  * 这里是纯 fetch，冒烟脚本也能覆盖。
  */
 export async function getAvatar(config: WebDavConfig): Promise<Uint8Array | null> {
-  const urls = [remoteFileUrl(config, AVATAR_FILE_NAME), legacyFileUrl(config, AVATAR_FILE_NAME)];
+  return getFile(config, AVATAR_FILE_NAME, true);
+}
+
+export async function getFile(
+  config: WebDavConfig,
+  name: string,
+  checkLegacy = false
+): Promise<Uint8Array | null> {
+  const urls = [remoteFileUrl(config, name)];
+  if (checkLegacy) urls.push(legacyFileUrl(config, name));
   for (const url of urls) {
     const response = await request(url, {
       method: "GET",

@@ -5,8 +5,8 @@ export const HOME_SECTION_IDS = [
   "today",
   "annual",
   "heatmap",
-  "random",
   "calendar",
+  "random",
   "discover",
   "reviews",
   "upcoming",
@@ -17,14 +17,20 @@ export interface HomeSectionPreference {
   id: HomeSectionId;
   visible: boolean;
 }
-const DEFAULT_VISIBLE_SECTIONS = new Set<HomeSectionId>(["quote", "today", "annual", "heatmap"]);
+const DEFAULT_VISIBLE_SECTIONS = new Set<HomeSectionId>([
+  "quote",
+  "today",
+  "annual",
+  "heatmap",
+  "calendar",
+]);
 export const HOME_SECTION_LABELS: Record<HomeSectionId, TranslationKey> = {
   today: "home.todayPlay",
   annual: "home.yearGoal",
   heatmap: "home.playHeatmap",
+  calendar: "home.releaseCalendar",
   quote: "home.quoteTitle",
   random: "home.randomTitle",
-  calendar: "home.calendar",
   discover: "home.discoverTitle",
   reviews: "home.feedReviews",
   upcoming: "home.feedUpcoming",
@@ -45,13 +51,6 @@ export function normalizeHomeLayout(value: unknown): HomeSectionPreference[] {
       seen.add(entry.id);
       result.push({ id: entry.id, visible: entry.visible !== false });
     }
-  if (!seen.has("calendar")) {
-    const discover = result.findIndex((entry) => entry.id === "discover");
-    if (discover >= 0) {
-      result.splice(discover, 0, { id: "calendar", visible: result[discover]!.visible });
-      seen.add("calendar");
-    }
-  }
   for (const id of HOME_SECTION_IDS)
     if (!seen.has(id)) result.push({ id, visible: DEFAULT_VISIBLE_SECTIONS.has(id) });
   return result;

@@ -13,6 +13,7 @@
  */
 
 import type { TranslationKey } from "@/lib/i18n/translate";
+import type { File } from "expo-file-system";
 
 /** 供应商 id */
 export type SyncProviderId = "webdav" | "baidunetdisk" | "quark";
@@ -76,5 +77,8 @@ export interface SyncProvider {
   getBackup: (ctx: ProviderContext) => Promise<{ body: string; info: RemoteFileInfo } | null>;
   /** 下载头像；服务器上没有时返回 null */
   getAvatar: (ctx: ProviderContext) => Promise<Uint8Array | null>;
+  /** 上传/下载备份附件（头像、背景图等） */
+  putAsset: (ctx: ProviderContext, name: string, file: File) => Promise<void>;
+  getAsset: (ctx: ProviderContext, name: string) => Promise<Uint8Array | null>;
   connect?: (ctx: ProviderContext) => Promise<void>;
 }

@@ -39,6 +39,7 @@ export function FavoriteItem({ entry, onRemove }: FavoriteItemProps): JSX.Elemen
       subtitle={entry.subtitle}
       timestamp={formatRelativeTime(entry.favoritedAt)}
       imageUrl={entry.imageUrl ?? fallbackLogo}
+      imageCategory={entry.type === "user" ? "community" : entry.type}
       imageIsSafe={isProducer}
       fallbackIcon="star"
       fallbackIconColor={accent}

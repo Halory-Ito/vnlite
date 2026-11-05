@@ -17,6 +17,7 @@ import { useTranslation } from "@/hooks/use-translation";
 export function SettingsShell({
   title,
   centerContent = false,
+  footer,
   children,
 }: {
   title: string;
@@ -28,6 +29,7 @@ export function SettingsShell({
    * 不会有任何效果（RN 的老坑）。
    */
   centerContent?: boolean;
+  footer?: ReactNode;
   children: ReactNode;
 }): JSX.Element {
   const router = useRouter();
@@ -58,6 +60,7 @@ export function SettingsShell({
       >
         {children}
       </ScrollView>
+      {footer}
     </View>
   );
 }

@@ -6,7 +6,6 @@
  */
 
 import { enBrowse } from "./browse";
-import { enCalendar } from "./calendar";
 import { enCatalog } from "./catalog";
 import { enCore } from "./core";
 import { enDiscussion } from "./discussion";
@@ -43,7 +42,6 @@ export const en = {
   ...enStats,
   ...enSync,
   ...enProfile,
-  ...enCalendar,
   ...enRanking,
   enums: { ...enEnums },
   ...enMisc,

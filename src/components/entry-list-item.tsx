@@ -16,6 +16,7 @@ import { CoverImage } from "./cover-image";
 import { Icon, type IconName } from "./icon";
 import { Muted, Paragraph } from "./typo";
 import { toThumbnailUrl } from "@/utils/format";
+import type { ImageCacheCategory } from "@/features/settings/lib/image-cache";
 
 export interface EntryListItemProps {
   onPress: () => void;
@@ -32,6 +33,7 @@ export interface EntryListItemProps {
    * 厂商 LOGO 不属于敏感内容，用这个开关直接以「安全」分级渲染。
    */
   imageIsSafe?: boolean;
+  imageCategory?: ImageCacheCategory;
   /** 无图时的兜底图标 */
   fallbackIcon: IconName;
   /** 兜底图标颜色，默认主题 `muted` */
@@ -49,6 +51,7 @@ export function EntryListItem({
   timestamp,
   imageUrl,
   imageIsSafe = false,
+  imageCategory = "vn",
   fallbackIcon,
   fallbackIconColor,
   onLongPress,
@@ -69,6 +72,7 @@ export function EntryListItem({
       {imageUrl ? (
         <CoverImage
           url={imageUrl ? (toThumbnailUrl(imageUrl) ?? imageUrl) : undefined}
+          category={imageCategory}
           width={48}
           height={[48, 64]}
           /* 显式给「安全」分级：厂商 LOGO 这类图不参与 NSFW 处理 */

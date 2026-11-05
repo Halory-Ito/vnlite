@@ -122,13 +122,6 @@ export const queryKeys = {
     list: (vnId: string, tagKey: string) => ["similar", "list", vnId, tagKey] as const,
   },
 
-  /* ---- 发售日历 ---- */
-  calendar: {
-    all: ["calendar"] as const,
-    /** `month` = `YYYY-MM` */
-    month: (month: string) => ["calendar", "month", month] as const,
-  },
-
   /* ---- 排行榜 / 大赏 ---- */
   ranking: {
     all: ["ranking"] as const,

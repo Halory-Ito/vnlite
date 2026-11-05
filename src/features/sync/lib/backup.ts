@@ -8,19 +8,20 @@
  * | 浏览历史 / 收藏 / 游玩记录 | ✅ | 纯本地数据，换机就没了 |
  * | 攻略标记（已走过 / 重点 / 已达成） | ✅ | **用户数据不是缓存**（见 `features/walkthrough/lib/marks`） |
  * | 应用偏好（主题 / 语言 / 剧透保护…） | ✅ | 换机后不用重设一遍 |
+ * | 自定义背景图 | ✅ | 作为 JSON 旁的独立附件 |
  * | 攻略正文 / 索引 | ❌ | 缓存，能重新下载 |
  * | 每日语录、下载的安装包 | ❌ | 缓存 |
  * | 账号信息 + VNDB Token | ❌ | **凭据不该上传到服务器** |
  *
  * ## 格式
  *
- * JSON（不是 zip）：没有压缩库依赖，且备份文件小到可以直接用文本编辑器看。
+ * JSON + 独立二进制附件（不是 zip）：备份文件本身仍可直接查看。
  * 顶层带 `format` 版本号，将来格式变了能分辨。
  */
 
 export const BACKUP_APP = "vnlite";
 /** 备份格式版本。改动 `data` 的结构时 +1，旧备份按旧版本解析 */
-export const BACKUP_FORMAT = 1;
+export const BACKUP_FORMAT = 2;
 /**
  * 云盘上的**备份目录**。
  *
@@ -39,6 +40,10 @@ export const BACKUP_FILE_NAME = "vnlite-backup.json";
  * 也没法用文本编辑器打开看。放在备份文件旁边，跟备份一起上传 / 拉取。
  */
 export const AVATAR_FILE_NAME = "vnlite-avatar.jpg";
+/** 背景图使用每份备份独立的附件名，避免后续上传覆盖旧备份的图片。 */
+export function backgroundFileName(createdAt: number): string {
+  return `vnlite-background-${createdAt}.jpg`;
+}
 
 /** 条目类型（与 `lib/db/dao/history` / `favorite` 的存储层一致） */
 export type BackupEntryType = "vn" | "character" | "staff" | "producer" | "user";
@@ -94,6 +99,8 @@ export interface BackupPayload {
   format: number;
   /** 打包时间（unix 毫秒） */
   createdAt: number;
+  /** 与 JSON 分开放置的二进制附件 */
+  assets?: { background?: string };
   data: BackupData;
 }
 
@@ -102,8 +109,12 @@ export function emptyBackupData(): BackupData {
 }
 
 /** 组装备份包 */
-export function buildBackup(data: BackupData, createdAt: number): BackupPayload {
-  return { app: BACKUP_APP, format: BACKUP_FORMAT, createdAt, data };
+export function buildBackup(
+  data: BackupData,
+  createdAt: number,
+  assets?: BackupPayload["assets"]
+): BackupPayload {
+  return { app: BACKUP_APP, format: BACKUP_FORMAT, createdAt, ...(assets ? { assets } : {}), data };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -210,10 +221,17 @@ export function parseBackup(raw: unknown): BackupPayload | null {
   if (format < 1) return null;
 
   const data = asRecord(root.data);
+  const rawAssets = asRecord(root.assets);
+  const background = rawAssets.background;
+  const assets =
+    typeof background === "string" && /^vnlite-background-\d+\.jpg$/.test(background)
+      ? { background }
+      : undefined;
   return {
     app: BACKUP_APP,
     format,
     createdAt: asNumber(root.createdAt),
+    ...(assets ? { assets } : {}),
     data: {
       history: parseHistory(data.history),
       favorite: parseFavorite(data.favorite),

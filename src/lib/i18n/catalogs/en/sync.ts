@@ -108,6 +108,7 @@ export const enSync: CatalogOf<typeof zhSync> = {
     itemFavorite: "%{count} favorites",
     itemPlaySession: "%{count} play records",
     itemMarks: "%{count} walkthroughs marked",
+    itemBackground: "Custom background image",
 
     /* ---- 网络错误 ---- */
     unauthorized: "Wrong username or password",

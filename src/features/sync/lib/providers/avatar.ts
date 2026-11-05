@@ -1,6 +1,3 @@
-import { upload as uploadQuark } from "./quark/client";
-import { upload } from "./baidu/client";
-import { AVATAR_FILE_NAME } from "../backup";
 /**
  * 头像上传的分发（**原生**）。
  *
@@ -11,19 +8,30 @@ import { AVATAR_FILE_NAME } from "../backup";
 
 import type { File } from "expo-file-system";
 
+import { AVATAR_FILE_NAME } from "../backup";
 import type { ProviderContext } from "./types";
-import { putAvatar as putWebDavAvatar } from "@/features/sync/lib/providers/webdav/file";
+import { upload as uploadQuark } from "./quark/client";
+import { upload } from "./baidu/client";
+import { putFile as putWebDavFile } from "@/features/sync/lib/providers/webdav/file";
 import { webdavConfigOf } from "@/features/sync/lib/providers/webdav/provider";
 
-/** 上传本地头像到对应的网盘 */
-export async function putProviderAvatar(ctx: ProviderContext, file: File): Promise<void> {
+/** 上传本地二进制附件到对应的网盘 */
+export async function putProviderAsset(
+  ctx: ProviderContext,
+  name: string,
+  file: File
+): Promise<void> {
   if (ctx.provider === "quark") {
-    await uploadQuark(ctx, AVATAR_FILE_NAME, await file.bytes());
+    await uploadQuark(ctx, name, await file.bytes());
   }
   if (ctx.provider === "baidunetdisk") {
-    await upload(ctx, AVATAR_FILE_NAME, await file.bytes());
+    await upload(ctx, name, await file.bytes());
   }
   if (ctx.provider === "webdav") {
-    await putWebDavAvatar(await webdavConfigOf(ctx), file);
+    await putWebDavFile(await webdavConfigOf(ctx), name, file);
   }
+}
+
+export async function putProviderAvatar(ctx: ProviderContext, file: File): Promise<void> {
+  await putProviderAsset(ctx, AVATAR_FILE_NAME, file);
 }

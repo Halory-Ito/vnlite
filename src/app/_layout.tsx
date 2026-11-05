@@ -55,10 +55,10 @@ export default function RootLayout(): JSX.Element {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <HeroUINativeProvider>
-          <QueryClientProvider client={queryClient}>
-            {/* 主题包在最内层：要在所有页面之前完成配色与背景的注入 */}
-            <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            {/* PortalHost 必须位于主题变量作用域内，浮层才能继承当前配色。 */}
+            <HeroUINativeProvider>
               <SafeAreaScreen>
                 <Stack
                   screenOptions={{
@@ -73,9 +73,9 @@ export default function RootLayout(): JSX.Element {
                 <GameTimerOverlay />
                 <StatusBar style="auto" />
               </SafeAreaScreen>
-            </ThemeProvider>
-          </QueryClientProvider>
-        </HeroUINativeProvider>
+            </HeroUINativeProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

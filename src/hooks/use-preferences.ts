@@ -36,6 +36,11 @@ export function useNsfwMode(): NsfwMode {
   return usePreferences().nsfwMode;
 }
 
+/** 全局作品图片圆角（dp） */
+export function useImageRadius(): number {
+  return usePreferences().imageRadius;
+}
+
 /**
  * 根据 NSFW 档位决定一张图的展示方式（纯函数）。
  *

@@ -6,14 +6,13 @@
       "name": "vnlite",
       "dependencies": {
         "@expo/metro-runtime": "~58.0.17",
-        "@gorhom/bottom-sheet": "^5.2.14",
         "@noble/hashes": "^2.4.0",
         "@react-native-async-storage/async-storage": "2.2.0",
-        "@react-native-community/slider": "5.2.1",
         "@shopify/flash-list": "2.3.2",
         "@tanstack/react-query": "^5.104.0",
         "expo": "^58.0.0",
         "expo-blur": "58.0.5",
+        "expo-calendar": "~58.0.6",
         "expo-clipboard": "~58.0.4",
         "expo-constants": "~58.0.15",
         "expo-dev-client": "~58.0.18",
@@ -436,8 +435,6 @@
 
     "@react-native-async-storage/async-storage": ["@react-native-async-storage/async-storage@2.2.0", "https://registry.npmmirror.com/@react-native-async-storage/async-storage/-/async-storage-2.2.0.tgz", { "dependencies": { "merge-options": "^3.0.4" }, "peerDependencies": { "react-native": "^0.0.0-0 || >=0.65 <1.0" } }, "sha512-gvRvjR5JAaUZF8tv2Kcq/Gbt3JHwbKFYfmb445rhOj6NUMx3qPLixmDx5pZAyb9at1bYvJ4/eTUipU5aki45xw=="],
 
-    "@react-native-community/slider": ["@react-native-community/slider@5.2.1", "https://registry.npmmirror.com/@react-native-community/slider/-/slider-5.2.1.tgz", {}, "sha512-HBDPRFRIN47hRtd5tdDWZp3kkVN1z98jGbK9wHOfUfVO+PbBDZzD7xjiiyBqNpg6Rom2QPFOpBZzsB2bHy4yAQ=="],
-
     "@react-native-masked-view/masked-view": ["@react-native-masked-view/masked-view@0.3.2", "https://registry.npmmirror.com/@react-native-masked-view/masked-view/-/masked-view-0.3.2.tgz", { "peerDependencies": { "react": ">=16", "react-native": ">=0.57" } }, "sha512-XwuQoW7/GEgWRMovOQtX3A4PrXhyaZm0lVUiY8qJDvdngjLms9Cpdck6SmGAUNqQwcj2EadHC1HwL0bEyoa/SQ=="],
 
     "@react-native/asset-utils": ["@react-native/asset-utils@0.88.1", "https://registry.npmmirror.com/@react-native/asset-utils/-/asset-utils-0.88.1.tgz", {}, "sha512-BLb5FF7NgggGYiCsA7KKkK2qFhn0K+6iGXOI+4Ucd+G7Robzw9Gt4WsWwxLt+Od+G+/hyqfz8ASokyWFZ6VcLw=="],
@@ -707,6 +704,8 @@
     "expo-asset": ["expo-asset@58.0.20", "https://registry.npmmirror.com/expo-asset/-/expo-asset-58.0.20.tgz", { "dependencies": { "@expo/image-utils": "^0.12.6", "expo-constants": "~58.0.15" }, "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-atirOtDsH0l+4zxnByf4WKc7Iw2k5e2bSNAkuu79d4SLOAjAROoDizeP0qNQSMyZNoHPArw7EwTpoc8LuWvg4Q=="],
 
     "expo-blur": ["expo-blur@58.0.5", "https://registry.npmmirror.com/expo-blur/-/expo-blur-58.0.5.tgz", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-l8MEObIh0opwIUf+SD9MfqD0JnOirGuetAW/V3phXQRJaTPKLtb0IukgyLmnOsfWMAWTdJrcl5l/2ezcDHrkHQ=="],
+
+    "expo-calendar": ["expo-calendar@58.0.6", "https://registry.npmmirror.com/expo-calendar/-/expo-calendar-58.0.6.tgz", { "peerDependencies": { "expo": "*", "react-native": "*" } }, "sha512-M4NPgjj+NSB3woKekc4/en1fCvVQhv1UL64ZIjkflq3mm2rwwcX5k3vAM1wozzgFL0RUuysx9qyVxPB32oGv6A=="],
 
     "expo-clipboard": ["expo-clipboard@58.0.4", "https://registry.npmmirror.com/expo-clipboard/-/expo-clipboard-58.0.4.tgz", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-b2eEJMwdWXLTrmrkg/otsmL2OV6s9D90tytSNBsY87UswrWf6JwxcB2OaWegyUWD9XnvtBVNeVK7lej0zZh+5A=="],
 

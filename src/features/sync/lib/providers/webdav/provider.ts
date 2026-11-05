@@ -10,7 +10,14 @@ import type {
   RemoteFileInfo,
   SyncProvider,
 } from "@/features/sync/lib/providers/types";
-import { getAvatar, getBackup, normalizeServerUrl, putBackup, type WebDavConfig } from "./client";
+import {
+  getAvatar,
+  getBackup,
+  getFile,
+  normalizeServerUrl,
+  putBackup,
+  type WebDavConfig,
+} from "./client";
 
 /** 密码在密钥库里的键名 */
 export const WEBDAV_PASSWORD_KEY = "password";
@@ -54,5 +61,12 @@ export const WEBDAV_PROVIDER: SyncProvider = {
 
   async getAvatar(ctx: ProviderContext): Promise<Uint8Array | null> {
     return getAvatar(await webdavConfigOf(ctx));
+  },
+  async putAsset(ctx, name, file) {
+    const { putFile } = await import("./file");
+    await putFile(await webdavConfigOf(ctx), name, file);
+  },
+  async getAsset(ctx, name) {
+    return getFile(await webdavConfigOf(ctx), name);
   },
 };

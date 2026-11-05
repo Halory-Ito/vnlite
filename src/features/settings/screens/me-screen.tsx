@@ -8,8 +8,7 @@
  */
 
 import { useRouter } from "expo-router";
-import { Image } from "expo-image";
-import { ListGroup, useToast } from "heroui-native";
+import { ListGroup } from "heroui-native";
 import type { JSX } from "react";
 import { ScrollView } from "react-native";
 
@@ -21,15 +20,12 @@ import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
-import { clearContentCache } from "@/lib/query/client";
-import { clearWalkthroughCache } from "@/features/walkthrough/lib/cache";
 import { resolveTheme } from "@/theme/themes";
 
 export default function MeScreen(): JSX.Element {
   const router = useRouter();
   const preferences = usePreferences();
   const { t } = useTranslation();
-  const { toast } = useToast();
   const groupSurface = useTranslucentSurface();
   const bottomPadding = useTabContentPadding();
   // 「外观」那行的读数是主题名，同步算出来即可，不用另存状态
@@ -38,18 +34,6 @@ export default function MeScreen(): JSX.Element {
     preferences.customTheme,
     t("settings.themeCustom")
   );
-
-  const clearCache = () => {
-    // 内存缓存（所有业务数据）+ 攻略的落盘缓存 + 封面 / 截图图片缓存一起清：
-    // 攻略索引有 ~190KB 且带 24h TTL，只清内存的话用户会觉得「清完还在」；
-    // 图片缓存不跟着清的话，用户遇到「图坏了 / 占了几个 G」时也没法自救
-    void Promise.all([
-      clearContentCache(),
-      clearWalkthroughCache(),
-      Image.clearMemoryCache(),
-      Image.clearDiskCache(),
-    ]).then(() => toast.show(t("me.cacheCleared")));
-  };
 
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bottomPadding }}>
@@ -96,7 +80,7 @@ export default function MeScreen(): JSX.Element {
         <Divider className="mx-4" />
 
         <SettingsItem
-          icon="starFill"
+          icon="star"
           label={t("me.favorites")}
           onPress={() => router.push("/favorites")}
         />
@@ -118,10 +102,9 @@ export default function MeScreen(): JSX.Element {
         <Divider className="mx-4" />
 
         <SettingsItem
-          icon="trashBin"
+          icon="floppyDisk"
           label={t("me.clearCache")}
-          tone="danger"
-          onPress={clearCache}
+          onPress={() => router.push("/settings/cache")}
         />
         <Divider className="mx-4" />
 

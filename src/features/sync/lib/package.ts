@@ -79,7 +79,7 @@ export async function collectBackupData(): Promise<BackupData> {
       endedAt: session.endedAt,
       durationMs: session.durationMs,
     })),
-    preferences: { ...getPreferences() } as Record<string, unknown>,
+    preferences: { ...getPreferences(), backgroundUrl: null } as Record<string, unknown>,
     marks: await collectMarks(),
   };
 }

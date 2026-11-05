@@ -10,8 +10,7 @@
  *   - `fill="currentColor"` 由 `<Svg color>` 解析（RNSVG 原生支持）
  *   - 属性名 `fill-rule` / `clip-rule` 由 SvgXml 的解析器自动转成 camelCase
  *
- * 新增图标时，从 `node_modules/@gravity-ui/icons/svgs/<kebab-name>.svg`
- * （或 https://gravity-ui.com/icons）复制整段源码到下面，别手改路径数据。
+ * 新增图标时，从 https://gravity-ui.com/icons 复制整段源码到下面，别手改路径数据。
  */
 
 export const ICON_GLYPHS = {

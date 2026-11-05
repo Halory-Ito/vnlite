@@ -9,10 +9,9 @@
 import Constants from "expo-constants";
 import { ListGroup } from "heroui-native";
 import type { JSX } from "react";
-import { Linking, View } from "react-native";
+import { Linking } from "react-native";
 
 import { Divider } from "@/components/separator";
-import { Muted } from "@/components/typo";
 import { DEVELOPER_INFO } from "@/constants/config";
 import { SettingsItem } from "@/features/settings/components/settings-item";
 import { SettingsSection, SettingsShell } from "@/features/settings/components/settings-shell";
@@ -88,10 +87,6 @@ export default function AboutScreen(): JSX.Element {
           />
         </ListGroup>
       </SettingsSection>
-
-      <View className="px-4 py-3">
-        <Muted type="body-xs">{t("settings.disclaimer")}</Muted>
-      </View>
     </SettingsShell>
   );
 }

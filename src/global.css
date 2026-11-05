@@ -8,5 +8,5 @@
 @source '../node_modules/heroui-native/lib';
 
 * {
-  text-autospace: "normal";
+  text-autospace: normal;
 }

@@ -75,12 +75,12 @@ export const VN_COVER_CARD_FIELDS = [
 ] as const satisfies readonly FieldSpec<VnSummary>[];
 
 /**
- * 发售日历 / 排行榜的字段集。
+ * 排行榜的字段集。
  *
  * 比封面墙多要 `released`（日历分组 / 榜单年份）、`rating` 与 `votecount`（榜单读数与门槛）。
  * 仍然**不要** `image.url`：这两处都是列表，缩略图够用。
  */
-export const VN_CALENDAR_RANKING_FIELDS = [
+export const VN_RANKING_FIELDS = [
   "id",
   "title",
   "titles.lang",

@@ -30,6 +30,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import {
   CARD_OPACITY_RANGE,
   CUSTOM_THEME_ID,
+  IMAGE_RADIUS_RANGE,
   patchPreferences,
   setPreference,
 } from "@/lib/storage/preferences";
@@ -134,17 +135,29 @@ export default function AppearanceScreen(): JSX.Element {
 
       <SettingsSection title={t("settings.cardSection")}>
         <TranslucentPanel>
-          <LabeledSlider
-            label={t("settings.cardOpacity")}
-            value={preferences.cardOpacity}
-            minValue={CARD_OPACITY_RANGE.min}
-            maxValue={CARD_OPACITY_RANGE.max}
-            step={CARD_OPACITY_RANGE.step}
-            displayScale={100}
-            unit="%"
-            onLiveChange={(value) => patchPreferences({ cardOpacity: value })}
-            onCommit={(value) => void setPreference("cardOpacity", value)}
-          />
+          <View className="gap-4">
+            <LabeledSlider
+              label={t("settings.imageRadius")}
+              value={preferences.imageRadius}
+              minValue={IMAGE_RADIUS_RANGE.min}
+              maxValue={IMAGE_RADIUS_RANGE.max}
+              step={IMAGE_RADIUS_RANGE.step}
+              unit=" dp"
+              onLiveChange={(value) => patchPreferences({ imageRadius: value })}
+              onCommit={(value) => void setPreference("imageRadius", value)}
+            />
+            <LabeledSlider
+              label={t("settings.cardOpacity")}
+              value={preferences.cardOpacity}
+              minValue={CARD_OPACITY_RANGE.min}
+              maxValue={CARD_OPACITY_RANGE.max}
+              step={CARD_OPACITY_RANGE.step}
+              displayScale={100}
+              unit="%"
+              onLiveChange={(value) => patchPreferences({ cardOpacity: value })}
+              onCommit={(value) => void setPreference("cardOpacity", value)}
+            />
+          </View>
         </TranslucentPanel>
       </SettingsSection>
 

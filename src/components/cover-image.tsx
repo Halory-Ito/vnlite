@@ -14,15 +14,17 @@
  * `View` style 不接受数组**，所以占位分支需要自己算出真实高度。
  */
 
-import { Image, type ImageStyle } from "expo-image";
+import type { ImageStyle } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { JSX } from "react";
 import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { Muted } from "./muted";
+import { ManagedImage } from "@/features/settings/components/managed-image";
+import type { ImageCacheCategory } from "@/features/settings/lib/image-cache";
 import { useDoubleTap } from "@/hooks/use-double-tap";
-import { useImageGate, useNsfwMode } from "@/hooks/use-preferences";
+import { useImageGate, useImageRadius, useNsfwMode } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 
 /** 宽高比写法：`[宽, 高]`，例如 `[62, 82]` 表示 62:82 */
@@ -52,6 +54,7 @@ export interface CoverImageProps {
   onPress?: () => void;
   /** 关闭双击切换（截图墙、纯展示位用） */
   disableToggle?: boolean;
+  category?: ImageCacheCategory;
 }
 
 export function CoverImage({
@@ -67,10 +70,12 @@ export function CoverImage({
   accessibilityLabel,
   onPress,
   disableToggle = false,
+  category = "vn",
 }: CoverImageProps): JSX.Element {
   const { t } = useTranslation();
   const gate = useImageGate({ sexual, violence });
   const nsfwMode = useNsfwMode();
+  const imageRadius = useImageRadius();
   const [revealed, setRevealed] = useState(false);
   const { w, h } = resolve(width, height);
 
@@ -83,7 +88,7 @@ export function CoverImage({
   const placeholderNode = (
     <View
       className={`items-center justify-center bg-default-soft ${roundedClassName}`}
-      style={{ width: w, height: h }}
+      style={{ width: w, height: h, borderRadius: imageRadius }}
       accessibilityLabel={t("common.noCover")}
     >
       <Muted type="body-xs" className="text-[10px]">
@@ -95,14 +100,14 @@ export function CoverImage({
   const image = !url ? (
     placeholderNode
   ) : (
-    <Image
-      source={url}
-      placeholder={placeholder ? { uri: placeholder } : undefined}
+    <ManagedImage
+      url={url}
+      category={category}
+      placeholderUrl={placeholder}
       placeholderContentFit="cover"
-      style={style ? [{ width: w, height: h }, style] : { width: w, height: h }}
+      style={[{ width: w, height: h }, style, { borderRadius: imageRadius }]}
       contentFit="cover"
       // 列表滚回去时命中内存缓存，不再走「磁盘读 + 重新解码」
-      cachePolicy="memory-disk"
       transition={priority === "low" ? 100 : 200}
       priority={priority}
       // `loading` 只在 web 上生效；原生没有 lazy 概念（挂载即入队），
@@ -124,6 +129,7 @@ export function CoverImage({
       onPress={onPress}
       canReveal={canReveal}
       revealed={revealed}
+      radius={imageRadius}
     >
       {image}
       {blurred ? (
@@ -144,12 +150,14 @@ function TogglePressable({
   onPress,
   canReveal,
   revealed,
+  radius,
 }: {
   children: React.ReactNode;
   onToggle: () => void;
   onPress?: () => void;
   canReveal: boolean;
   revealed?: boolean;
+  radius: number;
 }): JSX.Element {
   const toggle = useCallback(() => {
     if (!canReveal) return;
@@ -162,6 +170,8 @@ function TogglePressable({
 
   return (
     <Pressable
+      className="overflow-hidden"
+      style={{ borderRadius: radius }}
       onPress={handlePress}
       accessibilityRole="imagebutton"
       accessibilityState={{ selected: revealed }}
@@ -182,6 +192,12 @@ export function CoverSkeleton({
   height: SizeSpec;
   roundedClassName?: string;
 }): JSX.Element {
+  const imageRadius = useImageRadius();
   const { w, h } = resolve(width, height);
-  return <View className={`bg-default-soft ${roundedClassName}`} style={{ width: w, height: h }} />;
+  return (
+    <View
+      className={`bg-default-soft ${roundedClassName}`}
+      style={{ width: w, height: h, borderRadius: imageRadius }}
+    />
+  );
 }

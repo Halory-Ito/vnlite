@@ -10,7 +10,7 @@ import { t } from "@/lib/i18n/translate";
 
 import { api } from "@/lib/api/client";
 import {
-  VN_CALENDAR_RANKING_FIELDS,
+  VN_RANKING_FIELDS,
   VN_COVER_CARD_FIELDS,
   VN_DETAIL_FIELDS,
   VN_LIST_FIELDS,
@@ -248,33 +248,8 @@ export function queryJustReleasedVns(
 }
 
 /* -------------------------------------------------------------------------- */
-/* 发售日历 / 排行榜                                                            */
+/* 排行榜                                                                    */
 /* -------------------------------------------------------------------------- */
-
-/**
- * 某个月的发售作品（发售日历用）。
- *
- * `from` / `to` 是 `YYYY-MM-DD`（含首尾）。按发售日**升序** —— 日历从上往下读。
- * 单页 100 条，调用方按 `more` 继续翻。
- */
-export function queryVnsByReleaseRange(
-  from: string,
-  to: string,
-  options: { page?: number; results?: number; signal?: AbortSignal } = {}
-): Promise<QueryResponse<VnSummary>> {
-  return api.query<VnSummary>(
-    "/vn",
-    {
-      filters: ["and", ["released", ">=", from], ["released", "<=", to]],
-      fields: toFieldsString(VN_CALENDAR_RANKING_FIELDS),
-      sort: "released",
-      reverse: false,
-      results: clampResults(options.results ?? MAX_RESULTS_PER_PAGE),
-      page: options.page ?? 1,
-    },
-    { signal: options.signal }
-  );
-}
 
 /**
  * 按评分排行的作品（排行榜用）。
@@ -291,7 +266,7 @@ export function queryTopVns(
     "/vn",
     {
       filters: and(...filters, ["votecount", ">=", minVotes]) ?? undefined,
-      fields: toFieldsString(VN_CALENDAR_RANKING_FIELDS),
+      fields: toFieldsString(VN_RANKING_FIELDS),
       sort: "rating",
       reverse: true,
       results: clampResults(options.results ?? 10),

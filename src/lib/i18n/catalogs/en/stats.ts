@@ -4,6 +4,7 @@ import type { zhStats } from "@/lib/i18n/catalogs/zh/stats";
 
 export const enStats: CatalogOf<typeof zhStats> = {
   stats: {
+    weekdays: "S,M,T,W,T,F,S",
     /* Statistics screen */
     title: "Statistics",
     collectionTitle: "List stats",

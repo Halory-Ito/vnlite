@@ -22,7 +22,9 @@ import { useToast } from "heroui-native";
 import { useCallback, useState } from "react";
 
 import { downloadAvatar, uploadAvatar } from "@/features/sync/lib/avatar-sync";
-import { parseBackup, type BackupPayload } from "@/features/sync/lib/backup";
+import { downloadBackground, uploadBackground } from "@/features/sync/lib/background-sync";
+import { backgroundUploadFile } from "@/features/settings/lib/background-image";
+import { backgroundFileName, parseBackup, type BackupPayload } from "@/features/sync/lib/backup";
 import { secretStoreFor } from "@/features/sync/lib/configs/secrets";
 import type { SyncConfig } from "@/features/sync/lib/configs/types";
 import { createBackupPayload, restoreBackupPayload } from "@/features/sync/lib/package";
@@ -30,6 +32,7 @@ import { getProvider } from "@/features/sync/lib/providers/registry";
 import type { ProviderContext } from "@/features/sync/lib/providers/types";
 import { useTranslation } from "@/hooks/use-translation";
 import { queryKeys } from "@/lib/query/keys";
+import { getPreferences } from "@/lib/storage/preferences";
 
 export type SyncPhase =
   | "idle"
@@ -116,8 +119,18 @@ export function useSyncBackup(): UseSyncBackup {
       setPhase("packing");
       const ctx = contextOf(config);
       try {
-        const payload = await createBackupPayload();
+        const basePayload = await createBackupPayload();
+        const background = backgroundUploadFile(getPreferences().backgroundUrl);
+        const payload: BackupPayload = background
+          ? {
+              ...basePayload,
+              assets: { background: backgroundFileName(basePayload.createdAt) },
+            }
+          : basePayload;
         setPhase("uploading");
+        if (background && payload.assets?.background) {
+          await uploadBackground(ctx, background, payload.assets.background);
+        }
         await provider.putBackup(ctx, JSON.stringify(payload));
         // 头像跟备份一起上去；单独失败不影响这次备份的结果
         await uploadAvatar(ctx);
@@ -186,7 +199,17 @@ export function useSyncBackup(): UseSyncBackup {
     setBusyConfigId(pending.config.id);
     setPhase("restoring");
     try {
-      await restoreBackupPayload(pending.payload);
+      const backgroundUrl = pending.payload.assets?.background
+        ? await downloadBackground(contextOf(pending.config), pending.payload.assets.background)
+        : null;
+      const payload = {
+        ...pending.payload,
+        data: {
+          ...pending.payload.data,
+          preferences: { ...pending.payload.data.preferences, backgroundUrl },
+        },
+      };
+      await restoreBackupPayload(payload);
       // 换机场景：头像文件不在备份 JSON 里，得单独从服务器拉一次
       await downloadAvatar(contextOf(pending.config));
       setPending(null);

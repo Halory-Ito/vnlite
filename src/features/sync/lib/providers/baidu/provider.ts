@@ -25,4 +25,10 @@ export const BAIDU_PROVIDER: SyncProvider = {
   async getAvatar(ctx) {
     return (await download(ctx, AVATAR_FILE_NAME))?.bytes ?? null;
   },
+  async putAsset(ctx, name, file) {
+    await upload(ctx, name, await file.bytes());
+  },
+  async getAsset(ctx, name) {
+    return (await download(ctx, name))?.bytes ?? null;
+  },
 };

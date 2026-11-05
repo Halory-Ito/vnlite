@@ -45,15 +45,31 @@ export async function pickBackgroundImage(): Promise<BackgroundPickResult> {
       .renderAsync();
     const image = await rendered.saveAsync({ compress: QUALITY, format: SaveFormat.JPEG });
 
-    const file = new File(Paths.document, `${FILE_PREFIX}${Date.now()}${FILE_EXT}`);
-    file.create({ overwrite: true });
-    file.write(await new File(image.uri).bytes());
-    // 写成功之后才删旧的：失败时原来那张还在
-    removeBackgroundFilesExcept(file.uri);
-    return { status: "saved", uri: file.uri };
+    const uri = await writeBackgroundBytes(await new File(image.uri).bytes());
+    return { status: "saved", uri };
   } catch {
     return { status: "failed" };
   }
+}
+
+/** 本地自定义背景文件；仅接受应用自己的 document 文件。 */
+export function backgroundUploadFile(uri: string | null): File | null {
+  if (!uri?.startsWith("file://")) return null;
+  try {
+    const file = new File(uri);
+    return file.exists ? file : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 将备份附件写入本机背景目录，并清理旧背景图。 */
+export async function writeBackgroundBytes(bytes: Uint8Array): Promise<string> {
+  const file = new File(Paths.document, `${FILE_PREFIX}${Date.now()}${FILE_EXT}`);
+  file.create({ overwrite: true });
+  file.write(bytes);
+  removeBackgroundFilesExcept(file.uri);
+  return file.uri;
 }
 
 /** 删掉所有本地背景图（用户选择「恢复主题背景」时调用） */

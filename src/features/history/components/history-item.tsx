@@ -37,6 +37,7 @@ export function HistoryItem({ entry, onRemove }: HistoryItemProps): JSX.Element 
       subtitle={entry.subtitle}
       timestamp={formatRelativeTime(entry.viewedAt)}
       imageUrl={entry.imageUrl ?? fallbackLogo}
+      imageCategory={entry.type === "user" ? "community" : entry.type}
       imageIsSafe={isProducer}
       fallbackIcon="clock"
       onPress={() =>

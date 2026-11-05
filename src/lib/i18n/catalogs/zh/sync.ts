@@ -101,6 +101,7 @@ export const zhSync = {
     itemFavorite: "收藏 %{count} 条",
     itemPlaySession: "游玩 %{count} 条",
     itemMarks: "攻略标记 %{count} 篇",
+    itemBackground: "自定义背景图",
 
     /* ---- 网络错误 ---- */
     unauthorized: "用户名或密码不对",

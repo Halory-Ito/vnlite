@@ -19,7 +19,6 @@
  */
 
 import { FlashList } from "@shopify/flash-list";
-import { Image as ExpoImage } from "expo-image";
 import type { JSX, ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions, type RefreshControlProps } from "react-native";
@@ -32,6 +31,7 @@ import type { NsfwMode } from "@/lib/storage/preferences";
 import { coverGridColumns } from "@/utils/grid";
 import { coverUrl } from "@/utils/format";
 import { getVnDisplayTitle } from "@/features/vn/lib/display-title";
+import { prefetchImages } from "@/features/settings/lib/image-cache";
 
 /** 网格布局：列数随屏幕、格子间距 8、左右外边距 16 */
 const GAP = 8;
@@ -90,7 +90,7 @@ export function VnCoverGrid({
       prefetched.current.add(url);
       fresh.push(url);
     }
-    if (fresh.length > 0) void ExpoImage.prefetch(fresh, "memory-disk");
+    if (fresh.length > 0) void prefetchImages(fresh, "vn");
   }, [entries]);
 
   return (

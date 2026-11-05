@@ -6,6 +6,7 @@
  */
 export const zhStats = {
   stats: {
+    weekdays: "日,一,二,三,四,五,六",
     /* 记录统计页 */
     title: "记录统计",
     collectionTitle: "收藏统计",
