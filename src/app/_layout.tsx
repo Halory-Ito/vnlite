@@ -7,6 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useReducedMotion } from "react-native-reanimated";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { queryClient } from "@/lib/query/client";
@@ -28,6 +29,11 @@ initI18n();
 configureBaidu(Constants.expoConfig?.extra?.baidu);
 
 export default function RootLayout(): JSX.Element {
+  const reducedMotion = useReducedMotion();
+  const settingsTransition = {
+    animation: reducedMotion ? ("none" as const) : ("fade" as const),
+    animationDuration: 180,
+  };
   // 冷启动恢复登录态：读 SecureStore 的 token → /authinfo 校验 → 写本地 account 表。
   // 清单数据不落库（服务端直读），所以这里没有清单同步要做
   useEffect(() => {
@@ -57,7 +63,7 @@ export default function RootLayout(): JSX.Element {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            {/* PortalHost 必须位于主题变量作用域内，浮层才能继承当前配色。 */}
+            {/* 浮层和页面共用全局 Uniwind 主题变量。 */}
             <HeroUINativeProvider>
               <SafeAreaScreen>
                 <Stack
@@ -68,6 +74,9 @@ export default function RootLayout(): JSX.Element {
                   }}
                 >
                   <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="settings/appearance" options={settingsTransition} />
+                  <Stack.Screen name="settings/content" options={settingsTransition} />
+                  <Stack.Screen name="settings/home-layout" options={settingsTransition} />
                 </Stack>
                 {/* 全局游戏计时浮层：放在 Stack 之后，跨页面常驻且盖在最上层 */}
                 <GameTimerOverlay />

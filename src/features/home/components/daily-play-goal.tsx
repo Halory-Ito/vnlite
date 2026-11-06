@@ -5,13 +5,13 @@ import { View } from "react-native";
 
 import { AppDialog } from "@/components/dialog";
 import { Muted } from "@/components/typo";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import { setPreference } from "@/lib/storage/preferences";
 
 export function DailyPlayGoal({ children }: { children: (onPress: () => void) => ReactNode }) {
   const { t } = useTranslation();
-  const { dailyPlayGoalMinutes } = usePreferences();
+  const dailyPlayGoalMinutes = usePreference("dailyPlayGoalMinutes");
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);

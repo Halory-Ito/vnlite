@@ -222,6 +222,7 @@ const TEXT_PAIRS: readonly { fg: string; bg: string; min: number; note: string }
   // Tabs 列表底色是 --default，选中文字也会落在上面
   { fg: "--segment-foreground", bg: "--default", min: 4.5, note: "选中文字 / Tabs 列表底" },
   { fg: "--field-foreground", bg: "--field-background", min: 4.5, note: "输入框" },
+  { fg: "--foreground", bg: "--field-background", min: 4.5, note: "HeroUI 默认输入文字" },
   { fg: "--field-placeholder", bg: "--field-background", min: 3, note: "占位符" },
   { fg: "--muted", bg: "--background", min: 3, note: "次要文字 / 页面底" },
 ];
@@ -313,6 +314,46 @@ check("遮罩默认值落在合法区间", () => {
 
 /* ---- 3.5 自定义主题 / 背景位置 ---- */
 console.log("\n3.5 自定义主题与背景位置");
+
+check("单独修改辅色会更新选中块和输入框，保留主色强调与页面底色", () => {
+  for (const mode of MODES) {
+    const before = deriveTokens("#6ec8d2", "#f0aa64", mode);
+    const after = deriveTokens("#6ec8d2", "#9b51e0", mode);
+    for (const token of ["--default", "--segment", "--field-background"]) {
+      assert(before[token] !== after[token], `${mode} 修改辅色后 ${token} 未变化`);
+    }
+    for (const token of ["--background", "--accent"]) {
+      assert(before[token] === after[token], `${mode} 修改辅色不应改变 ${token}`);
+    }
+  }
+});
+
+check("自定义极端主辅色组合的控件文字保持可读", () => {
+  const colors = [
+    "#000000",
+    "#ffffff",
+    "#ff0000",
+    "#00ff00",
+    "#0000ff",
+    "#ffff00",
+    "#ff00ff",
+    "#00ffff",
+  ];
+  for (const mode of MODES) {
+    for (const primary of colors) {
+      for (const secondary of colors) {
+        const tokens = deriveTokens(primary, secondary, mode);
+        for (const { fg, bg, min, note } of TEXT_PAIRS) {
+          const ratio = contrastRatio(parseColor(tokens[fg]!), parseColor(tokens[bg]!));
+          assert(
+            ratio >= min,
+            `${mode} ${primary}/${secondary} ${note} 对比度 ${ratio.toFixed(2)} < ${min}`
+          );
+        }
+      }
+    }
+  }
+});
 
 check("自定义主题默认配色在明暗两套下都可读", () => {
   for (const mode of MODES) {

@@ -47,7 +47,7 @@ import { STALE_TIME } from "@/lib/query/client";
 import { queryKeys } from "@/lib/query/keys";
 import type { VnSummary } from "@/lib/api/types";
 import { setPreference } from "@/lib/storage/preferences";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { formatCount, producerTypeLabel, sexLabel } from "@/utils/format";
 
 /* -------------------------------------------------------------------------- */
@@ -359,7 +359,7 @@ export function ProducerDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
-  const viewMode = usePreferences().vnViewMode;
+  const viewMode = usePreference("vnViewMode");
   const [tab, setTab] = useState<CatalogTab>("overview");
   const recordView = useRecordHistory();
 
@@ -459,7 +459,7 @@ export function StaffDetailScreen(): JSX.Element {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
-  const viewMode = usePreferences().vnViewMode;
+  const viewMode = usePreference("vnViewMode");
   const [tab, setTab] = useState<CatalogTab>("overview");
   const recordView = useRecordHistory();
 

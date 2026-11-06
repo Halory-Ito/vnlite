@@ -10,13 +10,13 @@ import {
   type HomeSectionPreference,
 } from "@/features/home/lib/home-layout";
 import { SettingsShell } from "@/features/settings/components/settings-shell";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { setPreference } from "@/lib/storage/preferences";
 
 export default function HomeLayoutScreen() {
-  const { homeLayout } = usePreferences();
+  const homeLayout = usePreference("homeLayout");
   const { t } = useTranslation();
   const color = useThemeColor("foreground");
   const surface = useTranslucentSurface();

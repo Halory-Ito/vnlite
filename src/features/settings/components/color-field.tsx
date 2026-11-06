@@ -8,7 +8,7 @@
  * 输入不合法时**不覆盖**当前颜色，只标红提示 —— 输到一半的 `#12` 不该被当成有效值。
  */
 
-import { Input, Label, TextField } from "heroui-native";
+import { Input, TextField } from "heroui-native";
 import type { JSX } from "react";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
@@ -16,6 +16,7 @@ import { Pressable, View } from "react-native";
 import { Muted } from "@/components/typo";
 import { useTranslation } from "@/hooks/use-translation";
 import { normalizeHexColor } from "@/theme/custom-theme";
+import { SettingsLabel } from "./settings-field";
 
 /** 预设色板：饱和 / 明度都经过挑选，走 `deriveTokens` 后明暗两套都不会崩 */
 const PRESET_COLORS = [
@@ -66,9 +67,10 @@ export function ColorField({ label, value, onChange }: ColorFieldProps): JSX.Ele
 
   return (
     <View className="gap-2">
-      <TextField>
-        <Label>{label}</Label>
+      <TextField isInvalid={invalid}>
+        <SettingsLabel>{label}</SettingsLabel>
         <Input
+          className="bg-field text-field-foreground"
           value={text}
           onChangeText={handleChange}
           autoCapitalize="none"

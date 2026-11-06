@@ -16,7 +16,7 @@ import { Divider } from "@/components/separator";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
 import { SettingsItem } from "@/features/settings/components/settings-item";
-import { LANGUAGE_OPTIONS, NSFW_OPTIONS, optionLabel } from "@/features/settings/lib/options";
+import { NSFW_OPTIONS, optionLabel } from "@/features/settings/lib/options";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 import { useTranslation } from "@/hooks/use-translation";
@@ -45,14 +45,6 @@ export default function MeScreen(): JSX.Element {
           label={t("me.appearance")}
           value={theme.name}
           onPress={() => router.push("/settings/appearance")}
-        />
-        <Divider className="mx-4" />
-
-        <SettingsItem
-          icon="globe"
-          label={t("settings.languageTitle")}
-          value={optionLabel(LANGUAGE_OPTIONS, preferences.language, t)}
-          onPress={() => router.push("/settings/language")}
         />
         <Divider className="mx-4" />
 

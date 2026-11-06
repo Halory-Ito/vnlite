@@ -4,7 +4,7 @@ import { View } from "react-native";
 
 import { AppDialog } from "@/components/dialog";
 import { Body, H5, Muted } from "@/components/typo";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import { DEFAULT_ANNUAL_GAME_GOAL, setPreference } from "@/lib/storage/preferences";
 import { GoalProgressRing } from "./goal-progress-ring";
@@ -25,7 +25,7 @@ export function AnnualGoal({
   tablet?: boolean;
 }) {
   const { t } = useTranslation();
-  const { annualGameGoals } = usePreferences();
+  const annualGameGoals = usePreference("annualGameGoals");
   const goal = annualGameGoals[String(year)] ?? DEFAULT_ANNUAL_GAME_GOAL;
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");

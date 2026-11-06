@@ -5,7 +5,7 @@
  *   1. 列表用 `useInfiniteQuery` + `page` 翻页。Kana 的 `page` 参数对
  *      非 `id` 排序不太可靠，所以默认排序用 `id`（最稳）。
  *   2. 详情用 `useQuery`，字段集是全量字段，返回内容很大，
- *      所以 staleTime 拉长到 10 分钟。
+ *      所以 staleTime 设为 30 分钟。
  *   3. 搜索走 `searchrank` 排序时必须顶层带 `search` 过滤器，
  *      这一点由 `compileVnFilters` 保证。
  */

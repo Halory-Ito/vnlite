@@ -14,12 +14,12 @@
 
 import { useThemeColor } from "heroui-native";
 
-import { usePreferences } from "./use-preferences";
+import { usePreference } from "./use-preferences";
 import { withAlpha } from "@/theme/color";
 
 export function useTranslucentSurface(alpha?: number): { backgroundColor: string } {
   const surface = useThemeColor("surface");
-  const { cardOpacity } = usePreferences();
+  const cardOpacity = usePreference("cardOpacity");
   // 显式传 alpha 时忽略用户偏好（个别地方需要固定的浓度）
   return { backgroundColor: withAlpha(surface, alpha ?? cardOpacity) };
 }

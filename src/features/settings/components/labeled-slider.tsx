@@ -20,6 +20,7 @@ import type { JSX } from "react";
 import { View } from "react-native";
 
 import { Muted } from "@/components/muted";
+import { SettingsLabel } from "./settings-field";
 
 export interface LabeledSliderProps {
   label: string;
@@ -57,9 +58,7 @@ export function LabeledSlider({
   return (
     <View className="gap-1.5">
       <View className="flex-row items-center justify-between">
-        <Muted type="body-xs" className="font-medium">
-          {label}
-        </Muted>
+        <SettingsLabel>{label}</SettingsLabel>
         <Typography type="body-xs" className="font-semibold text-accent">
           {readValue}
           {unit}

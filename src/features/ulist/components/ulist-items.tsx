@@ -13,7 +13,7 @@
 
 import { FlashList } from "@shopify/flash-list";
 import type { JSX, ReactElement } from "react";
-import { RefreshControl, View } from "react-native";
+import { RefreshControl, View, useWindowDimensions } from "react-native";
 
 import { Separator } from "@/components/separator";
 import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
@@ -22,6 +22,7 @@ import { VnCoverGrid } from "@/features/vn/components/vn-cover-grid";
 import { useTranslation } from "@/hooks/use-translation";
 import type { UListItem } from "@/lib/api/types";
 import type { VnViewMode } from "@/lib/storage/preferences";
+import { vnListColumns } from "@/utils/grid";
 
 import { UlistItemRow } from "./ulist-item-row";
 
@@ -49,6 +50,8 @@ export function UlistItems({
   footer,
 }: UlistItemsProps): JSX.Element {
   const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
+  const columns = vnListColumns(width, height);
   const bottomPadding = useTabContentPadding();
   const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />;
   // 「加载更多…」与调用方的附加内容（筛选说明）互斥显示，避免两块提示叠在一起
@@ -81,11 +84,17 @@ export function UlistItems({
 
   return (
     <FlashList<UListItem>
+      key={`ulist-list-${columns}`}
+      numColumns={columns}
       style={{ flex: 1 }}
       data={items}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <UlistItemRow item={item} onPress={onPressItem} />}
-      ItemSeparatorComponent={Separator}
+      renderItem={({ item }) => (
+        <View>
+          <UlistItemRow item={item} onPress={onPressItem} />
+          <Separator />
+        </View>
+      )}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       refreshControl={refreshControl}

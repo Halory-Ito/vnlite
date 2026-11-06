@@ -34,7 +34,7 @@ import type { JSX } from "react";
 import { ScrollView } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 
 import {
@@ -47,7 +47,7 @@ import { WalkthroughMeta } from "./walkthrough-meta";
 import { WalkthroughRoutes } from "./walkthrough-routes";
 
 export function VnWalkthroughTab({ vnId }: { vnId: string }): JSX.Element {
-  const { spoilerShield } = usePreferences();
+  const spoilerShield = usePreference("spoilerShield");
   const { t } = useTranslation();
   const indexQuery = useWalkthroughIndex();
   const entry = findEntry(indexQuery.data, vnId);

@@ -14,6 +14,7 @@ import {
   COVER_GRID_COLUMNS_TABLET,
   coverGridColumns,
   screenshotColumns,
+  vnListColumns,
 } from "@/utils/grid";
 
 let passed = 0;
@@ -106,6 +107,26 @@ check("阈值与封面网格一致（600 / 800）", () => {
   assert(screenshotColumns(600, 960) === 3, "600 起算平板");
   assert(screenshotColumns(799, 960) === 3, "799 仍是小平板");
   assert(screenshotColumns(800, 960) === 4, "800 起算大平板");
+});
+
+console.log("\n6. 浏览与清单信息列表列数");
+check("手机横竖屏保持单列", () => {
+  assert(vnListColumns(393, 852) === 1, "手机竖屏应单列");
+  assert(vnListColumns(852, 393) === 1, "横屏手机不应被当成平板");
+});
+check("mini pad 和 pad 横竖屏均为三列", () => {
+  for (const [width, height] of [
+    [744, 1133],
+    [820, 1180],
+    [1024, 1366],
+  ]) {
+    assert(vnListColumns(width!, height!) === 3, "平板竖屏应三列");
+    assert(vnListColumns(height!, width!) === 3, "平板横屏应三列");
+  }
+});
+check("平板分屏缩窄至手机尺寸后恢复单列", () => {
+  assert(vnListColumns(600, 960) === 3, "600dp 起为三列");
+  assert(vnListColumns(599, 960) === 1, "不足 600dp 时恢复单列");
 });
 
 console.log(`\n${"=".repeat(60)}`);

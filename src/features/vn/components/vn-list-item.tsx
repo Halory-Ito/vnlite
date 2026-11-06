@@ -11,7 +11,7 @@ import { CoverImage } from "@/components/cover-image";
 import { Muted } from "@/components/typo";
 import { PlatformBadges, RatingBadge } from "@/components/ui";
 import { useCopyProps } from "@/hooks/use-copy";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import { VnDisplayTitle } from "@/features/vn/components/vn-display-title";
 import type { VnSummary } from "@/lib/api/types";
@@ -44,8 +44,7 @@ export function VnListItem({
   fields,
 }: VnListItemProps): JSX.Element {
   const { t } = useTranslation();
-  const preferences = usePreferences();
-  const preferred = preferences.cardFields;
+  const preferred = usePreference("cardFields");
   const show = (field: CardField): boolean => (fields ?? preferred).includes(field);
   // 长按整行复制作品名 —— 浏览 / 搜索 / 标签 / 清单的列表都靠这一处
   const copyable = useCopyProps(vnCopyText(vn), { preview: vn.title });

@@ -2,7 +2,7 @@
  * 浏览页：可排序 / 可筛选的 VN 大列表。
  *
  * 与首页的区别：这里是「一次看很多」的入口，支持**排序面板**（字段 + 方向）
- * 与筛选面板。排序偏好存 `preferences.browseSort`（默认人气降序）。
+ * 与筛选面板。排序偏好存 `browseSort`（默认人气降序）。
  *
  * 排序 / 筛选 / 卡片显示三个面板都是全屏覆盖层（`panel.tsx`），**不是** BottomSheet ——
  * 原因见该文件顶部，简单说是为了避开全局 Portal 层的触摸穿透。
@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
 import { useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View, useWindowDimensions } from "react-native";
 
 import { Icon } from "@/components/icon";
 import { Muted } from "@/components/typo";
@@ -27,10 +27,13 @@ import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { VnFilterState } from "@/lib/api/filters";
 import type { VnSummary } from "@/lib/api/types";
+import { vnListColumns } from "@/utils/grid";
 import { CARD_FIELD, setPreference } from "@/lib/storage/preferences";
 
 export default function BrowseTab(): JSX.Element {
   const router = useRouter();
+  const { width, height } = useWindowDimensions();
+  const columns = vnListColumns(width, height);
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const preferences = usePreferences();
@@ -137,6 +140,7 @@ export default function BrowseTab(): JSX.Element {
       </View>
 
       <VnInfiniteList
+        numColumns={columns}
         items={items}
         isLoading={query.isLoading}
         isError={query.isError}

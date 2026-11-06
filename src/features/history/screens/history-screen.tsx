@@ -21,7 +21,7 @@ import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ViewModeButton } from "@/components/view-mode-button";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { HistoryEntry } from "@/lib/db/dao/history";
 import { setPreference } from "@/lib/storage/preferences";
@@ -48,7 +48,7 @@ export default function HistoryScreen(): JSX.Element {
   const accent = useThemeColor("accent");
   const muted = useThemeColor("muted");
   const danger = useThemeColor("danger");
-  const viewMode = usePreferences().vnViewMode;
+  const viewMode = usePreference("vnViewMode");
   const [tab, setTab] = useState<HistoryTab>("vn");
   const [dateFilter, setDateFilter] = useState<HistoryDateFilter>(EMPTY_DATE_FILTER);
   const [rangeOpen, setRangeOpen] = useState(false);

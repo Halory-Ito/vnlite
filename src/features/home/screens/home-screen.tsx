@@ -8,18 +8,27 @@ import { QuoteCard } from "@/features/home/components/quote-card";
 import { RandomVnCard } from "@/features/home/components/random-vn-card";
 import { homeSectionRows } from "@/features/home/lib/home-layout";
 import { useTabContentPadding } from "@/features/navigation/hooks/use-tab-content-padding";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 
 export default function HomeScreen() {
-  const { homeLayout } = usePreferences();
+  const homeLayout = usePreference("homeLayout");
   const bottomPadding = useTabContentPadding();
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bottomPadding }}>
       {homeSectionRows(homeLayout).map((row) => {
         const id = row[0]!;
         const key = row.join(":");
-        if (id === "today" || id === "annual" || id === "heatmap") {
-          return <HomePlayStats key={key} sections={row as ("today" | "annual" | "heatmap")[]} />;
+        if (id === "playStats" || id === "heatmap") {
+          return (
+            <HomePlayStats
+              key={key}
+              sections={
+                id === "playStats"
+                  ? ["today", "totalDuration", "annual", "totalFinished"]
+                  : (row as "heatmap"[])
+              }
+            />
+          );
         }
         if (id === "calendar") return <ReleaseCalendar key={key} />;
         if (id === "quote") return <QuoteCard key={key} />;

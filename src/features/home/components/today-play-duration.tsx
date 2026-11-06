@@ -1,7 +1,7 @@
 import { Body, Muted } from "@/components/typo";
 import { formatPlayDuration } from "@/features/play-records/lib/format";
 import { useTranslation } from "@/hooks/use-translation";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 
 import { GoalProgressRing } from "./goal-progress-ring";
 import { DailyPlayGoal } from "./daily-play-goal";
@@ -15,7 +15,7 @@ export function TodayPlayDuration({
   tablet?: boolean;
 }) {
   const { t } = useTranslation();
-  const { dailyPlayGoalMinutes } = usePreferences();
+  const dailyPlayGoalMinutes = usePreference("dailyPlayGoalMinutes");
   return (
     <DailyPlayGoal>
       {(onPress) => {

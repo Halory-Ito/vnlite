@@ -1,13 +1,14 @@
 import { Card, Typography, useThemeColor } from "heroui-native";
-import { useMemo, useState } from "react";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { AppState, Pressable, useWindowDimensions, View } from "react-native";
 
-import { Icon } from "@/components/icon";
-import { H5 } from "@/components/typo";
+import { ReleaseCalendarHeader } from "./release-calendar-header";
+import { isValidDate } from "@/utils/date";
+import { COVER_GRID_TABLET_MIN_SHORT_SIDE } from "@/utils/grid";
 import { ReleaseCalendarJump } from "./release-calendar-jump";
 import { Muted } from "@/components/typo";
 import { ReleaseCalendarList } from "./release-calendar-list";
-import { useVnList, flattenPages } from "@/features/vn/hooks";
+import { useReleaseCalendarDays } from "@/features/home/hooks/use-release-calendar-days";
 import { useTranslation } from "@/hooks/use-translation";
 import { useTranslucentSurface } from "@/hooks/use-translucent-surface";
 
@@ -17,49 +18,59 @@ const iso = (date: Date) =>
 const monthStart = (year: number, month: number) => new Date(year, month, 1);
 
 export function ReleaseCalendar() {
-  const { t, locale } = useTranslation();
-  const { width } = useWindowDimensions();
+  const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
+  const [contentWidth, setContentWidth] = useState(0);
   const surface = useTranslucentSurface();
   const muted = useThemeColor("muted");
   const accent = useThemeColor("accent");
   const accentForeground = useThemeColor("accent-foreground");
   const foreground = useThemeColor("foreground");
   const [initialDate] = useState(() => new Date());
-  const todayIso = iso(initialDate);
+  const [todayIso, setTodayIso] = useState(() => iso(initialDate));
+  useEffect(() => {
+    const refreshToday = () => setTodayIso(iso(new Date()));
+    const timer = setInterval(refreshToday, 60_000);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshToday();
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, []);
   const [month, setMonth] = useState(() =>
     monthStart(initialDate.getFullYear(), initialDate.getMonth())
   );
   const [selected, setSelected] = useState(() => iso(initialDate));
   const [jumpOpen, setJumpOpen] = useState(false);
-  const [jumpDate, setJumpDate] = useState(iso(initialDate));
+  const [jumpDate, setJumpDate] = useState("");
   const first = monthStart(month.getFullYear(), month.getMonth());
   const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const offset = first.getDay();
-  const cells = useMemo(
-    () => Array.from({ length: Math.ceil((offset + days) / 7) * 7 }, (_, i) => i - offset + 1),
-    [offset, days]
+  const cells = Array.from(
+    { length: Math.ceil((offset + days) / 7) * 7 },
+    (_, i) => i - offset + 1
   );
-  const monthRange = useVnList({
-    filters: {
-      releasedFrom: iso(monthStart(month.getFullYear(), month.getMonth())),
-      releasedTo: iso(new Date(month.getFullYear(), month.getMonth() + 1, 0)),
-    },
-    sort: "released",
-    pageSize: 100,
-  });
-  const releaseDays = useMemo(
-    () => new Set(flattenPages(monthRange.data?.pages).map((vn) => vn.released)),
-    [monthRange.data]
+  const monthRange = useReleaseCalendarDays(
+    iso(first),
+    iso(new Date(month.getFullYear(), month.getMonth() + 1, 0))
   );
-  const compact = width < 700;
-  const shiftMonth = (delta: number) =>
-    setMonth((value) => monthStart(value.getFullYear(), value.getMonth() + delta));
+  const releaseDays = useMemo(() => new Set(monthRange.data ?? []), [monthRange.data]);
+  const compact = Math.min(width, height) < COVER_GRID_TABLET_MIN_SHORT_SIDE || contentWidth < 660;
+  const shiftMonth = (delta: number) => {
+    const next = monthStart(month.getFullYear(), month.getMonth() + delta);
+    const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+    const day = Math.min(Number(selected.slice(-2)), lastDay);
+    setMonth(next);
+    setSelected(iso(new Date(next.getFullYear(), next.getMonth(), day)));
+  };
   const choose = (day: number) => {
     if (day > 0 && day <= days)
       setSelected(iso(new Date(month.getFullYear(), month.getMonth(), day)));
   };
   const jumpToDate = () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(jumpDate)) return;
+    if (!isValidDate(jumpDate)) return;
     const date = new Date(`${jumpDate}T00:00:00`);
     if (!Number.isFinite(date.getTime()) || iso(date) !== jumpDate) return;
     setSelected(jumpDate);
@@ -69,49 +80,25 @@ export function ReleaseCalendar() {
   return (
     <Card className="mx-4 my-3" style={surface}>
       <Card.Body className="gap-3">
-        <View className={compact ? "gap-4" : "flex-row gap-5"}>
+        <View
+          onLayout={(event) => setContentWidth(event.nativeEvent.layout.width)}
+          className={compact ? "gap-4" : "flex-row gap-5"}
+        >
           <View className={compact ? "" : "flex-1"}>
-            <View
-              className={`mb-3 gap-2 ${compact ? "" : "flex-row items-center justify-between"}`}
-            >
-              <H5>{t("home.releaseCalendar")}</H5>
-              <View className="flex-row items-center justify-between">
-                <Pressable
-                  onPress={() => shiftMonth(-1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("home.previousMonth")}
-                  className="h-11 w-11 items-center justify-center rounded-full active:opacity-60"
-                >
-                  <Icon name="chevronLeft" size={20} color={muted} />
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setJumpDate(selected);
-                    setJumpOpen(true);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("home.jumpToDate")}
-                  className="flex-row items-center gap-2 rounded-md px-2 py-1 active:opacity-60"
-                >
-                  <Typography type={compact ? "body-sm" : "h5"} className="font-semibold">
-                    {new Date(`${selected}T00:00:00`).toLocaleDateString(locale, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </Typography>
-                  <Icon name="calendar" size={18} color={muted} />
-                </Pressable>
-                <Pressable
-                  onPress={() => shiftMonth(1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("home.nextMonth")}
-                  className="h-11 w-11 items-center justify-center rounded-full active:opacity-60"
-                >
-                  <Icon name="chevronRight" size={20} color={muted} />
-                </Pressable>
-              </View>
-            </View>
+            <ReleaseCalendarHeader
+              month={month}
+              showToday={selected !== todayIso || iso(first).slice(0, 7) !== todayIso.slice(0, 7)}
+              onToday={() => {
+                const today = new Date();
+                setSelected(iso(today));
+                setMonth(monthStart(today.getFullYear(), today.getMonth()));
+              }}
+              onShiftMonth={shiftMonth}
+              onJump={() => {
+                setJumpDate("");
+                setJumpOpen(true);
+              }}
+            />
             <View className="mb-2 flex-row border-b border-border pb-2">
               {WEEK.map((day) => (
                 <Muted key={day} type="body-xs" className="flex-1 text-center">
@@ -184,7 +171,7 @@ export function ReleaseCalendar() {
             </View>
           </View>
           <View className={compact ? "" : "flex-1"}>
-            <ReleaseCalendarList key={selected} date={selected} />
+            <ReleaseCalendarList date={selected} compact={compact} />
           </View>
         </View>
       </Card.Body>

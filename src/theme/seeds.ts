@@ -207,13 +207,21 @@ export function deriveTokens(
    * 就能在 background / surface / surface-secondary 上同样看清。
    * 下面的 `ensureContrast` 一律以它为基准反解，省掉逐层校验。
    */
-  const surface = quantize(mix(base, primaryRaw, dark ? 0.16 : 0.07));
-  const surfaceSecondary = quantize(mix(base, primaryRaw, dark ? 0.23 : 0.12));
-  const surfaceTertiary = quantize(mix(base, primaryRaw, dark ? 0.3 : 0.18));
+  // Cards follow the primary color with a soft tint, distinct from the page background.
+  const surface = quantize(mix(base, primaryRaw, dark ? 0.24 : 0.1));
+  const surfaceSecondary = quantize(mix(base, primaryRaw, dark ? 0.3 : 0.14));
+  const surfaceTertiary = quantize(mix(base, primaryRaw, dark ? 0.36 : 0.18));
+  // Primary owns the page and actions; secondary owns control surfaces and selection.
+  const defaultSurface = quantize(mix(base, secondaryRaw, dark ? 0.28 : 0.14));
 
   // 前景色：先取一个带主题味道的起点，再按对比度反解
-  const foregroundSeed = dark ? mix(primaryRaw, secondaryRaw, 0.35) : mix(primaryRaw, BLACK, 0.25);
-  const foreground = ensureContrast(foregroundSeed, surfaceTertiary, CONTRAST_AA, !dark);
+  const foregroundSeed = dark ? mix(primaryRaw, WHITE, 0.35) : mix(primaryRaw, BLACK, 0.25);
+  const foreground = ensureContrast(
+    ensureContrast(foregroundSeed, surfaceTertiary, CONTRAST_AA, !dark),
+    defaultSurface,
+    CONTRAST_AA,
+    !dark
+  );
 
   // accent：要能在页面/卡片底色上作为文字用（链接、选中态文字）
   const accent = ensureContrast(primaryRaw, surfaceTertiary, CONTRAST_AA, !dark);
@@ -242,8 +250,14 @@ export function deriveTokens(
    * （数学上做不到）。所以选中块必须留在「偏暗配亮字」或「偏亮配暗字」
    * 的安全区里，色差只能靠**色相/饱和度**来给。
    */
-  const defaultSurface = quantize(mix(base, primaryRaw, dark ? 0.28 : 0.14));
-  const { segment, segmentForeground } = deriveSegment(defaultSurface, accent, muted, !dark);
+  const secondaryAccent = ensureContrast(secondaryRaw, defaultSurface, CONTRAST_AA, !dark);
+  const { segment, segmentForeground } = deriveSegment(
+    defaultSurface,
+    secondaryAccent,
+    muted,
+    !dark
+  );
+  const fieldPlaceholder = ensureContrast(muted, defaultSurface, CONTRAST_MUTED, !dark);
 
   return {
     // 基础
@@ -272,10 +286,10 @@ export function deriveTokens(
     "--segment": toHex(segment),
     "--segment-foreground": toHex(segmentForeground),
     // 输入框
-    "--field-background": toHex(surface),
+    "--field-background": toHex(defaultSurface),
     "--field-foreground": toHex(foreground),
-    "--field-placeholder": toHex(muted),
-    "--field-border": toHex(quantize(mix(base, primaryRaw, dark ? 0.35 : 0.25))),
+    "--field-placeholder": toHex(fieldPlaceholder),
+    "--field-border": toHex(quantize(mix(base, secondaryRaw, dark ? 0.45 : 0.3))),
     // 描边 / 分隔线
     "--border": toHex(quantize(mix(base, primaryRaw, dark ? 0.35 : 0.24))),
     "--separator": toHex(quantize(mix(base, primaryRaw, dark ? 0.28 : 0.16))),

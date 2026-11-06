@@ -568,6 +568,27 @@ async function main(): Promise<void> {
     assert(migratePreferences({ tabBarOpacity: 2 }).tabBarOpacity === 1, "透明度上限应夹取");
     assert(migratePreferences({ tabBarBlur: 180 }).tabBarBlur === 16, "模糊度上限应夹取");
     assert(migratePreferences({ tabBarBlur: "high" }).tabBarBlur === 0, "模糊度脏值应回默认");
+    assert(defaults.tabBarGlassStrength === 1, "旧偏好默认保留增强玻璃材质");
+    assert(
+      migratePreferences({ tabBarGlassStrength: -1 }).tabBarGlassStrength === 0,
+      "玻璃质感下限"
+    );
+    assert(
+      migratePreferences({ tabBarGlassStrength: 3 }).tabBarGlassStrength === 2,
+      "玻璃质感上限"
+    );
+    assert(
+      migratePreferences({ tabBarGlassStrength: 0.5 }).tabBarGlassStrength === 0.5,
+      "玻璃质感保留小数"
+    );
+    assert(
+      migratePreferences({ tabBarGlassStrength: "high" }).tabBarGlassStrength === 1,
+      "玻璃质感脏值回默认"
+    );
+    assert(
+      migratePreferences({ tabBarGlassStrength: NaN }).tabBarGlassStrength === 1,
+      "玻璃质感非数值回默认"
+    );
   });
 
   await check("清单标签本地筛选：filterByLabel（切标签不再重新请求）", () => {
@@ -1985,8 +2006,8 @@ async function main(): Promise<void> {
       defaultLayout.length === HOME_SECTION_IDS.length &&
         homeSectionRows(defaultLayout)
           .map((row) => row.join(","))
-          .join("|") === "quote|today,annual|heatmap|calendar",
-      "默认显示每日一言、并排目标、热力图和发售日历"
+          .join("|") === "quote|playStats|heatmap|calendar",
+      "默认依次显示每日一言、游玩统计卡片、游玩热力图、发售日历"
     );
     const custom = normalizeHomeLayout([
       { id: "quote", visible: false },
@@ -1996,7 +2017,7 @@ async function main(): Promise<void> {
       { id: "annual", visible: true },
     ]);
     assert(
-      custom[0]!.id === "quote" && !custom[0]!.visible && custom[1]!.id === "annual",
+      custom[0]!.id === "quote" && !custom[0]!.visible && custom[1]!.id === "playStats",
       "保留自定义顺序与关闭状态，去重并补齐新组件"
     );
     assert(
@@ -2016,14 +2037,31 @@ async function main(): Promise<void> {
         !removedCalendar[1].visible,
       "保留日历及其他首页组件的顺序和显示设置"
     );
-    const moved = moveHomeSection(defaultLayout, "annual", -1);
-    assert(moved[1]!.id === "annual" && defaultLayout[1]!.id === "today", "移动位置且不修改原配置");
+    const moved = moveHomeSection(defaultLayout, "playStats", -1);
+    assert(
+      moved[0]!.id === "playStats" && defaultLayout[1]!.id === "playStats",
+      "移动位置且不修改原配置"
+    );
     assert(moveHomeSection(defaultLayout, "quote", -1)[0]!.id === "quote", "第一项不可继续上移");
     assert(
       moveHomeSection(defaultLayout, "released", 1).at(-1)!.id === "released",
       "最后一项不可继续下移"
     );
-    assert(homeSectionRows(moved)[1]!.join() === "annual,today", "目标相邻时按配置顺序并排");
+    assert(homeSectionRows(moved)[0]!.join() === "playStats", "统计卡片作为独立模块排列");
+    const oldDefault = normalizeHomeLayout([
+      { id: "quote" },
+      { id: "today" },
+      { id: "annual" },
+      { id: "heatmap" },
+      { id: "calendar" },
+    ]);
+    assert(
+      oldDefault
+        .filter((item) => item.visible)
+        .map((item) => item.id)
+        .join("|") === "quote|playStats|heatmap|calendar",
+      "旧默认布局迁移后仍保持四个模块的默认顺序"
+    );
     assert(
       homeSectionRows(defaultLayout.map((item) => ({ id: item.id, visible: false }))).length === 0,
       "支持关闭所有首页组件"

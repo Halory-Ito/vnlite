@@ -32,6 +32,9 @@ export interface DateOtpFieldProps {
   onChange: (iso: string) => void;
   /** 校验错误文案（null = 合法） */
   error?: string | null;
+  showClear?: boolean;
+  onSubmit?: () => void;
+  inputAccessoryViewID?: string;
 }
 
 export function DateOtpField({
@@ -39,6 +42,9 @@ export function DateOtpField({
   value,
   onChange,
   error = null,
+  showClear = true,
+  onSubmit,
+  inputAccessoryViewID,
 }: DateOtpFieldProps): JSX.Element {
   const { t } = useTranslation();
   return (
@@ -58,7 +64,7 @@ export function DateOtpField({
               {t("dateField.today")}
             </Typography>
           </Pressable>
-          {value !== "" ? (
+          {showClear && value !== "" ? (
             <Pressable
               onPress={() => onChange("")}
               className="active:opacity-60"
@@ -81,7 +87,17 @@ export function DateOtpField({
         inputMode="numeric"
         isInvalid={Boolean(error)}
         placeholder="YYYYMMDD"
-        textInputProps={{ accessibilityLabel: label }}
+        textInputProps={{
+          accessibilityLabel: label,
+          ...(onSubmit
+            ? {
+                returnKeyType: "done",
+                submitBehavior: "submit",
+                onSubmitEditing: onSubmit,
+              }
+            : {}),
+          inputAccessoryViewID,
+        }}
         style={{ gap: 6 }}
       >
         <InputOTP.Group style={GROUP_STYLE}>

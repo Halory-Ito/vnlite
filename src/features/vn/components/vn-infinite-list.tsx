@@ -25,6 +25,7 @@ import { VnListItem } from "./vn-list-item";
 
 export interface VnInfiniteListProps {
   items: VnSummary[];
+  numColumns?: number;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -44,6 +45,7 @@ export interface VnInfiniteListProps {
 
 export function VnInfiniteList({
   items,
+  numColumns = 1,
   isLoading,
   isError,
   error,
@@ -98,7 +100,7 @@ export function VnInfiniteList({
     return { covers: images, coverIndex: index };
   }, [items, t]);
 
-  if (isLoading) return <LoadingState label={t("common.loading")} />;
+  if (isLoading) return <LoadingState label={t("common.loading")} className="flex-1" />;
   if (isError) return <ErrorState error={error} onRetry={onRetry} />;
   if (items.length === 0) {
     return <EmptyState title={emptyTitle ?? t("vn.listEmpty")} description={emptyDescription} />;
@@ -118,6 +120,8 @@ export function VnInfiniteList({
   return (
     <View className="flex-1">
       <FlashList<VnSummary>
+        key={numColumns}
+        numColumns={numColumns}
         /*
          * flex-1 不可省：FlashList 默认按内容高度撑开，会溢出到 Tab 栏下方，
          * 把 Tab 栏的触摸事件全吃掉 —— 表现为「进了浏览页就切不了 Tab」。

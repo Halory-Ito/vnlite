@@ -5,13 +5,15 @@
  * 接到 React 树上。NSFW 档位会影响所有图片渲染，所以必须全局响应式。
  */
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 import {
   DEFAULT_PREFERENCES,
   getPreferences,
+  getPreference,
   loadPreferences,
   subscribePreferences,
+  subscribePreference,
   type NsfwMode,
   type Preferences,
 } from "@/lib/storage/preferences";
@@ -31,14 +33,29 @@ export function usePreferences(): Preferences {
   return preferences;
 }
 
+/** 字段快照保持原引用；无关偏好变化不触发组件更新。 */
+export function usePreference<K extends keyof Preferences>(key: K): Preferences[K] {
+  const subscribe = useCallback(
+    (listener: () => void) => subscribePreference(key, listener),
+    [key]
+  );
+  const getSnapshot = useCallback(() => getPreference(key), [key]);
+  const getServerSnapshot = useCallback(() => DEFAULT_PREFERENCES[key], [key]);
+  const value = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  useEffect(() => {
+    void loadPreferences();
+  }, []);
+  return value;
+}
+
 /** 只取 NSFW 档位，避免无关组件因其他偏好变化而重渲染 */
 export function useNsfwMode(): NsfwMode {
-  return usePreferences().nsfwMode;
+  return usePreference("nsfwMode");
 }
 
 /** 全局作品图片圆角（dp） */
 export function useImageRadius(): number {
-  return usePreferences().imageRadius;
+  return usePreference("imageRadius");
 }
 
 /**

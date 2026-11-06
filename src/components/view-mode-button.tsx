@@ -1,31 +1,25 @@
 /**
  * 作品列表的视图切换按钮（**单个按钮**，不是 Tabs / 分段控件）。
  *
- * 当前是网格就显示「列表」按钮，当前是列表就显示「网格」按钮 ——
- * 图标与文案表示**切过去会变成什么**，点一下直接切。
+ * 图标与文案表示当前视图，点击切换到另一种视图。
  * 视觉沿用浏览页头部的图标按钮（`eye` / `sliders` 那一套）。
  *
  * 清单 Tab 与制作者详情的「作品」页签共用；选择存 `preferences.vnViewMode`，
  * 跨启动记住（两处共享同一个偏好）。
  */
 
-import { useThemeColor } from "heroui-native";
+import { Button, useThemeColor } from "heroui-native";
 import type { JSX } from "react";
-import { Pressable } from "react-native";
 
 import { Icon, type IconName } from "./icon";
-import { Muted } from "./typo";
 import { useTranslation } from "@/hooks/use-translation";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import type { VnViewMode } from "@/lib/storage/preferences";
 
-/** 当前视图 → 切过去的目标视图（图标 / 文案都描述目标） */
-const SWITCH_TO: Record<
-  VnViewMode,
-  { next: VnViewMode; icon: IconName; labelKey: TranslationKey }
-> = {
-  grid: { next: "list", icon: "bars", labelKey: "viewMode.list" },
-  list: { next: "grid", icon: "layoutCells", labelKey: "viewMode.grid" },
+/** 当前视图的图标、文案与点击后切换的目标。 */
+const MODES: Record<VnViewMode, { next: VnViewMode; icon: IconName; labelKey: TranslationKey }> = {
+  grid: { next: "list", icon: "layoutCells", labelKey: "viewMode.grid" },
+  list: { next: "grid", icon: "bars", labelKey: "viewMode.list" },
 };
 
 export interface ViewModeButtonProps {
@@ -36,22 +30,23 @@ export interface ViewModeButtonProps {
 export function ViewModeButton({ value, onChange }: ViewModeButtonProps): JSX.Element {
   const accent = useThemeColor("accent");
   const { t } = useTranslation();
-  const target = SWITCH_TO[value];
-  const label = t(target.labelKey);
+  const current = MODES[value];
+  const label = t(current.labelKey);
+  const targetLabel = t(MODES[current.next].labelKey);
 
   return (
-    <Pressable
-      onPress={() => onChange(target.next)}
-      className="flex-row items-center gap-1 rounded-full px-2 py-1 active:opacity-70"
+    <Button
+      size="sm"
+      variant="ghost"
+      onPress={() => onChange(current.next)}
+      className="self-start gap-1 rounded-full px-2"
       hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel={t("viewMode.switchTo", { target: label })}
+      accessibilityLabel={t("viewMode.switchTo", { target: targetLabel })}
     >
       {/* 图标只能吃具体色值（不吃 className），所以走主题 accent */}
-      <Icon name={target.icon} size={18} color={accent} />
-      <Muted type="body-sm" className="text-accent">
-        {label}
-      </Muted>
-    </Pressable>
+      <Icon name={current.icon} size={18} color={accent} />
+      <Button.Label className="text-sm text-accent">{label}</Button.Label>
+    </Button>
   );
 }

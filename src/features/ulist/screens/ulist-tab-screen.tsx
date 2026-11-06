@@ -10,7 +10,7 @@
  * 补齐未过滤清单的下一页（原因见 `hooks.ts` 顶部）。
  *
  * 视图有网格（默认，纯封面墙）与列表（带打分 / 标签的行）两种，
- * 右上角按钮直接切换（按钮文案 / 图标表示切过去的目标视图），
+ * 按钮文案 / 图标表示当前视图，点击直接切换，
  * 选择存 `preferences.vnViewMode` 跨启动记住。
  */
 
@@ -22,7 +22,7 @@ import { RefreshControl, ScrollView, View } from "react-native";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { ViewModeButton } from "@/components/view-mode-button";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useSession } from "@/hooks/use-session";
 import { useTranslation } from "@/hooks/use-translation";
 import { setPreference } from "@/lib/storage/preferences";
@@ -35,7 +35,8 @@ import { filterByLabel } from "@/features/ulist/lib/list-filter";
 export function UlistTabScreen(): JSX.Element {
   const { t } = useTranslation();
   const session = useSession();
-  if (session.status === "loading") return <LoadingState label={t("ulist.loadingAccount")} />;
+  if (session.status === "loading")
+    return <LoadingState label={t("ulist.loadingAccount")} className="flex-1" />;
   if (session.status !== "authenticated") return <GuestState />;
   return <UlistContent />;
 }
@@ -59,7 +60,7 @@ function GuestState(): JSX.Element {
 function UlistContent(): JSX.Element {
   const router = useRouter();
   const { t } = useTranslation();
-  const viewMode = usePreferences().vnViewMode;
+  const viewMode = usePreference("vnViewMode");
   const [labelFilter, setLabelFilter] = useState<number | null>(null);
   // ⚠️ 不传 labelId：标签筛选是纯客户端行为，切标签不会换 queryKey
   const list = useUlistInfinite();
@@ -76,7 +77,7 @@ function UlistContent(): JSX.Element {
     if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
   };
 
-  if (list.isLoading) return <LoadingState label={t("ulist.loadingList")} />;
+  if (list.isLoading) return <LoadingState label={t("ulist.loadingList")} className="flex-1" />;
   if (list.isError) return <ErrorState error={list.error} onRetry={refresh} />;
 
   return (

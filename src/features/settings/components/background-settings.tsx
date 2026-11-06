@@ -19,7 +19,7 @@ import { Button, Switch, useToast } from "heroui-native";
 import type { JSX } from "react";
 import { View } from "react-native";
 
-import { Paragraph } from "@/components/typo";
+import { SettingsLabel } from "./settings-field";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import {
@@ -46,7 +46,7 @@ export function BackgroundSettings(): JSX.Element {
     <View className="gap-4">
       <View className="flex-row items-center justify-between">
         <View className="flex-1">
-          <Paragraph className="text-sm">{t("settings.showBackground")}</Paragraph>
+          <SettingsLabel>{t("settings.showBackground")}</SettingsLabel>
         </View>
         <Switch
           isSelected={preferences.showBackground}

@@ -2,8 +2,7 @@ import type { TranslationKey } from "@/lib/i18n/translate";
 
 export const HOME_SECTION_IDS = [
   "quote",
-  "today",
-  "annual",
+  "playStats",
   "heatmap",
   "calendar",
   "random",
@@ -19,14 +18,12 @@ export interface HomeSectionPreference {
 }
 const DEFAULT_VISIBLE_SECTIONS = new Set<HomeSectionId>([
   "quote",
-  "today",
-  "annual",
+  "playStats",
   "heatmap",
   "calendar",
 ]);
 export const HOME_SECTION_LABELS: Record<HomeSectionId, TranslationKey> = {
-  today: "home.todayPlay",
-  annual: "home.yearGoal",
+  playStats: "home.playStats",
   heatmap: "home.playHeatmap",
   calendar: "home.releaseCalendar",
   quote: "home.quoteTitle",
@@ -39,15 +36,24 @@ export const HOME_SECTION_LABELS: Record<HomeSectionId, TranslationKey> = {
 export function normalizeHomeLayout(value: unknown): HomeSectionPreference[] {
   const result: HomeSectionPreference[] = [];
   const seen = new Set<string>();
+  const legacyStats = new Set(["today", "annual", "totalDuration", "totalFinished"]);
+  const hasCurrentStats = Array.isArray(value) && value.some((entry) => entry?.id === "playStats");
   if (Array.isArray(value))
     for (const entry of value) {
       if (
         !entry ||
         typeof entry !== "object" ||
-        !HOME_SECTION_IDS.includes(entry.id) ||
+        (!HOME_SECTION_IDS.includes(entry.id) && !legacyStats.has(entry.id)) ||
         seen.has(entry.id)
       )
         continue;
+      if (legacyStats.has(entry.id)) {
+        if (!hasCurrentStats && !seen.has("playStats")) {
+          seen.add("playStats");
+          result.push({ id: "playStats", visible: entry.visible !== false });
+        }
+        continue;
+      }
       seen.add(entry.id);
       result.push({ id: entry.id, visible: entry.visible !== false });
     }
@@ -71,11 +77,7 @@ export function homeSectionRows(layout: readonly HomeSectionPreference[]): HomeS
   const rows: HomeSectionId[][] = [];
   for (const { id } of layout.filter((item) => item.visible)) {
     const previous = rows.at(-1);
-    if (
-      (id === "today" || id === "annual") &&
-      previous?.length === 1 &&
-      (previous[0] === "today" || previous[0] === "annual")
-    )
+    if (id === "playStats" && previous?.length === 1 && previous[0] === "playStats")
       previous.push(id);
     else rows.push([id]);
   }

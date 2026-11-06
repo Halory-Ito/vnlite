@@ -20,9 +20,9 @@ export function ReleaseReminderDialog(props: Props) {
         if (!open && !props.pending) props.onClose();
       }}
     >
-      <Dialog.Portal>
+      <Dialog.Portal className="items-center justify-center p-4">
         <Dialog.Overlay />
-        <Dialog.Content className="w-full max-w-[400px] gap-4 p-5">
+        <Dialog.Content className="w-full max-w-[400px] self-center gap-4 p-5">
           <Dialog.Title>{props.title}</Dialog.Title>
           <Dialog.Description>{props.message}</Dialog.Description>
           <View className="gap-2">

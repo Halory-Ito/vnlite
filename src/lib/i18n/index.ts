@@ -11,7 +11,7 @@
 
 import { getLocales } from "expo-localization";
 
-import { getPreference, loadPreferences, subscribePreferences } from "@/lib/storage/preferences";
+import { getPreference, loadPreferences, subscribePreference } from "@/lib/storage/preferences";
 
 import { resolveLocale, setDeviceLocale, setLocale } from "./translate";
 
@@ -40,5 +40,5 @@ export function initI18n(): () => void {
   // 偏好是异步水合的：读完再同步一次（用户在设备语言非中文时会看到一次切换）
   void loadPreferences().then(applyLocale);
 
-  return subscribePreferences(applyLocale);
+  return subscribePreference("language", applyLocale);
 }

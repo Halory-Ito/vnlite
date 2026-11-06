@@ -10,20 +10,20 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/errors";
 import { handleUnauthorized } from "@/lib/storage/session";
 
-/** 业务数据的内存缓存时长。VNDB 条目几乎不变，可以放很久 */
+/** 业务数据保鲜时长；无人订阅后的内存回收时间由 gcTime 单独控制。 */
 export const STALE_TIME = {
-  /** VN 列表 / 详情：10 分钟 */
-  vn: 10 * 60 * 1000,
-  /** 角色 / 制作者 / staff：30 分钟 */
-  catalog: 30 * 60 * 1000,
-  /** 标签 / 特性：1 小时 */
-  taxonomy: 60 * 60 * 1000,
-  /** 语录：1 小时 */
-  quote: 60 * 60 * 1000,
+  /** VN 列表 / 详情：30 分钟 */
+  vn: 30 * 60 * 1000,
+  /** 角色 / 制作者 / staff：1 小时 */
+  catalog: 60 * 60 * 1000,
+  /** 标签 / 特性：6 小时 */
+  taxonomy: 6 * 60 * 60 * 1000,
+  /** 语录：6 小时 */
+  quote: 6 * 60 * 60 * 1000,
   /** 攻略：6 小时（静态 JSON，更新以月计；比它自己的 24h 落盘 TTL 更短，保证回前台能拿到新的） */
   walkthrough: 6 * 60 * 60 * 1000,
-  /** 用户清单：30 秒（写操作很频繁） */
-  ulist: 30 * 1000,
+  /** 用户清单：2 分钟；应用内写入成功后主动失效刷新 */
+  ulist: 2 * 60 * 1000,
   /** 账号信息：5 分钟 */
   account: 5 * 60 * 1000,
 } as const;
@@ -58,8 +58,8 @@ export const queryClient = new QueryClient({
       // 不在后台刷新时请求，节省限流配额
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
-      // 退到后台 5 分钟后丢弃
-      gcTime: 5 * 60 * 1000,
+      // 查询无人订阅满 1 小时后回收，与应用是否在前台无关
+      gcTime: 60 * 60 * 1000,
     },
     mutations: {
       // 写操作绝不自动重试：PATCH 不是幂等的，重复提交会出问题

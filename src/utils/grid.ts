@@ -39,6 +39,11 @@ export function coverGridColumns(width: number, height: number): number {
     : COVER_GRID_COLUMNS_COMPACT_TABLET;
 }
 
+/** 浏览与清单的信息列表共用列数：手机单列，mini pad / pad 三列。 */
+export function vnListColumns(width: number, height: number): number {
+  return Math.min(width, height) >= COVER_GRID_TABLET_MIN_SHORT_SIDE ? 3 : 1;
+}
+
 /* -------------------------------------------------------------------------- */
 /* 作品截图墙                                                                  */
 /* -------------------------------------------------------------------------- */

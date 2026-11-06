@@ -1,13 +1,16 @@
 import { Tabs } from "expo-router";
 import { BottomTabBar } from "expo-router/build/layouts/Tabs";
+import { useCallback, useContext, useState, type ComponentRef, type RefObject } from "react";
+import { View } from "react-native";
 import { useThemeColor } from "heroui-native";
 import type { JSX } from "react";
-import { useWindowDimensions, type ColorValue } from "react-native";
+import { useWindowDimensions } from "react-native";
 import { useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Icon, type IconName } from "@/components/icon";
 import { TabButton } from "@/features/navigation/components/tab-button";
+import { TabBlurTarget } from "@/features/navigation/components/tab-blur-target";
+import { BlurTargetContext } from "@/features/navigation/lib/blur-target";
 import {
   TabIndicatorBackground,
   TabIndicatorProvider,
@@ -19,12 +22,18 @@ import { resolveMode } from "@/theme/themes";
 /** 栏内容高度（图标 + 文字 + 胶囊内边距），两种样式共用。 */
 const TAB_BAR_CONTENT_HEIGHT = 64;
 
-function TabIcon({ name, color }: { name: IconName; color: ColorValue }): JSX.Element {
-  return <Icon name={name} size={24} color={color} />;
-}
-
 /** 底部 Tab 栏：贴底 / 悬浮胶囊。 */
 export default function TabsLayout(): JSX.Element {
+  const backgroundTarget = useContext(BlurTargetContext);
+  const [targets, setTargets] = useState<
+    Record<string, RefObject<ComponentRef<typeof View> | null>>
+  >({});
+  const registerTarget = useCallback((key: string, target: ComponentRef<typeof View> | null) => {
+    // Publish a new ref object so BlurView notices targets mounted after the bar.
+    setTargets((current) =>
+      current[key]?.current === target ? current : { ...current, [key]: { current: target } }
+    );
+  }, []);
   const muted = useThemeColor("muted");
   const segmentForeground = useThemeColor("segment-foreground");
   const preferences = usePreferences();
@@ -60,11 +69,6 @@ export default function TabsLayout(): JSX.Element {
           paddingTop: 0,
           borderRadius: TAB_BAR_CONTENT_HEIGHT / 2,
           overflow: "hidden" as const,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.12,
-          shadowRadius: 12,
-          elevation: 6,
         }
       : {
           height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
@@ -75,18 +79,38 @@ export default function TabsLayout(): JSX.Element {
 
   return (
     <Tabs
-      tabBar={(props) => (
-        <TabIndicatorProvider
-          index={props.state.index}
-          count={props.state.routes.length}
-          animation={preferences.tabBarAnimation}
-          style={preferences.tabBarStyle}
-          opacity={preferences.tabBarOpacity}
-          blur={preferences.tabBarBlur}
-          dark={isDark}
+      screenLayout={({ children, route }) => (
+        <TabBlurTarget
+          routeKey={route.key}
+          onTarget={registerTarget}
+          includeBackground={!isCapsule}
         >
-          <BottomTabBar {...props} />
-        </TabIndicatorProvider>
+          {children}
+        </TabBlurTarget>
+      )}
+      tabBar={(props) => (
+        <BlurTargetContext.Provider
+          value={
+            isCapsule
+              ? backgroundTarget
+              : targets[props.state.routes[props.state.index]!.key]?.current
+                ? targets[props.state.routes[props.state.index]!.key]!
+                : backgroundTarget
+          }
+        >
+          <TabIndicatorProvider
+            index={props.state.index}
+            count={props.state.routes.length}
+            animation={preferences.tabBarAnimation}
+            style={preferences.tabBarStyle}
+            opacity={preferences.tabBarOpacity}
+            blur={preferences.tabBarBlur}
+            glassStrength={preferences.tabBarGlassStrength}
+            dark={isDark}
+          >
+            <BottomTabBar {...props} />
+          </TabIndicatorProvider>
+        </BlurTargetContext.Provider>
       )}
       screenOptions={{
         headerShown: false,
@@ -96,7 +120,9 @@ export default function TabsLayout(): JSX.Element {
         tabBarLabelPosition: "below-icon",
         tabBarActiveBackgroundColor: "transparent",
         tabBarInactiveBackgroundColor: "transparent",
-        tabBarButton: (props) => <TabButton {...props} />,
+        // The persistent icon lives in TabButton so its exit animation remains visible.
+        tabBarIcon: () => null,
+        tabBarIconStyle: { display: "none" },
         tabBarBackground: () => <TabIndicatorBackground />,
         tabBarStyle: barStyle,
       }}
@@ -105,35 +131,35 @@ export default function TabsLayout(): JSX.Element {
         name="index"
         options={{
           title: t("tabs.home"),
-          tabBarIcon: ({ color }) => <TabIcon name="house" color={color} />,
+          tabBarButton: (props) => <TabButton {...props} icon="house" />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: t("tabs.explore"),
-          tabBarIcon: ({ color }) => <TabIcon name="compass" color={color} />,
+          tabBarButton: (props) => <TabButton {...props} icon="compass" />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: t("tabs.search"),
-          tabBarIcon: ({ color }) => <TabIcon name="magnifier" color={color} />,
+          tabBarButton: (props) => <TabButton {...props} icon="magnifier" />,
         }}
       />
       <Tabs.Screen
         name="list"
         options={{
           title: t("tabs.list"),
-          tabBarIcon: ({ color }) => <TabIcon name="bookmark" color={color} />,
+          tabBarButton: (props) => <TabButton {...props} icon="bookmark" />,
         }}
       />
       <Tabs.Screen
         name="me"
         options={{
           title: t("tabs.me"),
-          tabBarIcon: ({ color }) => <TabIcon name="person" color={color} />,
+          tabBarButton: (props) => <TabButton {...props} icon="person" />,
         }}
       />
     </Tabs>

@@ -5,7 +5,7 @@
  * 开发状态）。**它和筛选是两回事**：筛选取的是「哪些作品」，这里选的是
  * 「卡片上写什么」，所以不放在筛选面板里，而是自己一个入口（在筛选按钮左边）。
  *
- * 选择存 `preferences.cardFields`（本地偏好，跨启动记住）。
+ * 选择存 `cardFields`（本地偏好，跨启动记住）。
  */
 
 import { Typography } from "heroui-native";

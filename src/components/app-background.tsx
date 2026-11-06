@@ -17,7 +17,7 @@
  * 表现为「切了主题但看不见背景图」。改这三处前先看本文件注释。
  *
  * 性能：全屏常驻图片会加重 GPU 合成。图片已预压成 720x1288 JPEG（0.64 MB 全套），
- * 这里再用 `priority="low"` 避免和列表封面抢解码队列。
+ * 背景使用普通解码优先级，避免切换主题时排在低优先级封面之后。
  */
 
 import { useThemeColor } from "heroui-native";
@@ -46,6 +46,8 @@ export interface AppBackgroundProps {
    * 设备比例和图片比例差得多时，用户能手动把主体挪进画面。
    */
   position?: BackgroundPosition;
+  /** 采样副本直接显示，避免首次挂载时从不透明底色淡入。 */
+  transitionDuration?: number;
 }
 
 /** 铺满父容器。三个图层共用，省掉重复的内联样式 */
@@ -57,6 +59,7 @@ export function AppBackground({
   opacity,
   blur,
   position = DEFAULT_BACKGROUND_POSITION,
+  transitionDuration = 250,
 }: AppBackgroundProps): JSX.Element {
   const background = useThemeColor("background");
   const blurRadius = blur > 0 ? blur : undefined;
@@ -77,8 +80,8 @@ export function AppBackground({
           contentPosition={backgroundContentPosition(position.x, position.y)}
           blurRadius={blurRadius}
           cachePolicy="memory-disk"
-          priority="low"
-          transition={250}
+          priority="normal"
+          transition={transitionDuration}
           accessibilityIgnoresInvertColors
           // 纯装饰，无障碍里必须隐藏
           accessibilityElementsHidden

@@ -13,7 +13,7 @@
  *      用 `Appearance` 的后果是：uniwind 的 variant 永远停在冷启动那一刻，
  *      而各类 `@variant light/dark` 的派生值（`*-soft`、`background-secondary`
  *      等）全按错误的模式渲染 —— 表现就是「某些组件颜色和主题对不上」。
- *   2. **配色覆盖** —— `ScopedVariables` 注入 `--xxx` 原始变量。
+ *   2. **配色覆盖** —— `Uniwind.updateCSSVariables` 更新主题的原始变量。
  *      注意必须覆盖 `--background` 而不是 `--color-background`：
  *      后者在 `@theme inline` 里会被内联进工具类，运行时改无效。
  *   3. **背景图层** —— 绝对定位的三层结构（底色 / 图片 / 遮罩），见 `AppBackground`。
@@ -26,9 +26,9 @@
  */
 
 import type { JSX, ReactNode } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useColorScheme, View } from "react-native";
-import { ScopedVariables, Uniwind } from "uniwind";
+import { Uniwind } from "uniwind";
 import { File } from "expo-file-system";
 
 import { AppBackground } from "@/components/app-background";
@@ -36,6 +36,9 @@ import { BlurTargetContext } from "@/features/navigation/lib/blur-target";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import { resolveTheme, getTokens, resolveMode } from "./themes";
+import { BackgroundContext } from "./background-context";
+import { ThemeTransition } from "./theme-transition";
+import { useWindowBackground } from "./use-window-background";
 
 export function ThemeProvider({ children }: { children: ReactNode }): JSX.Element {
   const preferences = usePreferences();
@@ -50,9 +53,6 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   /* ---- 明暗模式 ---- */
   // 用户的 colorScheme 偏好就是 Uniwind 的 setTheme 入参，三态直接对应
   const { colorScheme } = preferences;
-  useEffect(() => {
-    Uniwind.setTheme(colorScheme);
-  }, [colorScheme]);
 
   // 实际生效的模式：`system` 时看系统
   const mode = resolveMode(colorScheme, systemScheme);
@@ -62,6 +62,14 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   // 用对象本身当依赖会每帧重算；`getTokens` 内部还有一份按这三项做的缓存。
   const { primary, secondary } = theme;
   const tokens = useMemo(() => getTokens(primary, secondary, mode), [primary, secondary, mode]);
+  useWindowBackground(tokens["--background"]!);
+
+  // Global variable updates notify color-dependent styles without replacing the
+  // Uniwind context (which also rerendered every layout-only View in the app).
+  useLayoutEffect(() => {
+    Uniwind.updateCSSVariables(mode, tokens);
+    Uniwind.setTheme(colorScheme);
+  }, [mode, tokens, colorScheme]);
 
   const content = (
     <ThemeShell
@@ -75,8 +83,14 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
       {children}
     </ThemeShell>
   );
-  if (Object.keys(tokens).length === 0) return content;
-  return <ScopedVariables variables={tokens}>{content}</ScopedVariables>;
+  return (
+    <ThemeTransition
+      changeKey={`${theme.id}:${mode}:${primary}:${secondary}`}
+      backgroundColor={tokens["--background"]!}
+    >
+      {content}
+    </ThemeTransition>
+  );
 }
 
 /**
@@ -114,6 +128,10 @@ function ThemeShell({
     [showBackground, backgroundUrl]
   );
   const source = showBackground ? (custom ?? theme.background) : null;
+  const background = useMemo(
+    () => ({ source, opacity, blur, position }),
+    [source, opacity, blur, position]
+  );
 
   return (
     <BlurTargetContext.Provider value={blurTarget}>
@@ -125,7 +143,9 @@ function ThemeShell({
           blur={blur}
           position={position}
         />
-        <View style={{ flex: 1 }}>{children}</View>
+        <BackgroundContext.Provider value={background}>
+          <View style={{ flex: 1 }}>{children}</View>
+        </BackgroundContext.Provider>
       </View>
     </BlurTargetContext.Provider>
   );

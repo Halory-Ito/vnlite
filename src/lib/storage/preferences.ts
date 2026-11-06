@@ -170,6 +170,8 @@ export interface Preferences {
   tabBarOpacity: number;
   /** 底栏背景模糊强度，0–16 */
   tabBarBlur: number;
+  /** 液态玻璃质感强度，0–2，1 为默认高光与反射 */
+  tabBarGlassStrength: number;
   /** Tab 选中背景切换动画 */
   tabBarAnimation: TabBarAnimation;
   /** 自定义主题的品牌色（`themeId === "custom"` 时生效） */
@@ -205,6 +207,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   tabBarStyle: "default",
   tabBarOpacity: 0.78,
   tabBarBlur: 0,
+  tabBarGlassStrength: 1,
   tabBarAnimation: "settle",
   customTheme: { ...DEFAULT_CUSTOM_THEME },
   backgroundUrl: null,
@@ -334,6 +337,12 @@ export function migratePreferences(stored: Record<string, unknown>): Preferences
     next.tabBarStyle === "capsule" || next.tabBarStyle === "glass" ? next.tabBarStyle : "default";
   next.tabBarOpacity = clampNumber(next.tabBarOpacity, 0, 1, DEFAULT_PREFERENCES.tabBarOpacity);
   next.tabBarBlur = clampNumber(next.tabBarBlur, 0, 16, DEFAULT_PREFERENCES.tabBarBlur);
+  next.tabBarGlassStrength = clampNumber(
+    stored.tabBarGlassStrength,
+    0,
+    2,
+    DEFAULT_PREFERENCES.tabBarGlassStrength
+  );
   const animation = stored.tabBarAnimation;
   next.tabBarAnimation =
     animation === false || animation === "off"
@@ -391,14 +400,30 @@ export function getPreference<K extends keyof Preferences>(key: K): Preferences[
   return snapshot[key];
 }
 
+/** 仅通知指定字段的变化，避免主题切换唤醒语言、封面等无关订阅。 */
+export function subscribePreference<K extends keyof Preferences>(
+  key: K,
+  listener: () => void
+): () => void {
+  let previous = snapshot[key];
+  return subscribePreferences(() => {
+    const value = snapshot[key];
+    if (Object.is(previous, value)) return;
+    previous = value;
+    listener();
+  });
+}
+
 export async function setPreference<K extends keyof Preferences>(
   key: K,
   value: Preferences[K]
 ): Promise<void> {
-  const next = { ...snapshot, [key]: value };
-  snapshot = next;
-  emit();
-  await kv.set(KEY, next);
+  if (!Object.is(snapshot[key], value)) {
+    snapshot = { ...snapshot, [key]: value };
+    emit();
+  }
+  // 滑杆松手时仍需保存此前 patchPreferences 写入的内存值。
+  await kv.set(KEY, snapshot);
 }
 
 /**
@@ -410,6 +435,12 @@ export async function setPreference<K extends keyof Preferences>(
  * 松手 `onChangeEnd` 再 `setPreference` 落盘。
  */
 export function patchPreferences(patch: Partial<Preferences>): void {
+  if (
+    Object.entries(patch).every(([key, value]) =>
+      Object.is(snapshot[key as keyof Preferences], value)
+    )
+  )
+    return;
   snapshot = { ...snapshot, ...patch };
   emit();
 }

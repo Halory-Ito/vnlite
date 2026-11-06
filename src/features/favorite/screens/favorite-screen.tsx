@@ -20,7 +20,7 @@ import { Icon } from "@/components/icon";
 import { EmptyState, ErrorState, LoadingState } from "@/components/screen-state";
 import { SegmentedControl } from "@/components/segmented-control";
 import { ViewModeButton } from "@/components/view-mode-button";
-import { usePreferences } from "@/hooks/use-preferences";
+import { usePreference } from "@/hooks/use-preferences";
 import { useTranslation } from "@/hooks/use-translation";
 import type { FavoriteEntry } from "@/lib/db/dao/favorite";
 import { setPreference } from "@/lib/storage/preferences";
@@ -41,7 +41,7 @@ export default function FavoriteScreen(): JSX.Element {
   const router = useRouter();
   const { t } = useTranslation();
   const danger = useThemeColor("danger");
-  const viewMode = usePreferences().vnViewMode;
+  const viewMode = usePreference("vnViewMode");
   const [tab, setTab] = useState<FavoriteTab>("vn");
   const [clearOpen, setClearOpen] = useState(false);
   // 清空弹窗里勾选的分类，默认全选

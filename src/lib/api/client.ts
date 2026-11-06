@@ -13,6 +13,7 @@ import { API_BASE_URL, RATE_LIMIT } from "@/constants/config";
 
 import { ApiError, toApiError } from "./errors";
 import { rateLimiter, type RateLimiter } from "./rate-limiter";
+import { validateQueryResponse } from "./query-response";
 import type { QueryBody, QueryResponse } from "./types";
 
 /** Token 提供器。返回 null 表示未登录 */
@@ -63,11 +64,16 @@ export class VndbClient {
     body: QueryBody,
     options: RequestOptions = {}
   ): Promise<QueryResponse<T>> {
-    return this.request<QueryResponse<T>>(endpoint, {
+    const response = await this.request<unknown>(endpoint, {
       method: "POST",
       body: JSON.stringify(body),
       ...options,
     });
+    try {
+      return validateQueryResponse<T>(response);
+    } catch (cause) {
+      throw ApiError.parse(cause, endpoint);
+    }
   }
 
   /** GET 端点：`/user` `/stats` `/schema` `/authinfo` `/ulist_labels` */

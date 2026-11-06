@@ -2,7 +2,7 @@
  * 评价模块的 React hooks。
  *
  * 缓存策略与讨论 / 用户模块一致：走抓取，内容几乎不变，
- * 所以 staleTime 用 `STALE_TIME.catalog`（30 分钟），失败不自动重试
+ * 所以 staleTime 用 `STALE_TIME.catalog`（1 小时），失败不自动重试
  * （抓取被限流时重试只会更糟，错误态给手动重试按钮）。
  */
 

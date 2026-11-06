@@ -1,12 +1,15 @@
 import type { JSX } from "react";
 import { Pressable, View } from "react-native";
 import type { BottomTabBarButtonProps } from "expo-router/build/layouts/Tabs";
+import type { TabIconName } from "../lib/tab-icon-animations";
+import { TabIcon } from "./tab-icon";
 
 export function TabButton({
   children,
+  icon,
   style: _style,
   ...props
-}: BottomTabBarButtonProps): JSX.Element {
+}: BottomTabBarButtonProps & { icon: TabIconName }): JSX.Element {
   const focused = props["aria-selected"] === true;
 
   return (
@@ -22,7 +25,12 @@ export function TabButton({
       disabled={props.disabled}
       className="flex-1 items-center justify-center px-0.5"
     >
-      <View className="h-12 w-full max-w-[68px] items-center justify-center">{children}</View>
+      <View className="h-12 w-full max-w-[68px] items-center justify-center">
+        <View className="h-7 w-8 items-center justify-center">
+          <TabIcon name={icon} active={focused} />
+        </View>
+        {children}
+      </View>
     </Pressable>
   );
 }
